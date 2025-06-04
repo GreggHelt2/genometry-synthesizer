@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maurer Rose Generator (Catmull-Rom Splines)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif; display: flex; justify-content: center;
+            align-items: flex-start; min-height: 100vh; background-color: #1a202c;
+            color: #e2e8f0; padding-top: 1rem; padding-bottom: 2rem;
+        }
+        .container {
+            background-color: #2d3748; padding: 1.5rem; border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            text-align: center; width: 95%; max-width: 800px;
+        }
+        .canvas-container {
+            position: relative; width: 650px; height: 650px; margin: 1rem auto 1.5rem auto;
+            max-width: 100%; aspect-ratio: 1 / 1; height: auto;
+        }
+        canvas {
+            display: block; border: 1px solid #4a5568; border-radius: 0.5rem;
+            background-color: transparent; position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+        #maurerCanvas { z-index: 1; background-color: #000000; }
+        #fadeCanvas { z-index: 0; background-color: #000000; }
+
+        label {
+            font-weight: 500; margin-right: 0.25rem; min-width: 70px;
+            display: inline-block; text-align: right; flex-shrink: 0; font-size: 0.8rem;
+            color: #a0aec0;
+        }
+        /* Specific Label widths */
+        label[for="degreesSlider"] { min-width: 100px; }
+        label[for="segmentsSlider"] { min-width: 90px; }
+        label[for="rotateSlider"] { min-width: 90px; }
+        label[for="globalRotateSlider"] { min-width: 100px; }
+        label[for="radialOffsetSlider"] { min-width: 90px; }
+        label[for="maurerColorInput"] { min-width: 115px; }
+        label[for="maurerOpacitySlider"] { min-width: 115px; }
+        label[for="maurerLineThicknessSlider"] { min-width: 115px; }
+        label[for="maurerFillTypeSelect"] { min-width: 115px; }
+        label[for="maurerFillColorInput"] { min-width: 150px; }
+        label[for="maurerFillOpacitySlider"] { min-width: 115px; }
+        label[for="gradientStartColorInput"] { min-width: 130px; }
+        label[for="gradientMiddleColorInput"] { min-width: 130px; }
+        label[for="gradientEndColorInput"] { min-width: 130px; }
+        label[for="rhodoneaColorInput"] { min-width: 130px; }
+        label[for="rhodoneaOpacitySlider"] { min-width: 130px; }
+        label[for="minDegreesInput"], label[for="maxDegreesInput"] { min-width: 80px; }
+        label[for="animationSpeedInput"] { min-width: 80px; }
+        label[for="crossfadeDurationInput"] { min-width: 110px; }
+        label[for="waveAmplitudeSlider"] { min-width: 115px; }
+        label[for="waveFrequencySlider"] { min-width: 115px; }
+        label[for="curveDetailSlider"] { min-width: 115px; }
+        label[for="maurerLineStyleSelect"] { min-width: 115px; }
+        label[for="maurerPointSizeSlider"] {min-width: 115px;}
+        label[for="maurerPointColorInput"] {min-width: 115px;}
+        label[for="pointGlowColorInput"] {min-width: 115px;}
+        label[for="pointGlowBlurSlider"] {min-width: 115px;}
+        label[for="tensionSlider"] { min-width: 115px; }
+        label[for="biasSlider"] { min-width: 115px; }
+        label[for="continuitySlider"] { min-width: 115px; }
+        label[for="catmullRomAlphaSlider"] { min-width: 115px; }
+
+
+        input[type="range"] {
+            border: 1px solid #4a5568; padding: 0; border-radius: 0.25rem; margin-right: 0.25rem;
+            cursor: pointer; vertical-align: middle; width: 100px; height: 0.4rem;
+            -webkit-appearance: none; appearance: none; background: #4a5568; outline: none;
+            opacity: 0.9; transition: opacity .15s ease-in-out; flex-grow: 1; max-width: 120px;
+        }
+        input[type="range"]:disabled { background: #718096; cursor: not-allowed; opacity: 0.6; }
+        input[type="range"]:disabled::-webkit-slider-thumb { background: #a0aec0; }
+        input[type="range"]:disabled::-moz-range-thumb { background: #a0aec0; }
+        input[type="range"]:hover:not(:disabled) { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 0.8rem; height: 0.8rem; background: #63b3ed; border-radius: 50%; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 0.8rem; height: 0.8rem; background: #63b3ed; border-radius: 50%; cursor: pointer; border: none; }
+
+        input[type="number"] {
+            border: 1px solid #4a5568; padding: 0.2rem 0.4rem; border-radius: 0.25rem;
+            margin-left: 0.25rem; width: 50px; text-align: right; flex-shrink: 0; font-size: 0.8rem;
+            background-color: #1a202c; color: #e2e8f0;
+        }
+        input[type="number"]:disabled { background-color: #2d3748; color: #718096; cursor: not-allowed; opacity: 0.6; }
+
+        input[type="color"] {
+            vertical-align: middle; width: 28px; height: 1.6rem; border: 1px solid #4a5568;
+            border-radius: 0.25rem; padding: 1px; cursor: pointer; margin-left: 0.25rem; background-color: #2d3748;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.125rem;}
+        input[type="color"]::-moz-color-swatch { border: none; border-radius: 0.125rem;}
+
+        select {
+            background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568;
+            border-radius: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.8rem;
+            cursor: pointer; flex-grow: 1;
+            max-width: calc(100% - 115px - 0.25rem);
+        }
+        select:focus { outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.5); }
+
+        .slider-value { font-weight: 500; min-width: 30px; display: inline-block; text-align: left; margin-left: 0.25rem; flex-shrink: 0; font-size: 0.8rem; color: #cbd5e0; }
+        .opacity-value { min-width: 28px; }
+        .offset-value { min-width: 35px; }
+        .point-size-value { min-width: 30px; }
+        .blur-value {min-width: 30px;}
+        .thickness-value {min-width: 30px;}
+
+        .info-display { margin-top: 0.5rem; margin-bottom: 1rem; padding: 0.4rem; background-color: #2c304d; color: #a3bffa; border: 1px solid #4338ca; border-radius: 0.375rem; font-size: 0.8rem; display: block; text-align: center; }
+        .option-control { display: flex; align-items: center; justify-content: flex-start; margin-top: 0.4rem; gap: 0.4rem; width: 100%; padding-left: 0.5rem; box-sizing: border-box; font-size: 0.8rem; }
+        .option-control label { min-width: auto; text-align: left; font-weight: normal; color: #cbd5e0; }
+        input[type="checkbox"] { width: 0.9rem; height: 0.9rem; border-radius: 0.25rem; border-color: #4a5568; accent-color: #63b3ed; cursor: pointer; margin-right: 0.25rem;}
+
+        .animation-controls { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #4a5568; display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; }
+        .animation-controls .control-row { justify-content: flex-start; width: 100%; }
+        .animation-buttons { display: flex; justify-content: center; gap: 0.75rem; margin-top: 0.5rem; }
+        button { color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 0.25rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s ease, opacity 0.3s ease; font-size: 0.875rem; }
+        button:hover:not(:disabled) { filter: brightness(110%); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #drawButton { background-color: #4a5568; margin-top: 0.75rem; }
+        #drawButton:hover:not(:disabled) { background-color: #2d3748; }
+        #startButton { background-color: #2f855a; }
+        #pauseResumeButton { background-color: #dd6b20; }
+        #stopButton { background-color: #c53030; }
+
+        .controls { display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .control-row { display: flex; align-items: center; justify-content: flex-start; width: 100%; gap: 0.4rem; }
+        h1 { margin-bottom: 1rem; font-size: 1.35rem; color: #e2e8f0; text-align: center; }
+        h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem; color: #cbd5e0; text-align: center;}
+        p { font-size: 0.9rem; margin-bottom: 1rem; color: #a0aec0; text-align: center;}
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main-layout-container">
+        <div class="canvas-column">
+            <div class="canvas-container">
+                 <canvas id="fadeCanvas"></canvas>
+                 <canvas id="maurerCanvas"></canvas>
+            </div>
+            <div class="animation-controls">
+                 <h2>Animate Degrees Between</h2>
+                 <div class="control-row"> <label for="minDegreesInput">Min Degrees:</label> <input type="number" id="minDegreesInput" min="1" max="358" value="10" step="1"> </div>
+                 <div class="control-row"> <label for="maxDegreesInput">Max Degrees:</label> <input type="number" id="maxDegreesInput" min="1" max="359" value="359" step="1"> </div>
+                 <div class="control-row"> <label for="animationSpeedInput">Step Delay (ms):</label> <input type="number" id="animationSpeedInput" min="10" max="2000" value="600" step="10"> </div>
+                 <div class="control-row"> <label for="crossfadeDurationInput">Crossfade (ms):</label> <input type="number" id="crossfadeDurationInput" min="0" max="1000" value="400" step="10"> </div>
+                 <div class="animation-buttons">
+                     <button id="startButton" class="rounded">Start</button>
+                     <button id="pauseResumeButton" class="rounded" disabled>Pause</button>
+                     <button id="stopButton" class="rounded" disabled>Stop</button>
+                 </div>
+            </div>
+        </div>
+
+        <div class="controls-column">
+            <h1 class="text-2xl font-bold">Maurer Rose Generator</h1>
+            <p class="mb-6">Adjust sliders or enter values for knum, kdenom (k=knum/kdenom), segments, degrees, rotation, and offset.</p>
+            <div class="controls">
+                <div class="control-row"> <label for="knumSlider">knum:</label> <input type="range" id="knumSlider" min="1" max="20" value="3" step="1"> <span id="knumValueDisplay" class="slider-value">3</span> <input type="number" id="knumInput" min="1" max="20" value="4" step="1"> </div>
+                <div class="control-row"> <label for="kdenomSlider">kdenom:</label> <input type="range" id="kdenomSlider" min="1" max="20" value="4" step="1"> <span id="kdenomValueDisplay" class="slider-value">4</span> <input type="number" id="kdenomInput" min="1" max="20" value="3" step="1"> </div>
+                <div class="control-row"> <label for="segmentsSlider">Line Segments:</label> <input type="range" id="segmentsSlider" min="1" max="2160" value="360" step="1"> <span id="segmentsValueDisplay" class="slider-value">360</span> <input type="number" id="segmentsInput" min="1" max="2160" value="360" step="1"> </div>
+                <div class="control-row"> <label for="degreesSlider">Degrees Between:</label> <input type="range" id="degreesSlider" min="1" max="359" value="71" step="1"> <span id="degreesValueDisplay" class="slider-value">71</span> <input type="number" id="degreesInput" min="1" max="359" value="71" step="1"> </div>
+                <div class="control-row"> <label for="rotateSlider">Phase Rotation:</label> <input type="range" id="rotateSlider" min="0" max="360" value="0" step="1"> <span id="rotateValueDisplay" class="slider-value">0</span> <input type="number" id="rotateInput" min="0" max="360" value="0" step="1"> </div>
+                <div class="control-row"> <label for="globalRotateSlider">Global Rotation:</label> <input type="range" id="globalRotateSlider" min="0" max="360" value="0" step="1"> <span id="globalRotateValueDisplay" class="slider-value">0</span> <input type="number" id="globalRotateInput" min="0" max="360" value="0" step="1"> </div>
+                <div class="control-row"> <label for="radialOffsetSlider">Radial Offset:</label> <input type="range" id="radialOffsetSlider" min="-100" max="100" value="0" step="1.0"> <span id="radialOffsetValueDisplay" class="slider-value offset-value">0.0</span> <input type="number" id="radialOffsetInput" min="-100" max="100" value="0" step="1.0"> </div>
+                <div class="control-row"> <label for="maurerColorInput">Maurer Lines Color:</label> <input type="color" id="maurerColorInput" value="#00ffff"> </div>
+                <div class="control-row"> <label for="maurerOpacitySlider">Maurer Lines Opacity:</label> <input type="range" id="maurerOpacitySlider" min="0" max="1" value="1" step="0.01"> <span id="maurerOpacityValueDisplay" class="slider-value opacity-value">1.00</span> </div>
+                <div class="control-row"> <label for="maurerLineThicknessSlider">Maurer Line Thickness:</label> <input type="range" id="maurerLineThicknessSlider" min="0.1" max="10" value="1" step="0.1"> <span id="maurerLineThicknessValueDisplay" class="slider-value thickness-value">1.0</span> <input type="number" id="maurerLineThicknessInput" min="0.1" max="10" value="1" step="0.1"> </div>
+                <div class="control-row">
+                    <label for="maurerFillTypeSelect">Maurer Fill Type:</label>
+                    <select id="maurerFillTypeSelect">
+                        <option value="none" selected>None</option>
+                        <option value="solid">Solid Color</option>
+                        <option value="linear-gradient">Linear Gradient</option>
+                        <option value="radial-gradient">Radial Gradient</option>
+                    </select>
+                </div>
+                <div class="control-row" id="maurerFillColorSolidRow">
+                    <label for="maurerFillColorInput">Solid / Gradient Start:</label>
+                    <input type="color" id="maurerFillColorInput" value="#333333">
+                </div>
+                <div class="control-row" id="gradientMiddleColorRow" style="display:none;">
+                    <label for="gradientMiddleColorInput">Gradient Middle:</label>
+                    <input type="color" id="gradientMiddleColorInput" value="#00ff00">
+                </div>
+                <div class="control-row" id="gradientEndColorRow" style="display:none;">
+                    <label for="gradientEndColorInput">Gradient End:</label>
+                    <input type="color" id="gradientEndColorInput" value="#0000ff">
+                </div>
+                <div class="control-row">
+                    <label for="maurerFillOpacitySlider">Maurer Fill Opacity:</label>
+                    <input type="range" id="maurerFillOpacitySlider" min="0" max="1" value="0.3" step="0.01">
+                    <span id="maurerFillOpacityValueDisplay" class="slider-value opacity-value">0.30</span>
+                </div>
+
+
+                <div class="control-row"> <label for="rhodoneaColorInput">Rhodonea Curve Color:</label> <input type="color" id="rhodoneaColorInput" value="#ff00ff"> </div>
+                <div class="control-row"> <label for="rhodoneaOpacitySlider">Rhodonea Curve Opacity:</label> <input type="range" id="rhodoneaOpacitySlider" min="0" max="1" value="1" step="0.01"> <span id="rhodoneaOpacityValueDisplay" class="slider-value opacity-value">1.00</span> </div>
+
+                <div class="control-row">
+                    <label for="maurerLineStyleSelect">Maurer Line Style:</label>
+                    <select id="maurerLineStyleSelect">
+                        <option value="straight" selected>Straight</option>
+                        <option value="sine">Sine Wave</option>
+                        <option value="cosine">Cosine Wave</option>
+                        <option value="kb-spline">Kochanek-Bartels Spline</option>
+                        <option value="catmull-rom">Catmull-Rom Spline</option>
+                    </select>
+                </div>
+
+                <div id="waveSpecificControls">
+                    <div class="control-row"> <label for="waveAmplitudeSlider">Wave Amplitude:</label> <input type="range" id="waveAmplitudeSlider" min="0" max="50" value="10" step="1"> <span id="waveAmplitudeValueDisplay" class="slider-value">10</span> <input type="number" id="waveAmplitudeInput" min="0" max="50" value="10" step="1"> </div>
+                    <div class="control-row"> <label for="waveFrequencySlider">Wave Frequency:</label> <input type="range" id="waveFrequencySlider" min="1" max="20" value="5" step="1"> <span id="waveFrequencyValueDisplay" class="slider-value">5</span> <input type="number" id="waveFrequencyInput" min="1" max="20" value="5" step="1"> </div>
+                </div>
+                <div id="kbSplineSpecificControls" style="display:none;">
+                    <div class="control-row"> <label for="tensionSlider">Tension:</label> <input type="range" id="tensionSlider" min="-1" max="1" value="0" step="0.1"> <span id="tensionValueDisplay" class="slider-value offset-value">0.0</span> <input type="number" id="tensionInput" min="-1" max="1" value="0" step="0.1"> </div>
+                    <div class="control-row"> <label for="biasSlider">Bias:</label> <input type="range" id="biasSlider" min="-1" max="1" value="0" step="0.1"> <span id="biasValueDisplay" class="slider-value offset-value">0.0</span> <input type="number" id="biasInput" min="-1" max="1" value="0" step="0.1"> </div>
+                    <div class="control-row"> <label for="continuitySlider">Continuity:</label> <input type="range" id="continuitySlider" min="-1" max="1" value="0" step="0.1"> <span id="continuityValueDisplay" class="slider-value offset-value">0.0</span> <input type="number" id="continuityInput" min="-1" max="1" value="0" step="0.1"> </div>
+                </div>
+                <div id="catmullRomSpecificControls" style="display:none;">
+                    <div class="control-row"> <label for="catmullRomAlphaSlider">Catmull-Rom Alpha:</label> <input type="range" id="catmullRomAlphaSlider" min="0" max="1" value="0.5" step="0.01"> <span id="catmullRomAlphaValueDisplay" class="slider-value opacity-value">0.50</span> <input type="number" id="catmullRomAlphaInput" min="0" max="1" value="0.5" step="0.01"> </div>
+                </div>
+                <div class="control-row"> <label for="curveDetailSlider">Curve Detail:</label> <input type="range" id="curveDetailSlider" min="5" max="100" value="20" step="1"> <span id="curveDetailValueDisplay" class="slider-value">20</span> <input type="number" id="curveDetailInput" min="5" max="100" value="20" step="1"> </div>
+
+                <div class="control-row"> <label for="maurerPointSizeSlider">Maurer Point Size:</label> <input type="range" id="maurerPointSizeSlider" min="0.5" max="10" value="2" step="0.1"> <span id="maurerPointSizeValueDisplay" class="slider-value point-size-value">2.0</span> <input type="number" id="maurerPointSizeInput" min="0.5" max="10" value="2" step="0.1"> </div>
+                <div class="control-row"> <label for="maurerPointColorInput">Maurer Point Color:</label> <input type="color" id="maurerPointColorInput" value="#ffff00"> </div>
+                <div class="control-row"> <label for="pointGlowColorInput">Point Glow Color:</label> <input type="color" id="pointGlowColorInput" value="#ffff00"> </div>
+                <div class="control-row"> <label for="pointGlowBlurSlider">Point Glow Blur:</label> <input type="range" id="pointGlowBlurSlider" min="0" max="30" value="5" step="1"> <span id="pointGlowBlurValueDisplay" class="slider-value blur-value">5</span> <input type="number" id="pointGlowBlurInput" min="0" max="30" value="5" step="1"> </div>
+
+                <div class="option-control"> <input type="checkbox" id="autoSegmentsCheckbox" checked> <label for="autoSegmentsCheckbox">Auto-set Segments to Completion</label> </div>
+                <div class="option-control"> <input type="checkbox" id="showRhodoneaCheckbox"> <label for="showRhodoneaCheckbox">Show Rhodonea Curve</label> </div>
+                <div class="option-control"> <input type="checkbox" id="enableSmoothingCheckbox" checked> <label for="enableSmoothingCheckbox">Enable Image Smoothing</label> </div>
+                <div class="option-control"> <input type="checkbox" id="pixelOffsetCheckbox" checked> <label for="pixelOffsetCheckbox">Apply 0.5px Offset</label> </div>
+                <div class="option-control"> <input type="checkbox" id="alternateWaveMirrorCheckbox"> <label for="alternateWaveMirrorCheckbox">Alternate Wave Mirror</label> </div>
+                <div class="option-control"> <input type="checkbox" id="applyRotationToMaurerCheckbox" checked> <label for="applyRotationToMaurerCheckbox">Apply Phase Rotation to Maurer Lines</label> </div>
+                <div class="option-control"> <input type="checkbox" id="showMaurerPointsCheckbox"> <label for="showMaurerPointsCheckbox">Show Maurer Points</label> </div>
+                <div style="text-align: center;"> <button id="drawButton" class="rounded">Redraw</button> </div>
+            </div>
+             <div class="info-display"> Lines to complete cycle: <span id="completionLinesDisplay" class="font-semibold">--</span> </div>
+        </div>
+    </div>
+
+    <script>
+        const maurerCanvas = document.getElementById('maurerCanvas');
+        const ctx = maurerCanvas.getContext('2d');
+        const fadeCanvas = document.getElementById('fadeCanvas');
+        const fadeCtx = fadeCanvas.getContext('2d');
+        const canvasContainer = document.querySelector('.canvas-container');
+
+        const drawButton = document.getElementById('drawButton');
+        const completionLinesDisplay = document.getElementById('completionLinesDisplay');
+        const autoSegmentsCheckbox = document.getElementById('autoSegmentsCheckbox');
+        const showRhodoneaCheckbox = document.getElementById('showRhodoneaCheckbox');
+        const enableSmoothingCheckbox = document.getElementById('enableSmoothingCheckbox');
+        const pixelOffsetCheckbox = document.getElementById('pixelOffsetCheckbox');
+        const maurerLineStyleSelect = document.getElementById('maurerLineStyleSelect');
+        const alternateWaveMirrorCheckbox = document.getElementById('alternateWaveMirrorCheckbox');
+        const applyRotationToMaurerCheckbox = document.getElementById('applyRotationToMaurerCheckbox');
+        const showMaurerPointsCheckbox = document.getElementById('showMaurerPointsCheckbox');
+        const maurerFillTypeSelect = document.getElementById('maurerFillTypeSelect');
+        const maurerFillColorSolidRow = document.getElementById('maurerFillColorSolidRow');
+        const gradientStartColorRow = document.getElementById('gradientStartColorRow');
+        const gradientMiddleColorRow = document.getElementById('gradientMiddleColorRow');
+        const gradientEndColorRow = document.getElementById('gradientEndColorRow');
+        const waveSpecificControlsDiv = document.getElementById('waveSpecificControls');
+        const kbSplineSpecificControlsDiv = document.getElementById('kbSplineSpecificControls');
+        const catmullRomSpecificControlsDiv = document.getElementById('catmullRomSpecificControls');
+
+
+        const startButton = document.getElementById('startButton');
+        const pauseResumeButton = document.getElementById('pauseResumeButton');
+        const stopButton = document.getElementById('stopButton');
+        const minDegreesInput = document.getElementById('minDegreesInput');
+        const maxDegreesInput = document.getElementById('maxDegreesInput');
+        const animationSpeedInput = document.getElementById('animationSpeedInput');
+        const crossfadeDurationInput = document.getElementById('crossfadeDurationInput');
+
+        let isAnimating = false;
+        let isPaused = false;
+        let animationTimeoutId = null;
+        let crossfadeRequestId = null;
+        let currentAnimationDegrees = 1;
+        let crossfadeStartTime = 0;
+
+        const controls = {
+            knum: { slider: document.getElementById('knumSlider'), input: document.getElementById('knumInput'), display: document.getElementById('knumValueDisplay') },
+            kdenom: { slider: document.getElementById('kdenomSlider'), input: document.getElementById('kdenomInput'), display: document.getElementById('kdenomValueDisplay') },
+            degrees_between_lines: { slider: document.getElementById('degreesSlider'), input: document.getElementById('degreesInput'), display: document.getElementById('degreesValueDisplay') },
+            segments: { slider: document.getElementById('segmentsSlider'), input: document.getElementById('segmentsInput'), display: document.getElementById('segmentsValueDisplay') },
+            rotate: { slider: document.getElementById('rotateSlider'), input: document.getElementById('rotateInput'), display: document.getElementById('rotateValueDisplay') },
+            globalRotate: { slider: document.getElementById('globalRotateSlider'), input: document.getElementById('globalRotateInput'), display: document.getElementById('globalRotateValueDisplay') },
+            radial_offset: { slider: document.getElementById('radialOffsetSlider'), input: document.getElementById('radialOffsetInput'), display: document.getElementById('radialOffsetValueDisplay') },
+            maurerColor: { input: document.getElementById('maurerColorInput') },
+            maurerOpacity: { slider: document.getElementById('maurerOpacitySlider'), display: document.getElementById('maurerOpacityValueDisplay') },
+            maurerLineThickness: { slider: document.getElementById('maurerLineThicknessSlider'), input: document.getElementById('maurerLineThicknessInput'), display: document.getElementById('maurerLineThicknessValueDisplay') },
+            maurerFillColor: { input: document.getElementById('maurerFillColorInput') },
+            maurerFillOpacity: { slider: document.getElementById('maurerFillOpacitySlider'), display: document.getElementById('maurerFillOpacityValueDisplay') },
+            gradientStartColor: { input: document.getElementById('gradientStartColorInput') },
+            gradientMiddleColor: { input: document.getElementById('gradientMiddleColorInput') },
+            gradientEndColor: { input: document.getElementById('gradientEndColorInput') },
+            rhodoneaColor: { input: document.getElementById('rhodoneaColorInput') },
+            rhodoneaOpacity: { slider: document.getElementById('rhodoneaOpacitySlider'), display: document.getElementById('rhodoneaOpacityValueDisplay') },
+            waveAmplitude: { slider: document.getElementById('waveAmplitudeSlider'), input: document.getElementById('waveAmplitudeInput'), display: document.getElementById('waveAmplitudeValueDisplay') },
+            waveFrequency: { slider: document.getElementById('waveFrequencySlider'), input: document.getElementById('waveFrequencyInput'), display: document.getElementById('waveFrequencyValueDisplay') },
+            curveDetail: { slider: document.getElementById('curveDetailSlider'), input: document.getElementById('curveDetailInput'), display: document.getElementById('curveDetailValueDisplay') },
+            maurerPointSize: { slider: document.getElementById('maurerPointSizeSlider'), input: document.getElementById('maurerPointSizeInput'), display: document.getElementById('maurerPointSizeValueDisplay') },
+            maurerPointColor: { input: document.getElementById('maurerPointColorInput') },
+            pointGlowColor: { input: document.getElementById('pointGlowColorInput') },
+            pointGlowBlur: { slider: document.getElementById('pointGlowBlurSlider'), input: document.getElementById('pointGlowBlurInput'), display: document.getElementById('pointGlowBlurValueDisplay') },
+            tension: { slider: document.getElementById('tensionSlider'), input: document.getElementById('tensionInput'), display: document.getElementById('tensionValueDisplay') },
+            bias: { slider: document.getElementById('biasSlider'), input: document.getElementById('biasInput'), display: document.getElementById('biasValueDisplay') },
+            continuity: { slider: document.getElementById('continuitySlider'), input: document.getElementById('continuityInput'), display: document.getElementById('continuityValueDisplay') },
+            catmullRomAlpha: { slider: document.getElementById('catmullRomAlphaSlider'), input: document.getElementById('catmullRomAlphaInput'), display: document.getElementById('catmullRomAlphaValueDisplay') }
+        };
+
+        const RHODONEA_LINE_WIDTH = 1;
+        const RHODONEA_POINTS = 720;
+        const HIGHLIGHT_POINT_COLOR = '#00FF00';
+
+        function toRadians(degrees) { return degrees * (Math.PI / 180); }
+        function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); if (b === 0) return a; return gcd(b, a % b); }
+
+        function hexToRgba(hex, opacity) {
+            hex = hex.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16); const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16); const alpha = Math.max(0, Math.min(1, parseFloat(opacity)));
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function calculateCompletionLines() {
+            const knum = parseInt(controls.knum.slider.value); const kdenom = parseInt(controls.kdenom.slider.value);
+            const degrees_between_lines = parseInt(controls.degrees_between_lines.slider.value);
+            if (isNaN(knum) || isNaN(kdenom) || isNaN(degrees_between_lines) || knum <= 0 || kdenom <= 0 || degrees_between_lines <= 0) { return NaN; }
+            const common_ab = gcd(knum, kdenom); const b_red = kdenom / common_ab; const g_d = gcd(degrees_between_lines, 360); if (g_d === 0) return NaN;
+            const d_prime = degrees_between_lines / g_d; const g_bd_prime = gcd(b_red, d_prime); if (g_bd_prime === 0) return NaN;
+            const k_min = b_red / g_bd_prime; const m_angle = 360 / g_d; const lines = k_min * m_angle;
+            return Math.round(lines);
+        }
+
+        function updateCompletionLinesDisplay() {
+             const lines = calculateCompletionLines();
+             completionLinesDisplay.textContent = isNaN(lines) ? "N/A" : lines;
+        }
+
+        function drawWaveBetweenPoints(targetCtx, x1, y1, x2, y2, amplitude, frequency, detail, waveType) {
+            const dx = x2 - x1; const dy = y2 - y1; const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance === 0) { targetCtx.lineTo(x2, y2); return; }
+            const ux = dx / distance; const uy = dy / distance; const perpX = -uy; const perpY = ux;
+            for (let i = 1; i <= detail; i++) {
+                const t = i / detail; const currentXOnLine = x1 + t * dx; const currentYOnLine = y1 + t * dy;
+                let waveOffsetValue;
+                if (waveType === 'sine') { waveOffsetValue = Math.sin(t * frequency * 2 * Math.PI); }
+                else { waveOffsetValue = Math.cos(t * frequency * 2 * Math.PI - Math.PI / 2); }
+                const waveOffset = amplitude * waveOffsetValue;
+                const pointX = currentXOnLine + waveOffset * perpX; const pointY = currentYOnLine + waveOffset * perpY;
+                targetCtx.lineTo(pointX, pointY);
+            }
+        }
+
+        function drawKochanekBartelsSegment(targetCtx, p0, p1, p2, p3, tension, bias, continuity, detail) {
+            const t = tension; const b = bias; const c = continuity;
+            const m1x = ( (1-t)*(1+b)*(1-c)/2 * (p1.x - p0.x) ) + ( (1-t)*(1-b)*(1+c)/2 * (p2.x - p1.x) );
+            const m1y = ( (1-t)*(1+b)*(1-c)/2 * (p1.y - p0.y) ) + ( (1-t)*(1-b)*(1+c)/2 * (p2.y - p1.y) );
+            const m2x = ( (1-t)*(1+b)*(1+c)/2 * (p2.x - p1.x) ) + ( (1-t)*(1-b)*(1-c)/2 * (p3.x - p2.x) );
+            const m2y = ( (1-t)*(1+b)*(1+c)/2 * (p2.y - p1.y) ) + ( (1-t)*(1-b)*(1-c)/2 * (p3.y - p2.y) );
+            for (let i = 1; i <= detail; i++) {
+                const u = i / detail; const u2 = u * u; const u3 = u2 * u;
+                const h0 = 2*u3 - 3*u2 + 1; const h1 = -2*u3 + 3*u2;
+                const h2 = u3 - 2*u2 + u; const h3 = u3 - u2;
+                const px = h0*p1.x + h1*p2.x + h2*m1x + h3*m2x;
+                const py = h0*p1.y + h1*p2.y + h2*m1y + h3*m2y;
+                targetCtx.lineTo(px, py);
+            }
+        }
+
+        function drawCatmullRomSegment(targetCtx, p0, p1, p2, p3, detail, alpha) {
+            const m1x = alpha * (p2.x - p0.x);
+            const m1y = alpha * (p2.y - p0.y);
+            const m2x = alpha * (p3.x - p1.x);
+            const m2y = alpha * (p3.y - p1.y);
+            for (let i = 1; i <= detail; i++) {
+                const u = i / detail; const u2 = u * u; const u3 = u2 * u;
+                const h00 =  2*u3 - 3*u2 + 1; const h10 =    u3 - 2*u2 + u;
+                const h01 = -2*u3 + 3*u2; const h11 =    u3 - u2;
+                const px = h00*p1.x + h10*m1x + h01*p2.x + h11*m2x;
+                const py = h00*p1.y + h10*m1y + h01*p2.y + h11*m2y;
+                targetCtx.lineTo(px, py);
+            }
+        }
+
+
+        function drawFrame(targetCtx, degreesValue) {
+            const knum = parseInt(controls.knum.slider.value); const kdenom = parseInt(controls.kdenom.slider.value);
+            const phaseRotateDeg = parseInt(controls.rotate.slider.value);
+            const globalRotateDeg = parseInt(controls.globalRotate.slider.value);
+            const radialOffset = parseFloat(controls.radial_offset.slider.value);
+            const maurerColorHex = controls.maurerColor.input.value; const maurerOpacity = controls.maurerOpacity.slider.value;
+            const maurerLineThickness = parseFloat(controls.maurerLineThickness.slider.value);
+            const maurerFillType = maurerFillTypeSelect.value;
+            const maurerSolidFillColorHex = controls.maurerFillColor.input.value;
+            const maurerFillOpacity = controls.maurerFillOpacity.slider.value;
+            const gradientStartColor = controls.maurerFillColor.input.value;
+            const gradientMiddleColor = controls.gradientMiddleColor.input.value;
+            const gradientEndColor = controls.gradientEndColor.input.value;
+            const rhodoneaColorHex = controls.rhodoneaColor.input.value; const rhodoneaOpacity = controls.rhodoneaOpacity.slider.value;
+            const maurerLineStyle = maurerLineStyleSelect.value;
+            const alternateMirror = alternateWaveMirrorCheckbox.checked;
+            const applyRotationToMaurer = applyRotationToMaurerCheckbox.checked;
+            const showPoints = showMaurerPointsCheckbox.checked;
+            const maurerPointSize = parseFloat(controls.maurerPointSize.slider.value);
+            const maurerPointColorHex = controls.maurerPointColor.input.value;
+            const pointGlowColor = controls.pointGlowColor.input.value;
+            const pointGlowBlur = parseInt(controls.pointGlowBlur.slider.value);
+
+            const waveAmplitude = parseInt(controls.waveAmplitude.slider.value);
+            const waveFrequency = parseInt(controls.waveFrequency.slider.value);
+            const curveDetail = parseInt(controls.curveDetail.slider.value);
+
+            const tension = parseFloat(controls.tension.slider.value);
+            const bias = parseFloat(controls.bias.slider.value);
+            const continuity = parseFloat(controls.continuity.slider.value);
+            const catmullRomAlpha = parseFloat(controls.catmullRomAlpha.slider.value);
+
+
+            let numSegments;
+            if (autoSegmentsCheckbox.checked) { numSegments = calculateCompletionLines(); if (isNaN(numSegments)) { numSegments = parseInt(controls.segments.slider.value); } }
+            else { numSegments = parseInt(controls.segments.slider.value); }
+            if (isNaN(numSegments) || numSegments <= 0) { return; }
+            const k_val = knum / kdenom;
+            const phaseRotateRadians = toRadians(phaseRotateDeg);
+            const globalRotateRadiansValue = toRadians(globalRotateDeg);
+
+            const canvasWidth = targetCtx.canvas.width; const canvasHeight = targetCtx.canvas.height;
+            const centerX = canvasWidth / 2; const centerY = canvasHeight / 2; const scale = Math.min(centerX, centerY) * 0.9;
+            targetCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+            targetCtx.imageSmoothingEnabled = enableSmoothingCheckbox.checked;
+            const applyPixelOffset = pixelOffsetCheckbox.checked;
+
+            targetCtx.save();
+            targetCtx.translate(centerX, centerY);
+            targetCtx.rotate(globalRotateRadiansValue);
+            targetCtx.translate(-centerX, -centerY);
+
+            if (applyPixelOffset) { targetCtx.save(); targetCtx.translate(0.5, 0.5); }
+
+            if (showRhodoneaCheckbox.checked) {
+                targetCtx.beginPath(); targetCtx.strokeStyle = hexToRgba(rhodoneaColorHex, rhodoneaOpacity); targetCtx.lineWidth = RHODONEA_LINE_WIDTH;
+                let firstRhodoneaPoint = true;
+                for (let angleDeg = 0; angleDeg <= 360; angleDeg += 360 / RHODONEA_POINTS) {
+                    const angleRad = toRadians(angleDeg);
+                    const radiusAngleRadBase = toRadians(k_val * angleDeg);
+                    const r = radialOffset + (scale * (Math.cos(radiusAngleRadBase + phaseRotateRadians)));
+                    const x = centerX + r * Math.cos(angleRad); const y = centerY + r * Math.sin(angleRad);
+                    if (firstRhodoneaPoint) { targetCtx.moveTo(x, y); firstRhodoneaPoint = false; } else { targetCtx.lineTo(x, y); }
+                }
+                 const common_ab = gcd(knum, kdenom); const b_red = kdenom / common_ab;
+                 if (b_red > 1) {
+                     for (let angleDeg = 360 + (360 / RHODONEA_POINTS); angleDeg <= b_red * 360; angleDeg += 360 / RHODONEA_POINTS) {
+                        const angleRad_local = toRadians(angleDeg); const radiusAngleRadBase = toRadians(k_val * angleDeg);
+                        const r = radialOffset + (scale * (Math.cos(radiusAngleRadBase + phaseRotateRadians)));
+                        const x = centerX + r * Math.cos(angleRad_local); const y = centerY + r * Math.sin(angleRad_local);
+                        targetCtx.lineTo(x, y);
+                     }
+                 }
+                targetCtx.stroke();
+            }
+
+            const maurerPhaseRotateRadians = applyRotationToMaurer ? phaseRotateRadians : 0;
+            const maurerPoints = [];
+            for (let i = 0; i <= numSegments; i++) {
+                const angleDegrees = i * degreesValue; const angleRadians = toRadians(angleDegrees);
+                const radiusAngleRadBase = toRadians(k_val * angleDegrees);
+                const r = radialOffset + (scale * (Math.cos(radiusAngleRadBase + maurerPhaseRotateRadians)));
+                const x = centerX + r * Math.cos(angleRadians); const y = centerY + r * Math.sin(angleRadians);
+                maurerPoints.push({x, y});
+            }
+
+            targetCtx.beginPath();
+            if (maurerPoints.length > 0) {
+                targetCtx.moveTo(maurerPoints[0].x, maurerPoints[0].y);
+            }
+
+            for (let i = 0; i < maurerPoints.length - 1; i++) {
+                const p1 = maurerPoints[i];
+                const p2 = maurerPoints[i+1];
+
+                if (maurerLineStyle === 'sine' || maurerLineStyle === 'cosine') {
+                    let currentAmplitude = waveAmplitude;
+                    if (alternateMirror && (i % 2 !== 0)) {
+                        currentAmplitude = -waveAmplitude;
+                    }
+                    drawWaveBetweenPoints(targetCtx, p1.x, p1.y, p2.x, p2.y, currentAmplitude, waveFrequency, curveDetail, maurerLineStyle);
+                } else if (maurerLineStyle === 'kb-spline') {
+                    const p0 = (i === 0) ? p1 : maurerPoints[i-1];
+                    const p3 = (i >= maurerPoints.length - 2) ? p2 : maurerPoints[i+2];
+                    drawKochanekBartelsSegment(targetCtx, p0, p1, p2, p3, tension, bias, continuity, curveDetail);
+                } else if (maurerLineStyle === 'catmull-rom') {
+                    const p0 = (i === 0) ? p1 : maurerPoints[i-1];
+                    const p3 = (i >= maurerPoints.length - 2) ? p2 : maurerPoints[i+2];
+                    drawCatmullRomSegment(targetCtx, p0, p1, p2, p3, curveDetail, catmullRomAlpha);
+                }
+                else { // straight
+                    targetCtx.lineTo(p2.x, p2.y);
+                }
+            }
+
+            if (maurerFillType === 'solid') {
+                targetCtx.fillStyle = hexToRgba(maurerSolidFillColorHex, maurerFillOpacity);
+                targetCtx.fill("evenodd");
+            } else if (maurerFillType === 'linear-gradient') {
+                const gradient = targetCtx.createLinearGradient(0, centerY, canvasWidth, centerY);
+                gradient.addColorStop(0, hexToRgba(gradientStartColor, maurerFillOpacity));
+                gradient.addColorStop(0.5, hexToRgba(gradientMiddleColor, maurerFillOpacity));
+                gradient.addColorStop(1, hexToRgba(gradientEndColor, maurerFillOpacity));
+                targetCtx.fillStyle = gradient;
+                targetCtx.fill("evenodd");
+            } else if (maurerFillType === 'radial-gradient') {
+                const maxRadius = scale * (1 + Math.abs(radialOffset));
+                const gradient = targetCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+                gradient.addColorStop(0, hexToRgba(gradientStartColor, maurerFillOpacity));
+                gradient.addColorStop(0.5, hexToRgba(gradientMiddleColor, maurerFillOpacity));
+                gradient.addColorStop(1, hexToRgba(gradientEndColor, maurerFillOpacity));
+                targetCtx.fillStyle = gradient;
+                targetCtx.fill("evenodd");
+            }
+
+            targetCtx.strokeStyle = hexToRgba(maurerColorHex, maurerOpacity);
+            targetCtx.lineWidth = maurerLineThickness;
+            targetCtx.stroke();
+
+            if (showPoints) {
+                maurerPoints.forEach((point, index) => {
+                    targetCtx.shadowColor = pointGlowColor;
+                    targetCtx.shadowBlur = pointGlowBlur > 0 ? pointGlowBlur : 0;
+                    if (index === 0 || index === maurerPoints.length - 1) {
+                        targetCtx.fillStyle = HIGHLIGHT_POINT_COLOR;
+                    } else {
+                        targetCtx.fillStyle = hexToRgba(maurerPointColorHex, maurerOpacity);
+                    }
+                    targetCtx.beginPath();
+                    targetCtx.arc(point.x, point.y, maurerPointSize, 0, 2 * Math.PI);
+                    targetCtx.fill();
+                    targetCtx.shadowColor = 'transparent';
+                    targetCtx.shadowBlur = 0;
+                });
+            }
+
+            if (applyPixelOffset) { targetCtx.restore(); }
+            targetCtx.restore();
+        }
+
+         function staticDraw() {
+             const degreesValue = parseInt(controls.degrees_between_lines.slider.value);
+             // handleResize(); // Removed recursive call
+             drawFrame(ctx, degreesValue);
+             maurerCanvas.style.opacity = 1;
+             fadeCtx.clearRect(0, 0, fadeCanvas.width, fadeCanvas.height);
+         }
+
+        function syncControls(control, source, controlKey) {
+             if (control.slider && control.input && control.display && !['maurerOpacity', 'rhodoneaOpacity', 'radial_offset', 'waveAmplitude', 'waveFrequency', 'curveDetail', 'maurerPointSize', 'pointGlowBlur', 'maurerLineThickness', 'maurerFillOpacity', 'tension', 'bias', 'continuity', 'catmullRomAlpha'].includes(controlKey)) {
+                const slider = control.slider; const input = control.input; const display = control.display;
+                const min = parseInt(slider.min); const max = parseInt(slider.max); let value;
+                if ( (isAnimating && (controlKey === 'degrees_between_lines' || controlKey === 'rotate' || controlKey === 'globalRotate')) || (controlKey === 'segments' && autoSegmentsCheckbox.checked && source !== 'auto') ) { return; }
+                if (source === 'slider' || source === 'auto') { value = parseInt(slider.value); if (source !== 'auto') { input.value = value; } }
+                else { value = parseInt(input.value); if (isNaN(value) || value < min) { value = min; } else if (value > max) { value = max; } if (input.value !== value.toString()) { input.value = value; } slider.value = value; }
+                display.textContent = value;
+            } else if (control.slider && control.display) {
+                 const slider = control.slider; const display = control.display;
+                 const input = control.input; const step = parseFloat(slider.step) || 1;
+                 const decimals = step < 1 ? (step.toString().split('.')[1] || '').length : 0; let value;
+                 if ( isAnimating && (controlKey === 'degrees_between_lines' || controlKey === 'rotate' || controlKey === 'globalRotate' || controlKey === 'radial_offset' || controlKey === 'maurerPointSize' || controlKey === 'pointGlowBlur' || controlKey === 'maurerLineThickness' || controlKey === 'maurerFillOpacity' || ['tension', 'bias', 'continuity', 'catmullRomAlpha'].includes(controlKey)) ) { return; }
+                 if (source === 'slider' || source === 'auto') {
+                     value = parseFloat(slider.value); if (input && source !== 'auto') { input.value = value.toFixed(decimals); }
+                 } else if (input) {
+                     value = parseFloat(input.value); const min = parseFloat(slider.min); const max = parseFloat(slider.max);
+                     if (isNaN(value)) { value = parseFloat(slider.value); } else if (value < min) { value = min; } else if (value > max) { value = max; }
+                     value = Math.round(value / step) * step; if (input.value !== value.toFixed(decimals)) { input.value = value.toFixed(decimals); }
+                     slider.value = value;
+                 } else { value = parseFloat(slider.value); }
+                 display.textContent = value.toFixed(decimals);
+            } else if (control.input) { /* Color input */ }
+            if (!isAnimating && (controlKey === 'knum' || controlKey === 'kdenom' || controlKey === 'degrees_between_lines')) {
+                 updateCompletionLinesDisplay(); if (autoSegmentsCheckbox.checked) { updateAutoSegments(); }
+            }
+        }
+
+        function updateAutoSegments() {
+             const lines = calculateCompletionLines();
+             if (!isNaN(lines)) {
+                const segSlider = controls.segments.slider; const segInput = controls.segments.input;
+                const minSeg = parseInt(segSlider.min); const maxSeg = parseInt(segSlider.max);
+                const clampedLines = Math.max(minSeg, Math.min(lines, maxSeg));
+                segSlider.value = clampedLines; segInput.value = clampedLines;
+                syncControls(controls.segments, 'auto', 'segments');
+             }
+        }
+
+        function toggleSegmentControls(disabled) {
+             controls.segments.slider.disabled = disabled; controls.segments.input.disabled = disabled;
+        }
+
+        function toggleFillColorControls() {
+            const fillType = maurerFillTypeSelect.value;
+            const opacityRow = controls.maurerFillOpacity.slider.closest('.control-row');
+            const solidColorRow = maurerFillColorSolidRow;
+
+            if (fillType === 'solid') {
+                solidColorRow.style.display = 'flex';
+                gradientStartColorRow.style.display = 'none';
+                gradientMiddleColorRow.style.display = 'none';
+                gradientEndColorRow.style.display = 'none';
+                if (opacityRow) opacityRow.style.display = 'flex';
+            } else if (fillType === 'linear-gradient' || fillType === 'radial-gradient') {
+                solidColorRow.style.display = 'flex'; // Start color
+                gradientMiddleColorRow.style.display = 'flex';
+                gradientEndColorRow.style.display = 'flex';
+                if (opacityRow) opacityRow.style.display = 'flex';
+            } else { // 'none'
+                solidColorRow.style.display = 'none';
+                gradientStartColorRow.style.display = 'none';
+                gradientMiddleColorRow.style.display = 'none';
+                gradientEndColorRow.style.display = 'none';
+                if (opacityRow) opacityRow.style.display = 'none';
+            }
+        }
+
+        function toggleLineStyleSpecificControls() {
+            const lineStyle = maurerLineStyleSelect.value;
+            if (lineStyle === 'sine' || lineStyle === 'cosine') {
+                waveSpecificControlsDiv.style.display = 'block';
+                kbSplineSpecificControlsDiv.style.display = 'none';
+                catmullRomSpecificControlsDiv.style.display = 'none';
+            } else if (lineStyle === 'kb-spline') {
+                waveSpecificControlsDiv.style.display = 'none';
+                kbSplineSpecificControlsDiv.style.display = 'block';
+                catmullRomSpecificControlsDiv.style.display = 'none';
+            } else if (lineStyle === 'catmull-rom') {
+                waveSpecificControlsDiv.style.display = 'none';
+                kbSplineSpecificControlsDiv.style.display = 'none';
+                catmullRomSpecificControlsDiv.style.display = 'block';
+            }
+            else { // straight
+                waveSpecificControlsDiv.style.display = 'none';
+                kbSplineSpecificControlsDiv.style.display = 'none';
+                catmullRomSpecificControlsDiv.style.display = 'none';
+            }
+        }
+
+
+        function runCrossfade(timestamp) {
+            if (!isAnimating || isPaused) { cancelAnimationFrame(crossfadeRequestId); crossfadeRequestId = null; crossfadeStartTime = 0; return; }
+            const duration = parseInt(crossfadeDurationInput.value);
+            if (!crossfadeStartTime) { crossfadeStartTime = timestamp; }
+            const elapsed = timestamp - crossfadeStartTime; const progress = Math.min(1, elapsed / duration);
+            maurerCanvas.style.opacity = progress;
+            if (progress < 1) { crossfadeRequestId = requestAnimationFrame(runCrossfade); }
+            else {
+                crossfadeRequestId = null; crossfadeStartTime = 0; maurerCanvas.style.opacity = 1;
+                // handleResize(); // No longer call handleResize from here
+                fadeCanvas.width = maurerCanvas.offsetWidth;
+                fadeCanvas.height = maurerCanvas.offsetHeight;
+                fadeCtx.clearRect(0, 0, fadeCanvas.width, fadeCanvas.height);
+                fadeCtx.drawImage(maurerCanvas, 0, 0);
+                const speed = parseInt(animationSpeedInput.value); const nextDelay = Math.max(10, speed - duration);
+                if (isAnimating && !isPaused) { animationTimeoutId = setTimeout(animationStep, nextDelay); }
+            }
+        }
+
+        function animationStep() {
+             if (!isAnimating || isPaused) { return; }
+             clearTimeout(animationTimeoutId); cancelAnimationFrame(crossfadeRequestId); crossfadeStartTime = 0;
+            const minDegrees = parseInt(minDegreesInput.value); const maxDegrees = parseInt(maxDegreesInput.value); const duration = parseInt(crossfadeDurationInput.value);
+            currentAnimationDegrees++;
+            if (currentAnimationDegrees > maxDegrees) { currentAnimationDegrees = minDegrees; }
+            controls.degrees_between_lines.slider.value = currentAnimationDegrees; controls.degrees_between_lines.input.value = currentAnimationDegrees; controls.degrees_between_lines.display.textContent = currentAnimationDegrees;
+            updateCompletionLinesDisplay(); if (autoSegmentsCheckbox.checked) { updateAutoSegments(); }
+            // handleResize(); // No longer call handleResize from here
+            maurerCanvas.width = maurerCanvas.offsetWidth;
+            maurerCanvas.height = maurerCanvas.offsetHeight;
+            drawFrame(ctx, currentAnimationDegrees);
+            if (duration > 0) { maurerCanvas.style.opacity = 0; crossfadeRequestId = requestAnimationFrame(runCrossfade); }
+            else {
+                 maurerCanvas.style.opacity = 1;
+                 // handleResize(); // No longer call handleResize from here
+                 fadeCanvas.width = maurerCanvas.offsetWidth;
+                 fadeCanvas.height = maurerCanvas.offsetHeight;
+                 fadeCtx.clearRect(0, 0, fadeCanvas.width, fadeCanvas.height); fadeCtx.drawImage(maurerCanvas, 0, 0);
+                 const speed = parseInt(animationSpeedInput.value);
+                 if (isAnimating && !isPaused) { animationTimeoutId = setTimeout(animationStep, speed); }
+            }
+        }
+
+        function startAnimation() {
+            if (isAnimating) return;
+            const minDegrees = parseInt(minDegreesInput.value); const maxDegrees = parseInt(maxDegreesInput.value); const speed = parseInt(animationSpeedInput.value); const duration = parseInt(crossfadeDurationInput.value);
+            if (isNaN(minDegrees) || isNaN(maxDegrees) || isNaN(speed) || isNaN(duration) || minDegrees >= maxDegrees || speed < 10 || duration < 0 || duration > speed) {
+                alert("Please enter valid Min/Max Degrees (Min < Max), Speed (>= 10ms), and Crossfade (0 <= Crossfade <= Speed)."); return;
+            }
+            isAnimating = true; isPaused = false;
+            startButton.disabled = true; stopButton.disabled = false; pauseResumeButton.disabled = false; pauseResumeButton.textContent = 'Pause';
+            Object.values(controls).forEach(controlGroup => {
+                if(controlGroup.slider) controlGroup.slider.disabled = true;
+                if(controlGroup.input) controlGroup.input.disabled = true;
+            });
+            minDegreesInput.disabled = true; maxDegreesInput.disabled = true; animationSpeedInput.disabled = true; crossfadeDurationInput.disabled = true;
+            currentAnimationDegrees = minDegrees -1; if (currentAnimationDegrees < 1) currentAnimationDegrees = maxDegrees;
+            // handleResize(); // No longer call handleResize from here
+            fadeCanvas.width = maurerCanvas.offsetWidth;
+            fadeCanvas.height = maurerCanvas.offsetHeight;
+            drawFrame(fadeCtx, currentAnimationDegrees);
+            currentAnimationDegrees = minDegrees;
+            animationStep();
+        }
+
+        function stopAnimation() {
+            if (!isAnimating && !isPaused) return;
+            isAnimating = false; isPaused = false;
+            clearTimeout(animationTimeoutId); animationTimeoutId = null; cancelAnimationFrame(crossfadeRequestId); crossfadeRequestId = null; crossfadeStartTime = 0;
+            startButton.disabled = false; stopButton.disabled = true; pauseResumeButton.disabled = true; pauseResumeButton.textContent = 'Pause';
+             Object.values(controls).forEach(controlGroup => {
+                if(controlGroup.slider) controlGroup.slider.disabled = false;
+                if(controlGroup.input) controlGroup.input.disabled = false;
+            });
+            minDegreesInput.disabled = false; maxDegreesInput.disabled = false; animationSpeedInput.disabled = false; crossfadeDurationInput.disabled = false;
+            toggleSegmentControls(autoSegmentsCheckbox.checked);
+
+            const finalDegrees = currentAnimationDegrees; controls.degrees_between_lines.slider.value = finalDegrees;
+            syncControls(controls.degrees_between_lines, 'slider', 'degrees_between_lines');
+            staticDraw(); updateCompletionLinesDisplay();
+             if (autoSegmentsCheckbox.checked) { updateAutoSegments(); }
+        }
+
+        function togglePauseResume() {
+             if (!isAnimating) return; isPaused = !isPaused;
+             if (isPaused) { pauseResumeButton.textContent = 'Resume'; clearTimeout(animationTimeoutId); cancelAnimationFrame(crossfadeRequestId); crossfadeStartTime = 0; }
+             else { pauseResumeButton.textContent = 'Pause'; animationStep(); }
+        }
+
+        autoSegmentsCheckbox.addEventListener('change', () => { const isChecked = autoSegmentsCheckbox.checked; toggleSegmentControls(isChecked); if (isChecked) { updateAutoSegments(); } if (!isAnimating) staticDraw(); });
+        showRhodoneaCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        enableSmoothingCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        pixelOffsetCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        maurerLineStyleSelect.addEventListener('change', () => { toggleLineStyleSpecificControls(); if (!isAnimating) staticDraw(); });
+        alternateWaveMirrorCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        applyRotationToMaurerCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        showMaurerPointsCheckbox.addEventListener('change', () => { if (!isAnimating) staticDraw(); });
+        maurerFillTypeSelect.addEventListener('change', () => {
+            toggleFillColorControls();
+            if (!isAnimating) staticDraw();
+        });
+
+
+        for (const key in controls) {
+            const control = controls[key];
+            if (control.slider && control.input) {
+                control.slider.addEventListener('input', () => { if (!isAnimating) { syncControls(control, 'slider', key); staticDraw(); } });
+                control.input.addEventListener('input', () => { if (!isAnimating) { syncControls(control, 'input', key); staticDraw(); } });
+                control.input.addEventListener('change', () => { if (!isAnimating) { syncControls(control, 'input', key); staticDraw(); } });
+                control.input.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !isAnimating) { syncControls(control, 'input', key); staticDraw(); } });
+            } else if (control.slider && control.display) {
+                 control.slider.addEventListener('input', () => { if (!isAnimating) { syncControls(control, 'slider', key); staticDraw(); } });
+            } else if (control.input) {
+                 control.input.addEventListener('input', () => { if (!isAnimating) { staticDraw(); } });
+            }
+        }
+
+        drawButton.addEventListener('click', () => { if (!isAnimating) staticDraw(); });
+        startButton.addEventListener('click', startAnimation);
+        pauseResumeButton.addEventListener('click', togglePauseResume);
+        stopButton.addEventListener('click', stopAnimation);
+
+        let resizeTimeout;
+        function handleResize() {
+            const containerWidth = canvasContainer.offsetWidth;
+            const containerHeight = canvasContainer.offsetHeight;
+            const size = Math.min(containerWidth, containerHeight);
+
+            maurerCanvas.width = size;
+            maurerCanvas.height = size;
+            maurerCanvas.style.width = size + 'px';
+            maurerCanvas.style.height = size + 'px';
+
+            fadeCanvas.width = size;
+            fadeCanvas.height = size;
+            fadeCanvas.style.width = size + 'px';
+            fadeCanvas.style.height = size + 'px';
+
+            ctx.imageSmoothingEnabled = enableSmoothingCheckbox.checked;
+            fadeCtx.imageSmoothingEnabled = enableSmoothingCheckbox.checked;
+
+            if (!isAnimating) {
+                staticDraw();
+            } else if (isPaused) {
+                drawFrame(ctx, currentAnimationDegrees);
+                let prevDegrees = currentAnimationDegrees - 1;
+                if (minDegreesInput && maxDegreesInput) {
+                    const minVal = parseInt(minDegreesInput.value);
+                    const maxVal = parseInt(maxDegreesInput.value);
+                    if (!isNaN(minVal) && !isNaN(maxVal)) {
+                       if (prevDegrees < minVal) { prevDegrees = maxVal; }
+                    }
+                }
+                drawFrame(fadeCtx, prevDegrees);
+            }
+        }
+        window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(handleResize, 150); });
+
+        function setupAndDraw() {
+            for (const key in controls) {
+                if (controls[key] && controls[key].slider) {
+                     syncControls(controls[key], 'slider', key);
+                }
+            }
+            if (autoSegmentsCheckbox) {
+                toggleSegmentControls(autoSegmentsCheckbox.checked);
+                if (autoSegmentsCheckbox.checked) {
+                    updateAutoSegments();
+                }
+            }
+            if (completionLinesDisplay) {
+                updateCompletionLinesDisplay();
+            }
+            if (maurerFillTypeSelect) {
+                toggleFillColorControls();
+            }
+            if (maurerLineStyleSelect) {
+                toggleLineStyleSpecificControls();
+            }
+            handleResize();
+        }
+        window.onload = setupAndDraw;
+
+    </script>
+</body>
+</html>
