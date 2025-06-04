@@ -19,13 +19,24 @@
             padding: 1rem;
             box-sizing: border-box;
         }
+        .top-level-container { /* Wrapper for main content and snapshot strip */
+            display: flex;
+            width: 100%;
+            max-width: calc(1600px + 120px + 1rem); /* Max-width of main + strip width + gap */
+            gap: 1rem;
+        }
+        .content-wrapper { /* For existing main content */
+            flex-grow: 1;
+            max-width: 1600px;
+            display: flex; 
+            flex-direction: column;
+        }
         .main-container {
             display: flex;
             flex-wrap: nowrap; 
             justify-content: flex-start; 
             gap: 1rem; 
             width: 100%;
-            max-width: 1600px; 
             overflow-x: auto; 
         }
         .figure-slot-container { 
@@ -41,7 +52,7 @@
             box-sizing: border-box;
         }
 
-        .overlay-container, .snapshots-container { 
+        .overlay-container { 
             background-color: #374151; 
             border-radius: 0.75rem; 
             padding: 1rem; 
@@ -52,73 +63,99 @@
             width: 100%; 
             margin-top: 1rem; 
         }
-        .snapshots-container h3 {
-            margin-bottom: 1rem;
-        }
-        .snapshot-save-area {
+        
+        /* Snapshot Strip Styles */
+        .snapshot-strip-container {
+            width: 110px; /* Width of the strip */
+            flex-shrink: 0;
+            background-color: #2d3748; /* Tailwind gray-800 */
+            border-radius: 0 0.75rem 0.75rem 0; /* Rounded corners on the right */
+            padding: 0.5rem;
+            box-shadow: 5px 0 15px -3px rgba(0,0,0,0.2); /* Shadow on the right */
             display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 0.5rem;
-            margin-bottom: 1rem;
-            width: 100%;
-            max-width: 400px;
+            max-height: calc(100vh - 2rem); /* Adjust based on body padding */
         }
-        .snapshot-save-area input[type="text"] {
-            flex-grow: 1;
+        .snapshot-strip-container h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .snapshot-save-area-strip {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .snapshot-save-area-strip input[type="text"] {
+            width: 100%;
             background-color: #4b5563;
             color: #e5e7eb;
             border: 1px solid #6b7280;
             border-radius: 0.25rem;
             padding: 0.3rem 0.5rem;
+            font-size: 0.8rem;
         }
-        #savedSnapshotsList {
+        #saveSnapshotStripBtn { 
+             width: 100%;
+        }
+
+        #snapshotImageStrip {
             width: 100%;
-            max-height: 400px; 
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-        }
-        .snapshot-item {
-            background-color: #4b5563; 
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
+            flex-grow: 1;
         }
-        .snapshot-item img {
-            width: 80px;
+        .snapshot-image-item {
+            position: relative; 
+            cursor: pointer;
+        }
+        .snapshot-image-item img {
+            width: 80px; 
             height: 80px;
             object-fit: cover;
             border-radius: 0.25rem;
-            border: 1px solid #6b7280;
+            border: 2px solid #4b5563; 
+            transition: border-color 0.2s;
         }
-        .snapshot-info {
-            flex-grow: 1;
+        .snapshot-image-item img:hover {
+            border-color: #3b82f6; 
         }
-        .snapshot-info .name {
-            font-weight: 600;
-            color: #f3f4f6;
+
+        /* Custom Context Menu */
+        #customContextMenu {
+            position: absolute;
+            background-color: #374151; 
+            border: 1px solid #4b5563; 
+            border-radius: 0.375rem; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            padding: 0.25rem 0;
+            z-index: 4000; 
+            display: none; 
+            min-width: 120px;
         }
-        .snapshot-info .timestamp {
-            font-size: 0.75rem;
-            color: #9ca3af;
+        #customContextMenu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
         }
-        .snapshot-actions button {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-            border-radius: 0.25rem;
+        #customContextMenu li {
+            padding: 0.5rem 0.75rem;
             cursor: pointer;
-            margin-left: 0.5rem;
+            font-size: 0.875rem;
+            color: #d1d5db; 
         }
-        .snapshot-actions button.delete {
-            background-color: #dc2626; 
-        }
-        .snapshot-actions button:hover {
-            opacity: 0.8;
+        #customContextMenu li:hover {
+            background-color: #4b5563; 
+            color: #f3f4f6; 
         }
 
 
@@ -313,103 +350,114 @@
 </head>
 <body>
     <h1>Animated Geometric Patterns</h1>
-    <div class="main-container">
-        <div class="figure-slot-container">
-            <h2>Figure 1</h2>
-            <div class="figure-type-selector">
-                <label for="figure1Type">Type:</label>
-                <select id="figure1Type">
-                    <option value="centeredCircles">Centered Circles</option>
-                    <option value="rhodoneaCurve">Rhodonea Curve</option>
-                    <option value="epitrochoid">Epitrochoid</option> 
-                    <option value="hypotrochoid">Hypotrochoid</option>
-                    <option value="none">None</option>
-                </select>
+    <div class="top-level-container">
+        <div class="snapshot-strip-container">
+            <h3>Snapshots</h3>
+            <div class="snapshot-save-area-strip">
+                <input type="text" id="snapshotNameInput" placeholder="Snapshot Name">
+                <button id="saveSnapshotStripBtn" class="styled-button">Save Current</button>
             </div>
-            <canvas id="figure1Canvas" width="300" height="300"></canvas>
-            <div class="controls" id="figure1Controls">
-                {/* Controls for Figure 1 */}
-            </div>
+            <div id="snapshotImageStrip">
+                </div>
         </div>
+        <div class="content-wrapper">
+            <div class="main-container">
+                <div class="figure-slot-container">
+                    <h2>Figure 1</h2>
+                    <div class="figure-type-selector">
+                        <label for="figure1Type">Type:</label>
+                        <select id="figure1Type">
+                            <option value="centeredCircles">Centered Circles</option>
+                            <option value="rhodoneaCurve">Rhodonea Curve</option>
+                            <option value="epitrochoid">Epitrochoid</option> 
+                            <option value="hypotrochoid">Hypotrochoid</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                    <canvas id="figure1Canvas" width="300" height="300"></canvas>
+                    <div class="controls" id="figure1Controls">
+                        {/* Controls for Figure 1 */}
+                    </div>
+                </div>
 
-        <div class="figure-slot-container">
-            <h2>Figure 2</h2>
-            <div class="figure-type-selector">
-                <label for="figure2Type">Type:</label>
-                <select id="figure2Type">
-                    <option value="centeredCircles">Centered Circles</option>
-                    <option value="rhodoneaCurve" selected>Rhodonea Curve</option>
-                    <option value="epitrochoid">Epitrochoid</option>
-                    <option value="hypotrochoid">Hypotrochoid</option>
-                    <option value="none">None</option>
-                </select>
-            </div>
-            <canvas id="figure2Canvas" width="300" height="300"></canvas>
-            <div class="controls" id="figure2Controls">
-                {/* Controls for Figure 2 */}
-            </div>
-        </div>
+                <div class="figure-slot-container">
+                    <h2>Figure 2</h2>
+                    <div class="figure-type-selector">
+                        <label for="figure2Type">Type:</label>
+                        <select id="figure2Type">
+                            <option value="centeredCircles">Centered Circles</option>
+                            <option value="rhodoneaCurve" selected>Rhodonea Curve</option>
+                            <option value="epitrochoid">Epitrochoid</option>
+                            <option value="hypotrochoid">Hypotrochoid</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                    <canvas id="figure2Canvas" width="300" height="300"></canvas>
+                    <div class="controls" id="figure2Controls">
+                        {/* Controls for Figure 2 */}
+                    </div>
+                </div>
 
-        <div class="figure-slot-container">
-            <h2>Figure 3</h2>
-            <div class="figure-type-selector">
-                <label for="figure3Type">Type:</label>
-                <select id="figure3Type">
-                    <option value="centeredCircles">Centered Circles</option>
-                    <option value="rhodoneaCurve">Rhodonea Curve</option>
-                    <option value="epitrochoid">Epitrochoid</option>
-                    <option value="hypotrochoid">Hypotrochoid</option>
-                    <option value="none" selected>None</option>
-                </select>
+                <div class="figure-slot-container">
+                    <h2>Figure 3</h2>
+                    <div class="figure-type-selector">
+                        <label for="figure3Type">Type:</label>
+                        <select id="figure3Type">
+                            <option value="centeredCircles">Centered Circles</option>
+                            <option value="rhodoneaCurve">Rhodonea Curve</option>
+                            <option value="epitrochoid">Epitrochoid</option>
+                            <option value="hypotrochoid">Hypotrochoid</option>
+                            <option value="none" selected>None</option>
+                        </select>
+                    </div>
+                    <canvas id="figure3Canvas" width="300" height="300"></canvas>
+                    <div class="controls" id="figure3Controls">
+                        {/* Controls for Figure 3 */}
+                    </div>
+                </div>
             </div>
-            <canvas id="figure3Canvas" width="300" height="300"></canvas>
-            <div class="controls" id="figure3Controls">
-                {/* Controls for Figure 3 */}
-            </div>
-        </div>
-    </div>
 
-    <div class="overlay-container">
-        <h3>Overlay</h3>
-        <canvas id="combinedCanvas" width="600" height="600"></canvas>
-        <div class="controls" id="combinedControls">
-             <label for="mainBlendingMode">Main Blending Mode:</label>
-             <select id="mainBlendingMode">
-                <option value="source-over">Normal</option>
-                <option value="lighter">Lighter (Additive)</option>
-                <option value="multiply">Multiply</option>
-                <option value="screen">Screen</option>
-                <option value="overlay">Overlay</option>
-                <option value="darken">Darken</option>
-                <option value="lighten">Lighten</option>
-                <option value="color-dodge">Color Dodge</option>
-                <option value="color-burn">Color Burn</option>
-                <option value="hard-light">Hard Light</option>
-                <option value="soft-light">Soft Light</option>
-                <option value="difference">Difference</option>
-                <option value="exclusion">Exclusion</option>
-                <option value="hue">Hue</option>
-                <option value="saturation">Saturation</option>
-                <option value="color">Color</option>
-                <option value="luminosity">Luminosity</option>
-             </select>
-        </div>
-    </div>
-
-    <div class="snapshots-container">
-        <h3>Snapshots</h3>
-        <div class="snapshot-save-area">
-            <input type="text" id="snapshotName" placeholder="Snapshot Name (optional)">
-            <button id="saveSnapshotBtn" class="styled-button">Save Snapshot</button>
-        </div>
-        <div id="savedSnapshotsList">
+            <div class="overlay-container">
+                <h3>Overlay</h3>
+                <canvas id="combinedCanvas" width="600" height="600"></canvas>
+                <div class="controls" id="combinedControls">
+                     <label for="mainBlendingMode">Main Blending Mode:</label>
+                     <select id="mainBlendingMode">
+                        <option value="source-over">Normal</option>
+                        <option value="lighter">Lighter (Additive)</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="darken">Darken</option>
+                        <option value="lighten">Lighten</option>
+                        <option value="color-dodge">Color Dodge</option>
+                        <option value="color-burn">Color Burn</option>
+                        <option value="hard-light">Hard Light</option>
+                        <option value="soft-light">Soft Light</option>
+                        <option value="difference">Difference</option>
+                        <option value="exclusion">Exclusion</option>
+                        <option value="hue">Hue</option>
+                        <option value="saturation">Saturation</option>
+                        <option value="color">Color</option>
+                        <option value="luminosity">Luminosity</option>
+                     </select>
+                </div>
             </div>
+        </div>
     </div>
 
     <div id="gradientSidebar">
         <h4>Choose Preset Gradient</h4>
         <canvas id="gradientsCanvas"></canvas>
         <button id="closeGradientSidebar">Close</button>
+    </div>
+
+    <div id="customContextMenu">
+        <ul>
+            <li id="ctxMenuLoad">Load</li>
+            <li id="ctxMenuRename">Rename</li>
+            <li id="ctxMenuDelete">Delete</li>
+        </ul>
     </div>
 
     <script>
@@ -499,8 +547,10 @@
         let gradientsCtxElem;
         let closeGradientSidebarButtonElem;
         let snapshotNameInput;
-        let saveSnapshotBtn;
-        let savedSnapshotsListDiv;
+        let saveSnapshotStripBtn; 
+        let snapshotImageStripDiv; 
+        let customContextMenuElem; 
+        let currentContextMenuSnapshotId = null; 
 
 
         let lastTimestamp = 0;
@@ -883,9 +933,11 @@
             params.reverseRotation = document.getElementById(`${prefix}reverseRotation`).checked; 
             params.rotationSpeed = parseFloat(document.getElementById(`${prefix}rotationSpeed`).value);
             
-            if (params.type !== 'epitrochoid' && params.type !== 'hypotrochoid') {
-                params.showCenterCircle = document.getElementById(`${prefix}toggleCenterCircle`).checked;
-                params.centerRadiusPercent = parseInt(document.getElementById(`${prefix}centerRadiusPercent`).value);
+            if (params.type !== 'epitrochoid' && params.type !== 'hypotrochoid') { // CenteredCircles and Rhodonea can have center circle
+                if(document.getElementById(`${prefix}toggleCenterCircle`)) { // Check if element exists
+                    params.showCenterCircle = document.getElementById(`${prefix}toggleCenterCircle`).checked;
+                    params.centerRadiusPercent = parseInt(document.getElementById(`${prefix}centerRadiusPercent`).value);
+                }
             }
 
             params.baseSizePercent = parseInt(document.getElementById(`${prefix}baseSizePercent`).value);
@@ -893,13 +945,15 @@
             params.sizeAnimationSpeed = parseFloat(document.getElementById(`${prefix}sizeAnimationSpeed`).value);
 
             if (params.type === 'centeredCircles' || params.type === 'rhodoneaCurve' || params.type === 'epitrochoid' || params.type === 'hypotrochoid') {
-                params.fillLoops = document.getElementById(`${prefix}fillLoops`).checked;
-                params.fillType = document.getElementById(`${prefix}fillType`).value;
-                params.fillColor1 = document.getElementById(`${prefix}fillColor1`).value;
-                params.fillColor2 = document.getElementById(`${prefix}fillColor2`).value;
-                params.fillOpacity = parseFloat(document.getElementById(`${prefix}fillOpacity`).value);
-                const presetSelect = document.getElementById(`${prefix}presetGradient`); 
-                if (presetSelect) params.presetGradient = presetSelect.value;
+                if(document.getElementById(`${prefix}fillLoops`)){ // Check if fill controls exist
+                    params.fillLoops = document.getElementById(`${prefix}fillLoops`).checked;
+                    params.fillType = document.getElementById(`${prefix}fillType`).value;
+                    params.fillColor1 = document.getElementById(`${prefix}fillColor1`).value;
+                    params.fillColor2 = document.getElementById(`${prefix}fillColor2`).value;
+                    params.fillOpacity = parseFloat(document.getElementById(`${prefix}fillOpacity`).value);
+                    const presetSelect = document.getElementById(`${prefix}presetGradient`); 
+                    if (presetSelect) params.presetGradient = presetSelect.value;
+                }
 
                 if (params.type === 'centeredCircles') {
                     params.numOuterCircles = parseInt(document.getElementById(`${prefix}numOuterCircles`).value);
@@ -1010,9 +1064,11 @@
                 if (params.numOuterCircles > 0) {
                     figureEffectiveRadius = 2 * currentOuterRadius;
                 } else if (params.showCenterCircle) {
-                    const figureRadius = 2 * currentOuterRadius; 
+                    const tempOuterRadiusForCalc = (params.baseSizePercent / 100) * (canvasWidth / 4); 
+                    const figureRadius = 2 * tempOuterRadiusForCalc; 
                     figureEffectiveRadius = (params.centerRadiusPercent / 100) * figureRadius;
                 }
+
 
                 if (figureEffectiveRadius > 0) {
                     if (params.fillType === 'solid') {
@@ -1411,9 +1467,10 @@
             gradientsCanvasElem = document.getElementById('gradientsCanvas');
             gradientsCtxElem = gradientsCanvasElem.getContext('2d');
             closeGradientSidebarButtonElem = document.getElementById('closeGradientSidebar');
-            snapshotNameInput = document.getElementById('snapshotName');
-            saveSnapshotBtn = document.getElementById('saveSnapshotBtn');
-            savedSnapshotsListDiv = document.getElementById('savedSnapshotsList');
+            snapshotNameInput = document.getElementById('snapshotNameInput'); 
+            saveSnapshotStripBtn = document.getElementById('saveSnapshotStripBtn'); 
+            snapshotImageStripDiv = document.getElementById('snapshotImageStrip'); 
+            customContextMenuElem = document.getElementById('customContextMenu');
 
 
             overlayParams.mainBlendingMode = mainBlendingModeInputElem.value;
@@ -1453,8 +1510,20 @@
                 }
             });
 
-            saveSnapshotBtn.addEventListener('click', saveSnapshot);
+            saveSnapshotStripBtn.addEventListener('click', saveSnapshot);
             renderSavedSnapshots();
+
+            // Hide custom context menu on click outside
+            document.addEventListener('click', (event) => {
+                if (customContextMenuElem.style.display === 'block' && !customContextMenuElem.contains(event.target)) {
+                    customContextMenuElem.style.display = 'none';
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    customContextMenuElem.style.display = 'none';
+                }
+            });
 
 
             for (let i = 0; i < 3; i++) {
@@ -1527,23 +1596,23 @@
             thumbnailCanvas.height = 80;
             const thumbCtx = thumbnailCanvas.getContext('2d');
             thumbCtx.drawImage(combinedCanvas, 0, 0, 80, 80);
-            const thumbnailDataUrl = thumbnailCanvas.toDataURL('image/jpeg', 0.5); // Lower quality for smaller size
+            const thumbnailDataUrl = thumbnailCanvas.toDataURL('image/jpeg', 0.5); 
 
             const snapshot = {
                 id: Date.now(),
                 name: name,
                 timestamp: new Date().toLocaleString(),
-                figureParams: JSON.parse(JSON.stringify(figureParams)), // Deep copy
-                overlayParams: JSON.parse(JSON.stringify(overlayParams)), // Deep copy
+                figureParams: JSON.parse(JSON.stringify(figureParams)), 
+                overlayParams: JSON.parse(JSON.stringify(overlayParams)), 
                 thumbnail: thumbnailDataUrl
             };
 
             let snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
-            snapshots.unshift(snapshot); // Add to the beginning
+            snapshots.unshift(snapshot); 
             try {
                 localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
                 renderSavedSnapshots();
-                snapshotNameInput.value = ''; // Clear input
+                snapshotNameInput.value = ''; 
             } catch (e) {
                 console.error("Error saving to localStorage:", e);
                 alert("Could not save snapshot. Storage might be full.");
@@ -1551,106 +1620,151 @@
         }
 
         function loadSnapshot(snapshotId) {
+            console.log(`Attempting to load snapshot ID: ${snapshotId}`);
             const snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
-            const snapshot = snapshots.find(s => s.id === snapshotId);
+            const loadedSnapshotData = snapshots.find(s => s.id === snapshotId);
 
-            if (snapshot) {
-                // Restore figureParams
-                for (let i = 0; i < snapshot.figureParams.length; i++) {
-                    if (snapshot.figureParams[i]) {
-                        figureParams[i] = JSON.parse(JSON.stringify(snapshot.figureParams[i])); // Deep copy
-                        // Repopulate controls for this figure
-                        const typeSelector = document.getElementById(`figure${i+1}Type`);
-                        if (typeSelector) typeSelector.value = figureParams[i].type;
-                        populateControls(i, figureParams[i].type);
+            if (loadedSnapshotData) {
+                console.log('Snapshot data found:', loadedSnapshotData);
+                
+                const loadedFigParams = JSON.parse(JSON.stringify(loadedSnapshotData.figureParams));
+                for (let i = 0; i < loadedFigParams.length; i++) {
+                    if (loadedFigParams[i]) {
+                        figureParams[i] = loadedFigParams[i]; // Update the global array element
                     }
                 }
+                console.log('Global figureParams restored:', figureParams);
+
+                overlayParams = JSON.parse(JSON.stringify(loadedSnapshotData.overlayParams));
+                console.log('Global overlayParams restored:', overlayParams);
                 
-                // Restore overlayParams
-                overlayParams = JSON.parse(JSON.stringify(snapshot.overlayParams));
                 if (mainBlendingModeInputElem) {
                     mainBlendingModeInputElem.value = overlayParams.mainBlendingMode;
                 }
                 
-                // Ensure all UI elements reflect the loaded state
-                // This might require re-calling populateControls for each figure after params are set
                 for(let i=0; i<3; i++) {
-                    if(figureParams[i] && figureParams[i].type !== 'none') {
-                        populateControls(i, figureParams[i].type);
-                    } else {
-                        // If a figure was 'none', ensure its controls are cleared
-                        const controlsDiv = document.getElementById(`figure${i + 1}Controls`);
-                        if(controlsDiv) controlsDiv.innerHTML = '';
+                    console.log(`Restoring UI for Figure ${i+1}`);
+                    const typeSelector = document.getElementById(`figure${i+1}Type`);
+                    if (typeSelector) {
+                        typeSelector.value = figureParams[i].type; 
+                        console.log(`Figure ${i+1} type selector value set to: ${figureParams[i].type}`);
                     }
+                    populateControls(i, figureParams[i].type); 
+                    // updateFigureParams(i); // This is called implicitly by populateControls via event listeners if needed, or directly if not.
+                                           // For loading, it's better to rely on populateControls using the already updated figureParams[i]
                 }
-
-
+                console.log('Snapshot load and UI update sequence complete.');
             } else {
                 console.error("Snapshot not found:", snapshotId);
             }
         }
 
-        function deleteSnapshot(snapshotId) {
+        function renameSnapshot(snapshotId) {
+            console.log("Rename function called for ID:", snapshotId); 
             let snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
-            snapshots = snapshots.filter(s => s.id !== snapshotId);
-            localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
-            renderSavedSnapshots();
+            const snapshotIndex = snapshots.findIndex(s => s.id === snapshotId);
+            if (snapshotIndex === -1) {
+                console.error("Snapshot to rename not found:", snapshotId);
+                return;
+            }
+            
+            const newName = prompt("Enter new name for the snapshot:", snapshots[snapshotIndex].name);
+            
+            if (newName !== null) { // User clicked OK
+                if (newName.trim() !== "") {
+                    snapshots[snapshotIndex].name = newName.trim();
+                    localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
+                    renderSavedSnapshots();
+                    console.log("Snapshot renamed and list updated.");
+                } else {
+                     console.log("Rename not performed: name was empty.");
+                }
+            } else {
+                 console.log("Rename cancelled by user (prompt returned null).");
+            }
+        }
+
+        function deleteSnapshot(snapshotId) {
+            console.log("Delete function called for ID:", snapshotId); 
+            let snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
+            const snapshotToDelete = snapshots.find(s => s.id === snapshotId);
+            if (!snapshotToDelete) {
+                 console.error("Snapshot to delete not found:", snapshotId);
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete snapshot "${snapshotToDelete.name}"?`)) {
+                console.log("Deletion confirmed for snapshot:", snapshotToDelete.name);
+                snapshots = snapshots.filter(s => s.id !== snapshotId);
+                localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
+                renderSavedSnapshots();
+            } else {
+                console.log("Deletion cancelled by user for snapshot:", snapshotToDelete.name);
+            }
         }
 
         function renderSavedSnapshots() {
-            savedSnapshotsListDiv.innerHTML = '';
+            snapshotImageStripDiv.innerHTML = '';
             const snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
 
             if (snapshots.length === 0) {
-                savedSnapshotsListDiv.innerHTML = '<p class="text-gray-400 text-sm">No snapshots saved yet.</p>';
+                const p = document.createElement('p');
+                p.className = 'text-gray-400 text-sm text-center w-full';
+                p.textContent = 'No snapshots yet.';
+                snapshotImageStripDiv.appendChild(p);
                 return;
             }
 
             snapshots.forEach(snapshot => {
-                const item = document.createElement('div');
-                item.className = 'snapshot-item';
-
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'snapshot-image-item';
+                
                 const img = document.createElement('img');
                 img.src = snapshot.thumbnail;
                 img.alt = snapshot.name;
-                item.appendChild(img);
-
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'snapshot-info';
                 
-                const nameEl = document.createElement('div');
-                nameEl.className = 'name';
-                nameEl.textContent = snapshot.name;
-                infoDiv.appendChild(nameEl);
+                itemDiv.appendChild(img);
 
-                const timestampEl = document.createElement('div');
-                timestampEl.className = 'timestamp';
-                timestampEl.textContent = snapshot.timestamp;
-                infoDiv.appendChild(timestampEl);
-                item.appendChild(infoDiv);
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'snapshot-actions';
-
-                const loadBtn = document.createElement('button');
-                loadBtn.textContent = 'Load';
-                loadBtn.onclick = () => loadSnapshot(snapshot.id);
-                actionsDiv.appendChild(loadBtn);
-
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.className = 'delete';
-                deleteBtn.onclick = () => {
-                    if (confirm(`Are you sure you want to delete snapshot "${snapshot.name}"?`)) {
-                        deleteSnapshot(snapshot.id);
-                    }
-                };
-                actionsDiv.appendChild(deleteBtn);
-                item.appendChild(actionsDiv);
-
-                savedSnapshotsListDiv.appendChild(item);
+                itemDiv.addEventListener('dblclick', () => {
+                    console.log(`Double-clicked snapshot ID: ${snapshot.id}, Name: ${snapshot.name}`);
+                    loadSnapshot(snapshot.id);
+                });
+                itemDiv.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    currentContextMenuSnapshotId = snapshot.id;
+                    customContextMenuElem.style.top = `${e.pageY}px`; 
+                    customContextMenuElem.style.left = `${e.pageX}px`; 
+                    customContextMenuElem.style.display = 'block';
+                });
+                snapshotImageStripDiv.appendChild(itemDiv);
             });
         }
+
+        // Context Menu Event Listeners
+        document.getElementById('ctxMenuLoad').addEventListener('click', () => {
+            const idToLoad = currentContextMenuSnapshotId; 
+            customContextMenuElem.style.display = 'none'; 
+            if (idToLoad) {
+                console.log(`Context menu: Loading snapshot ID: ${idToLoad}`);
+                loadSnapshot(idToLoad);
+            }
+        });
+        document.getElementById('ctxMenuRename').addEventListener('click', () => {
+            const idToRename = currentContextMenuSnapshotId;
+            customContextMenuElem.style.display = 'none';
+            if (idToRename) {
+                console.log(`Context menu: Renaming snapshot ID: ${idToRename}`);
+                renameSnapshot(idToRename);
+            }
+        });
+        document.getElementById('ctxMenuDelete').addEventListener('click', () => {
+            const idToDelete = currentContextMenuSnapshotId;
+            customContextMenuElem.style.display = 'none';
+            if (idToDelete) {
+                console.log(`Context menu: Deleting snapshot ID: ${idToDelete}`);
+                deleteSnapshot(idToDelete);
+            }
+        });
 
 
     </script>
