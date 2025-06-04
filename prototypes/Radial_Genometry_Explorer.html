@@ -259,7 +259,7 @@
         .controls input[type="checkbox"] {
              accent-color: #3b82f6; 
         }
-        .controls h4 { 
+        .controls .accordion-header { /* Modified for accordion trigger */
             grid-column: span 2;
             font-size: 0.9rem;
             font-weight: 600;
@@ -268,7 +268,43 @@
             margin-bottom: 0.2rem;
             border-bottom: 1px solid #4b5563;
             padding-bottom: 0.1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            position: relative; /* For arrow positioning */
+            padding-left: 1.7em; /* Space for arrow */
+            user-select: none; /* Prevent text selection on click */
         }
+        .controls .accordion-header::before {
+            content: '►'; /* Collapsed state arrow */
+            position: absolute;
+            left: 0.5em;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.2s ease-in-out;
+            font-size: 0.8em;
+        }
+        .controls .accordion-header.active::before {
+            content: '▼'; /* Expanded state arrow */
+        }
+        .controls .accordion-header:hover {
+             background-color: #4b5563; /* Tailwind gray-600 for hover */
+        }
+
+        .accordion-content {
+            display: none; /* Initially hidden */
+            grid-column: span 2; /* Span across both columns of the parent .controls grid */
+            /* The grid properties for children are now set directly on this panel */
+            grid-template-columns: auto 1fr; 
+            gap: 0.4rem 0.8rem; 
+            align-items: center; 
+            width: 100%;
+            padding-top: 0.5rem; 
+        }
+        .accordion-content.active {
+            display: grid; /* Show with grid layout */
+        }
+
+
         .slider-value-wrapper {
             position: relative;
             width: 100%; 
@@ -692,9 +728,12 @@
             return button;
         }
 
-        function createSubheading(text) {
+        function createSubheading(text, isAccordionHeader = false) { // Added isAccordionHeader flag
             const h4 = document.createElement('h4');
             h4.textContent = text;
+            if (isAccordionHeader) {
+                h4.classList.add('accordion-header');
+            }
             return h4;
         }
         
@@ -727,51 +766,81 @@
 
             if (figureType === 'none' || !params) return; 
 
+            // Helper function to create an accordion section
+            function createAccordionSection(title, controlsArray, isInitiallyOpen = false) {
+                const header = createSubheading(title, true); // Add class for accordion header
+                const panel = document.createElement('div');
+                panel.className = 'accordion-content';
+                if (isInitiallyOpen) {
+                    header.classList.add('active');
+                    panel.classList.add('active');
+                }
+
+                controlsArray.forEach(controlWrapper => {
+                    if (controlWrapper.label && controlWrapper.id) {
+                         panel.appendChild(createLabel(controlWrapper.id, controlWrapper.label));
+                         panel.appendChild(controlWrapper.element);
+                    } else {
+                        if (controlWrapper.element.classList.contains('checkbox-container') || controlWrapper.element.tagName === 'BUTTON' || controlWrapper.element.id.includes('choosePresetContainer')) {
+                             controlWrapper.element.style.gridColumn = 'span 2';
+                        }
+                        panel.appendChild(controlWrapper.element);
+                    }
+                });
+
+                header.addEventListener('click', () => {
+                    header.classList.toggle('active'); 
+                    panel.classList.toggle('active'); 
+                    
+                    if (panel.classList.contains('active')) {
+                        panel.querySelectorAll('input[type="range"]').forEach(slider => {
+                            updateSliderOutputPosition(slider);
+                        });
+                    }
+                });
+                controlsDiv.appendChild(header);
+                controlsDiv.appendChild(panel);
+            }
+            
             // Blending Mode (Top-level general setting for the figure)
             controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-blendingMode`, 'Blending Mode:'));
             controlsDiv.appendChild(createSelect(`figure${figureIndex+1}-blendingMode`, blendingModeOptions, params.blendingMode));
 
             // --- Shape Section ---
-            controlsDiv.appendChild(createSubheading('Shape')); // RENAMED
+            const shapeControlsArray = [];
             if (figureType === 'centeredCircles' || figureType === 'rhodoneaCurve') {
-                 controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-toggleCenterCircle`, 'Show Center Circle', params.showCenterCircle));
-                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-centerRadiusPercent`, 'Center Circle Size:'));
-                 controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1));
+                shapeControlsArray.push({ element: createCheckbox(`figure${figureIndex+1}-toggleCenterCircle`, 'Show Center Circle', params.showCenterCircle) });
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-centerRadiusPercent`, id: `figure${figureIndex+1}-centerRadiusPercent`, element: createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1) });
             }
             if (figureType === 'centeredCircles') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-numOuterCircles`, 'Outer Circles:'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1));
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-numOuterCircles`, id: `figure${figureIndex+1}-numOuterCircles`, element: createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1) });
             } else if (figureType === 'rhodoneaCurve') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-n`, 'n (numerator):'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d`, 'd (denominator):'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1));
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-n`, id: `figure${figureIndex+1}-n`, element: createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1) });
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-d`, id: `figure${figureIndex+1}-d`, element: createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1) });
             } else if (figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-R`, 'R (Fixed Circle):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-r`, 'r (Rolling Circle):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d_param`, 'd (Distance):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1));
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-R`, id: `figure${figureIndex+1}-R`, element: createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1) });
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-r`, id: `figure${figureIndex+1}-r`, element: createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1) });
+                shapeControlsArray.push({ label: `figure${figureIndex+1}-d_param`, id: `figure${figureIndex+1}-d_param`, element: createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1) });
             }
+            if (shapeControlsArray.length > 0) createAccordionSection('Shape', shapeControlsArray);
+
 
             // --- Line Section ---
-            controlsDiv.appendChild(createSubheading('Line')); // RENAMED
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-color`, 'Color:')); // MOVED HERE
-            controlsDiv.appendChild(createColorInput(`figure${figureIndex+1}-color`, params.color)); // MOVED HERE
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseLineWidth`, 'Base:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate', params.animateLineWidth));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 'Speed:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01));
+            const lineControlsArray = [
+                { label: `figure${figureIndex+1}-color`, id: `figure${figureIndex+1}-color`, element: createColorInput(`figure${figureIndex+1}-color`, params.color) },
+                { label: `figure${figureIndex+1}-baseLineWidth`, id: `figure${figureIndex+1}-baseLineWidth`, element: createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1) },
+                { element: createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate', params.animateLineWidth) },
+                { label: `figure${figureIndex+1}-lineWidthAnimationSpeed`, id: `figure${figureIndex+1}-lineWidthAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01) }
+            ];
+            createAccordionSection('Line', lineControlsArray);
             
             // --- Fill Section ---
             if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
-                controlsDiv.appendChild(createSubheading('Fill')); // RENAMED
-                controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-fillType`, 'Fill Type:'));
-                controlsDiv.appendChild(createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType));
-                
+                const fillControlsArray = [
+                    { element: createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops) },
+                    { label: `figure${figureIndex+1}-fillType`, id: `figure${figureIndex+1}-fillType`, element: createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType) }
+                ];
+
                 const choosePresetButtonContainer = document.createElement('div');
                 choosePresetButtonContainer.id = `figure${figureIndex + 1}-choosePresetContainer`;
                 choosePresetButtonContainer.style.gridColumn = 'span 2'; 
@@ -782,51 +851,40 @@
                     gradientSidebarElem.classList.add('visible');
                 });
                 choosePresetButtonContainer.appendChild(choosePresetButton);
-                controlsDiv.appendChild(choosePresetButtonContainer); 
+                fillControlsArray.push({element: choosePresetButtonContainer});
                 
                 const presetSelect = createSelect(`figure${figureIndex+1}-presetGradient`, presetGradients.map(g => ({ value: g.id, text: g.name })), params.presetGradient);
-                presetSelect.style.display = 'none'; // Hidden, used internally
-                controlsDiv.appendChild(presetSelect);
+                presetSelect.style.display = 'none'; 
+                fillControlsArray.push({element: presetSelect}); 
 
-                const fillColor1Label = createLabel(`figure${figureIndex+1}-fillColor1`, 'Fill Color 1:');
-                const fillColor1Input = createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1);
-                controlsDiv.appendChild(fillColor1Label);
-                controlsDiv.appendChild(fillColor1Input);
-
-                const fillColor2Label = createLabel(`figure${figureIndex+1}-fillColor2`, 'Fill Color 2:');
-                const fillColor2Input = createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2);
-                controlsDiv.appendChild(fillColor2Label);
-                controlsDiv.appendChild(fillColor2Input);
+                fillControlsArray.push({ label: `figure${figureIndex+1}-fillColor1`, id: `figure${figureIndex+1}-fillColor1`, element: createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1) });
+                fillControlsArray.push({ label: `figure${figureIndex+1}-fillColor2`, id: `figure${figureIndex+1}-fillColor2`, element: createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2) });
+                fillControlsArray.push({ label: `figure${figureIndex+1}-fillOpacity`, id: `figure${figureIndex+1}-fillOpacity`, element: createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01) });
                 
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-fillOpacity`, 'Fill Opacity:'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01));
+                createAccordionSection('Fill', fillControlsArray);
+                updateFigureFillControlsVisibility(figureIndex); 
             }
             
             // --- Size Section ---
-            controlsDiv.appendChild(createSubheading('Size'));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseSizePercent`, 'Base Size:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-sizeAnimationSpeed`, 'Speed:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01));
+            const sizeControlsArray = [
+                { label: `figure${figureIndex+1}-baseSizePercent`, id: `figure${figureIndex+1}-baseSizePercent`, element: createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1) },
+                { element: createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize) },
+                { label: `figure${figureIndex+1}-sizeAnimationSpeed`, id: `figure${figureIndex+1}-sizeAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01) }
+            ];
+            createAccordionSection('Size', sizeControlsArray);
 
             // --- Rotation Section ---
-            controlsDiv.appendChild(createSubheading('Rotation'));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseRotation`, 'Degrees:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateRotation`, 'Animate', params.animateRotation));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-reverseRotation`, 'Reverse', params.reverseRotation)); 
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-rotationSpeed`, 'Speed:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01));
-            
-            if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
-                updateFigureFillControlsVisibility(figureIndex);
-            }
+            const rotationControlsArray = [
+                { label: `figure${figureIndex+1}-baseRotation`, id: `figure${figureIndex+1}-baseRotation`, element: createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1) },
+                { element: createCheckbox(`figure${figureIndex+1}-animateRotation`, 'Animate', params.animateRotation) },
+                { element: createCheckbox(`figure${figureIndex+1}-reverseRotation`, 'Reverse', params.reverseRotation) },
+                { label: `figure${figureIndex+1}-rotationSpeed`, id: `figure${figureIndex+1}-rotationSpeed`, element: createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01) }
+            ];
+            createAccordionSection('Rotation', rotationControlsArray);
             
             addEventListenersToControls(figureIndex);
-            // Ensure slider outputs are updated after DOM elements are created and values set
             setTimeout(() => { 
-                controlsDiv.querySelectorAll('input[type="range"]').forEach(updateSliderOutputPosition);
+                controlsDiv.querySelectorAll('.accordion-content.active input[type="range"]').forEach(updateSliderOutputPosition);
             }, 0);
         }
 
