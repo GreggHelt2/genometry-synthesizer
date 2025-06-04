@@ -781,8 +781,12 @@
                          panel.appendChild(createLabel(controlWrapper.id, controlWrapper.label));
                          panel.appendChild(controlWrapper.element);
                     } else {
-                        if (controlWrapper.element.classList.contains('checkbox-container') || controlWrapper.element.tagName === 'BUTTON' || controlWrapper.element.id.includes('choosePresetContainer')) {
-                             controlWrapper.element.style.gridColumn = 'span 2';
+                        // For elements without a separate label (like checkboxes or full-width buttons)
+                        // Ensure they span both columns if they are direct children of the panel
+                        if (controlWrapper.element.classList.contains('checkbox-container') || 
+                            controlWrapper.element.tagName === 'BUTTON' || 
+                            (controlWrapper.element.id && controlWrapper.element.id.includes('choosePresetContainer'))) {
+                             // These elements are already designed to span or are handled by their own structure
                         }
                         panel.appendChild(controlWrapper.element);
                     }
@@ -810,27 +814,27 @@
             const shapeControlsArray = [];
             if (figureType === 'centeredCircles' || figureType === 'rhodoneaCurve') {
                 shapeControlsArray.push({ element: createCheckbox(`figure${figureIndex+1}-toggleCenterCircle`, 'Show Center Circle', params.showCenterCircle) });
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-centerRadiusPercent`, id: `figure${figureIndex+1}-centerRadiusPercent`, element: createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1) });
+                shapeControlsArray.push({ label: 'Center Circle Size:', id: `figure${figureIndex+1}-centerRadiusPercent`, element: createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1) });
             }
             if (figureType === 'centeredCircles') {
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-numOuterCircles`, id: `figure${figureIndex+1}-numOuterCircles`, element: createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1) });
+                shapeControlsArray.push({ label: 'Outer Circles:', id: `figure${figureIndex+1}-numOuterCircles`, element: createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1) });
             } else if (figureType === 'rhodoneaCurve') {
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-n`, id: `figure${figureIndex+1}-n`, element: createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1) });
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-d`, id: `figure${figureIndex+1}-d`, element: createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1) });
+                shapeControlsArray.push({ label: 'n (numerator):', id: `figure${figureIndex+1}-n`, element: createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1) });
+                shapeControlsArray.push({ label: 'd (denominator):', id: `figure${figureIndex+1}-d`, element: createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1) });
             } else if (figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-R`, id: `figure${figureIndex+1}-R`, element: createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1) });
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-r`, id: `figure${figureIndex+1}-r`, element: createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1) });
-                shapeControlsArray.push({ label: `figure${figureIndex+1}-d_param`, id: `figure${figureIndex+1}-d_param`, element: createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1) });
+                shapeControlsArray.push({ label: 'R (Fixed Circle):', id: `figure${figureIndex+1}-R`, element: createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1) });
+                shapeControlsArray.push({ label: 'r (Rolling Circle):', id: `figure${figureIndex+1}-r`, element: createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1) });
+                shapeControlsArray.push({ label: 'd (Distance):', id: `figure${figureIndex+1}-d_param`, element: createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1) });
             }
-            if (shapeControlsArray.length > 0) createAccordionSection('Shape', shapeControlsArray);
+            if (shapeControlsArray.length > 0) createAccordionSection('Shape', shapeControlsArray, true); // Open Shape by default
 
 
             // --- Line Section ---
             const lineControlsArray = [
-                { label: `figure${figureIndex+1}-color`, id: `figure${figureIndex+1}-color`, element: createColorInput(`figure${figureIndex+1}-color`, params.color) },
-                { label: `figure${figureIndex+1}-baseLineWidth`, id: `figure${figureIndex+1}-baseLineWidth`, element: createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1) },
+                { label: 'Color:', id: `figure${figureIndex+1}-color`, element: createColorInput(`figure${figureIndex+1}-color`, params.color) },
+                { label: 'Base:', id: `figure${figureIndex+1}-baseLineWidth`, element: createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1) },
                 { element: createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate', params.animateLineWidth) },
-                { label: `figure${figureIndex+1}-lineWidthAnimationSpeed`, id: `figure${figureIndex+1}-lineWidthAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01) }
+                { label: 'Speed:', id: `figure${figureIndex+1}-lineWidthAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01) }
             ];
             createAccordionSection('Line', lineControlsArray);
             
@@ -838,7 +842,7 @@
             if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
                 const fillControlsArray = [
                     { element: createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops) },
-                    { label: `figure${figureIndex+1}-fillType`, id: `figure${figureIndex+1}-fillType`, element: createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType) }
+                    { label: 'Fill Type:', id: `figure${figureIndex+1}-fillType`, element: createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType) }
                 ];
 
                 const choosePresetButtonContainer = document.createElement('div');
@@ -857,9 +861,9 @@
                 presetSelect.style.display = 'none'; 
                 fillControlsArray.push({element: presetSelect}); 
 
-                fillControlsArray.push({ label: `figure${figureIndex+1}-fillColor1`, id: `figure${figureIndex+1}-fillColor1`, element: createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1) });
-                fillControlsArray.push({ label: `figure${figureIndex+1}-fillColor2`, id: `figure${figureIndex+1}-fillColor2`, element: createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2) });
-                fillControlsArray.push({ label: `figure${figureIndex+1}-fillOpacity`, id: `figure${figureIndex+1}-fillOpacity`, element: createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01) });
+                fillControlsArray.push({ label: 'Fill Color 1:', id: `figure${figureIndex+1}-fillColor1`, element: createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1) });
+                fillControlsArray.push({ label: 'Fill Color 2:', id: `figure${figureIndex+1}-fillColor2`, element: createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2) });
+                fillControlsArray.push({ label: 'Fill Opacity:', id: `figure${figureIndex+1}-fillOpacity`, element: createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01) });
                 
                 createAccordionSection('Fill', fillControlsArray);
                 updateFigureFillControlsVisibility(figureIndex); 
@@ -867,18 +871,18 @@
             
             // --- Size Section ---
             const sizeControlsArray = [
-                { label: `figure${figureIndex+1}-baseSizePercent`, id: `figure${figureIndex+1}-baseSizePercent`, element: createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1) },
+                { label: 'Base Size:', id: `figure${figureIndex+1}-baseSizePercent`, element: createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1) },
                 { element: createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize) },
-                { label: `figure${figureIndex+1}-sizeAnimationSpeed`, id: `figure${figureIndex+1}-sizeAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01) }
+                { label: 'Speed:', id: `figure${figureIndex+1}-sizeAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01) }
             ];
             createAccordionSection('Size', sizeControlsArray);
 
             // --- Rotation Section ---
             const rotationControlsArray = [
-                { label: `figure${figureIndex+1}-baseRotation`, id: `figure${figureIndex+1}-baseRotation`, element: createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1) },
+                { label: 'Degrees:', id: `figure${figureIndex+1}-baseRotation`, element: createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1) },
                 { element: createCheckbox(`figure${figureIndex+1}-animateRotation`, 'Animate', params.animateRotation) },
                 { element: createCheckbox(`figure${figureIndex+1}-reverseRotation`, 'Reverse', params.reverseRotation) },
-                { label: `figure${figureIndex+1}-rotationSpeed`, id: `figure${figureIndex+1}-rotationSpeed`, element: createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01) }
+                { label: 'Speed:', id: `figure${figureIndex+1}-rotationSpeed`, element: createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01) }
             ];
             createAccordionSection('Rotation', rotationControlsArray);
             
