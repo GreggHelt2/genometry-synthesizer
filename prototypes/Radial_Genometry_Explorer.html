@@ -14,18 +14,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh; /* Ensure body takes full viewport height */
             margin: 0;
             padding: 1rem;
             box-sizing: border-box;
-            overflow: hidden; /* Prevent body scrollbars due to layout shifts */
+            overflow: hidden; 
         }
         .app-container { /* New top-level wrapper for app content */
             display: flex;
             width: 100%;
             height: calc(100vh - 4rem); /* Adjust based on h1 margin and body padding */
-            max-width: 1800px; /* Increased max-width for wider layout */
+            max-width: 1800px; 
             gap: 1rem;
+            flex-grow: 1; 
+            overflow: hidden;
         }
         .snapshot-strip-container {
             width: 110px; 
@@ -38,7 +40,7 @@
             flex-direction: column;
             align-items: center;
             gap: 0.5rem;
-            max-height: 100%; /* Fill available height */
+            height: 100%; 
         }
         .snapshot-strip-container h3 {
             font-size: 1rem;
@@ -92,15 +94,15 @@
             border-color: #3b82f6; 
         }
         
-        .main-content-area { /* Container for overlay and figures sections */
+        .main-content-area { 
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Important for containing children */
+            overflow: hidden; 
             height: 100%;
         }
 
-        .overlay-section {
+        .overlay-section { /* Renamed from .overlay-container for clarity in this context */
             background-color: #374151; 
             border-radius: 0.75rem; 
             padding: 1rem; 
@@ -109,42 +111,47 @@
             flex-direction: column;
             align-items: center; 
             width: 100%; 
-            /* Height will be controlled by JS, but set a sensible initial/min */
-            min-height: 100px; /* Adjusted min-height */
-            height: 40%; /* Initial height, draggable will adjust this */
-            overflow: hidden; /* Prevent content from spilling during resize */
+            flex-basis: 45%; 
+            min-height: 150px; 
+            flex-shrink: 0;
+            overflow: hidden; 
         }
         .overlay-section h3 {
             margin-bottom: 0.5rem;
+            flex-shrink: 0;
         }
         #combinedCanvas {
-             /* Max width/height to prevent overflow, aspect ratio handled by JS */
             max-width: 100%;
-            max-height: calc(100% - 60px); /* Account for title and controls */
-            object-fit: contain; /* Maintain aspect ratio within bounds */
+            max-height: calc(100% - 60px); 
+            object-fit: contain; 
+            flex-grow: 1; 
+            height: auto; 
+        }
+         .overlay-section .controls {
+            flex-shrink: 0; 
+            margin-top: 0.5rem;
         }
 
-
-        #draggable-divider {
+        .fixed-divider {
             width: 100%;
-            height: 10px;
-            background-color: #4b5563; /* Tailwind gray-600 */
-            cursor: ns-resize;
-            flex-shrink: 0; /* Prevent divider from shrinking */
-            border-top: 1px solid #6b7280;
-            border-bottom: 1px solid #6b7280;
+            height: 2px;
+            background-color: #6b7280; 
+            margin: 0.5rem 0;
+            border: none;
+            flex-shrink: 0;
         }
 
-        .figures-section {
-            flex-grow: 1; /* Takes remaining space */
-            display: flex; /* For the horizontal row of figures */
-            overflow-x: auto; /* Horizontal scrolling for figures */
-            overflow-y: hidden; /* Prevent vertical scroll within this section */
+        /* This targets the div with class="main-container" and id="figuresSectionBottom" */
+        #figuresSectionBottom.main-container { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: row; /* Explicitly ensure row */
+            overflow-x: auto; 
+            overflow-y: hidden; 
             gap: 1rem;
-            padding-top: 1rem; /* Space above figures */
+            padding-top: 1rem; 
             width: 100%;
-            align-items: flex-start; /* ADDED: Prevents figure slots from stretching unnecessarily */
-            /* Height is implicitly determined by flex-grow */
+            min-height: 150px; 
         }
 
         .figure-slot-container { 
@@ -158,8 +165,8 @@
             min-width: 340px; 
             flex-shrink: 0; 
             box-sizing: border-box;
-            max-height: 100%; /* Ensure figure slots don't overflow vertically */
-            overflow-y: auto; /* Allow individual figure slots to scroll if content is too tall */
+            max-height: 100%; 
+            overflow-y: auto; 
         }
 
 
@@ -201,10 +208,10 @@
         h1 {
             font-size: 1.875rem; 
             font-weight: 600; 
-            margin-bottom: 1rem; /* Adjusted margin */
+            margin-bottom: 1rem; 
             text-align: center;
             color: #f3f4f6; 
-            flex-shrink: 0; /* Prevent h1 from shrinking */
+            flex-shrink: 0; 
         }
         h2 { 
             font-size: 1.1rem; 
@@ -426,8 +433,8 @@
                 </div>
         </div>
         <div class="main-content-area">
-            <div class="overlay-section" id="overlaySection">
-                <h3>Overlay</h3>
+            <div class="overlay-section" id="overlaySectionTop"> 
+                <h3>Scene</h3> 
                 <canvas id="combinedCanvas" width="600" height="600"></canvas>
                 <div class="controls" id="combinedControls">
                      <label for="mainBlendingMode">Main Blending Mode:</label>
@@ -453,11 +460,11 @@
                 </div>
             </div>
 
-            <div id="draggable-divider"></div>
+            <hr class="fixed-divider my-2"> 
 
-            <div class="figures-section">
+            <div class="main-container" id="figuresSectionBottom"> 
                 <div class="figure-slot-container">
-                    <h2>Figure 1</h2>
+                    <h2>Layer 1</h2> 
                     <div class="figure-type-selector">
                         <label for="figure1Type">Type:</label>
                         <select id="figure1Type">
@@ -475,7 +482,7 @@
                 </div>
 
                 <div class="figure-slot-container">
-                    <h2>Figure 2</h2>
+                    <h2>Layer 2</h2> 
                     <div class="figure-type-selector">
                         <label for="figure2Type">Type:</label>
                         <select id="figure2Type">
@@ -493,7 +500,7 @@
                 </div>
 
                 <div class="figure-slot-container">
-                    <h2>Figure 3</h2>
+                    <h2>Layer 3</h2> 
                     <div class="figure-type-selector">
                         <label for="figure3Type">Type:</label>
                         <select id="figure3Type">
@@ -627,11 +634,6 @@
         let accumulatedTime = 0;
         let activeFigureIndexForGradientChoice = 0; 
         let isBatchUpdatingUI = false; 
-
-        // Draggable divider elements
-        let dividerElem, overlaySectionElem, figuresSectionElem;
-        let isDraggingDivider = false;
-
 
         // Initialize figure canvases and contexts
         for (let i = 0; i < 3; i++) {
@@ -867,8 +869,8 @@
             // --- Line Section ---
             const lineControlsArray = [
                 { label: 'Color:', id: `figure${figureIndex+1}-color`, element: createColorInput(`figure${figureIndex+1}-color`, params.color) },
-                { label: 'Base:', id: `figure${figureIndex+1}-baseLineWidth`, element: createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1) },
-                { element: createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate', params.animateLineWidth) },
+                { label: 'Thickness:', id: `figure${figureIndex+1}-baseLineWidth`, element: createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1) },
+                { element: createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate Thickness', params.animateLineWidth) },
                 { label: 'Speed:', id: `figure${figureIndex+1}-lineWidthAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01) }
             ];
             createAccordionSection('Line', lineControlsArray);
@@ -876,8 +878,8 @@
             // --- Fill Section ---
             if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
                 const fillControlsArray = [
-                    { element: createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops) },
-                    { label: 'Fill Type:', id: `figure${figureIndex+1}-fillType`, element: createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType) }
+                    { element: createCheckbox(`figure${figureIndex+1}-fillLoops`, 'On', params.fillLoops) }, // Changed Label
+                    { label: 'Type:', id: `figure${figureIndex+1}-fillType`, element: createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType) } // Changed Label
                 ];
 
                 const choosePresetButtonContainer = document.createElement('div');
@@ -896,9 +898,9 @@
                 presetSelect.style.display = 'none'; 
                 fillControlsArray.push({element: presetSelect}); 
 
-                fillControlsArray.push({ label: 'Fill Color 1:', id: `figure${figureIndex+1}-fillColor1`, element: createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1) });
-                fillControlsArray.push({ label: 'Fill Color 2:', id: `figure${figureIndex+1}-fillColor2`, element: createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2) });
-                fillControlsArray.push({ label: 'Fill Opacity:', id: `figure${figureIndex+1}-fillOpacity`, element: createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01) });
+                fillControlsArray.push({ label: 'Color 1:', id: `figure${figureIndex+1}-fillColor1`, element: createColorInput(`figure${figureIndex+1}-fillColor1`, params.fillColor1) }); // Changed Label
+                fillControlsArray.push({ label: 'Color 2:', id: `figure${figureIndex+1}-fillColor2`, element: createColorInput(`figure${figureIndex+1}-fillColor2`, params.fillColor2) }); // Changed Label
+                fillControlsArray.push({ label: 'Opacity:', id: `figure${figureIndex+1}-fillOpacity`, element: createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01) }); // Changed Label
                 
                 createAccordionSection('Fill', fillControlsArray);
                 updateFigureFillControlsVisibility(figureIndex); 
@@ -906,7 +908,7 @@
             
             // --- Size Section ---
             const sizeControlsArray = [
-                { label: 'Base Size:', id: `figure${figureIndex+1}-baseSizePercent`, element: createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1) },
+                { label: 'Scale:', id: `figure${figureIndex+1}-baseSizePercent`, element: createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1) }, // Changed Label
                 { element: createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize) },
                 { label: 'Speed:', id: `figure${figureIndex+1}-sizeAnimationSpeed`, element: createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01) }
             ];
@@ -941,22 +943,39 @@
             const showPresetButton = params.fillType === 'preset';
 
             const fillColor1El = document.getElementById(`${prefix}fillColor1`);
-            const fillColor1LabelEl = fillColor1El?.previousElementSibling; 
+            let fillColor1LabelEl = null;
+            if (fillColor1El) fillColor1LabelEl = Array.from(fillColor1El.parentElement.children).find(el => el.tagName === 'LABEL' && el.htmlFor === `${prefix}fillColor1`);
+            
             const fillColor2El = document.getElementById(`${prefix}fillColor2`);
-            const fillColor2LabelEl = fillColor2El?.previousElementSibling; 
+            let fillColor2LabelEl = null;
+            if (fillColor2El) fillColor2LabelEl = Array.from(fillColor2El.parentElement.children).find(el => el.tagName === 'LABEL' && el.htmlFor === `${prefix}fillColor2`);
+            
             const choosePresetContainerEl = document.getElementById(`${prefix}choosePresetContainer`); 
             
-            if(fillColor1El) fillColor1El.style.display = (showSolid || showGradientColors) ? '' : 'none';
-            if(fillColor1LabelEl) fillColor1LabelEl.style.display = (showSolid || showGradientColors) ? '' : 'none';
-            if(fillColor2El) fillColor2El.style.display = showGradientColors ? '' : 'none';
-            if(fillColor2LabelEl) fillColor2LabelEl.style.display = showGradientColors ? '' : 'none';
-            
-            if(choosePresetContainerEl) choosePresetContainerEl.style.display = showPresetButton ? 'grid' : 'none'; 
-            
-            if (showSolid && fillColor1LabelEl) {
-                fillColor1LabelEl.textContent = 'Fill Color:';
-            } else if (fillColor1LabelEl) {
-                fillColor1LabelEl.textContent = 'Fill Color 1:';
+            if (showSolid) {
+                if(fillColor1LabelEl) {fillColor1LabelEl.textContent = 'Color:'; fillColor1LabelEl.style.display = '';}
+                if(fillColor1El) fillColor1El.style.display = '';
+                if(fillColor2LabelEl) fillColor2LabelEl.style.display = 'none';
+                if(fillColor2El) fillColor2El.style.display = 'none';
+                if(choosePresetContainerEl) choosePresetContainerEl.style.display = 'none';
+            } else if (showGradientColors) {
+                if(fillColor1LabelEl) {fillColor1LabelEl.textContent = 'Color 1:'; fillColor1LabelEl.style.display = '';}
+                if(fillColor1El) fillColor1El.style.display = '';
+                if(fillColor2LabelEl) {fillColor2LabelEl.textContent = 'Color 2:'; fillColor2LabelEl.style.display = '';}
+                if(fillColor2El) fillColor2El.style.display = '';
+                if(choosePresetContainerEl) choosePresetContainerEl.style.display = 'none';
+            } else if (showPresetButton) {
+                if(fillColor1LabelEl) fillColor1LabelEl.style.display = 'none';
+                if(fillColor1El) fillColor1El.style.display = 'none';
+                if(fillColor2LabelEl) fillColor2LabelEl.style.display = 'none';
+                if(fillColor2El) fillColor2El.style.display = 'none';
+                if(choosePresetContainerEl) choosePresetContainerEl.style.display = 'grid';
+            } else { // No fill or unknown
+                if(fillColor1LabelEl) fillColor1LabelEl.style.display = 'none';
+                if(fillColor1El) fillColor1El.style.display = 'none';
+                if(fillColor2LabelEl) fillColor2LabelEl.style.display = 'none';
+                if(fillColor2El) fillColor2El.style.display = 'none';
+                if(choosePresetContainerEl) choosePresetContainerEl.style.display = 'none';
             }
         }
         
