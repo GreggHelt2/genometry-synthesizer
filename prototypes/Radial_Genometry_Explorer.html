@@ -727,38 +727,47 @@
 
             if (figureType === 'none' || !params) return; 
 
-            // Common controls
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-color`, 'Color:'));
-            controlsDiv.appendChild(createColorInput(`figure${figureIndex+1}-color`, params.color));
-
+            // Blending Mode (Top-level general setting for the figure)
             controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-blendingMode`, 'Blending Mode:'));
             controlsDiv.appendChild(createSelect(`figure${figureIndex+1}-blendingMode`, blendingModeOptions, params.blendingMode));
 
-            controlsDiv.appendChild(createSubheading('Line Thickness'));
+            // --- Shape Section ---
+            controlsDiv.appendChild(createSubheading('Shape')); // RENAMED
+            if (figureType === 'centeredCircles' || figureType === 'rhodoneaCurve') {
+                 controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-toggleCenterCircle`, 'Show Center Circle', params.showCenterCircle));
+                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-centerRadiusPercent`, 'Center Circle Size:'));
+                 controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1));
+            }
+            if (figureType === 'centeredCircles') {
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-numOuterCircles`, 'Outer Circles:'));
+                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1));
+            } else if (figureType === 'rhodoneaCurve') {
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-n`, 'n (numerator):'));
+                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1));
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d`, 'd (denominator):'));
+                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1));
+            } else if (figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-R`, 'R (Fixed Circle):'));
+                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1));
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-r`, 'r (Rolling Circle):'));
+                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1));
+                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d_param`, 'd (Distance):'));
+                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1));
+            }
+
+            // --- Line Section ---
+            controlsDiv.appendChild(createSubheading('Line')); // RENAMED
+            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-color`, 'Color:')); // MOVED HERE
+            controlsDiv.appendChild(createColorInput(`figure${figureIndex+1}-color`, params.color)); // MOVED HERE
             controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseLineWidth`, 'Base:'));
             controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseLineWidth`, 0.5, 40, params.baseLineWidth, 0.1));
             controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateLineWidth`, 'Animate', params.animateLineWidth));
             controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 'Speed:'));
             controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-lineWidthAnimationSpeed`, 0.01, 1, params.lineWidthAnimationSpeed, 0.01));
             
-            controlsDiv.appendChild(createSubheading('Rotation'));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseRotation`, 'Degrees:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateRotation`, 'Animate', params.animateRotation));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-reverseRotation`, 'Reverse', params.reverseRotation)); 
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-rotationSpeed`, 'Speed:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01));
-
-            controlsDiv.appendChild(createSubheading('Size'));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseSizePercent`, 'Base Size:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1));
-            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize));
-            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-sizeAnimationSpeed`, 'Speed:'));
-            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01));
-
-            // Fill Options (Common for all types that support it)
+            // --- Fill Section ---
             if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
-                controlsDiv.appendChild(createSubheading('Fill Options'));
+                controlsDiv.appendChild(createSubheading('Fill')); // RENAMED
                 controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops));
                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-fillType`, 'Fill Type:'));
                 controlsDiv.appendChild(createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType));
@@ -792,31 +801,23 @@
                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-fillOpacity`, 'Fill Opacity:'));
                 controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-fillOpacity`, 0, 1, params.fillOpacity, 0.01));
             }
+            
+            // --- Size Section ---
+            controlsDiv.appendChild(createSubheading('Size'));
+            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseSizePercent`, 'Base Size:'));
+            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseSizePercent`, 0, 100, params.baseSizePercent, 1));
+            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateSize`, 'Animate', params.animateSize));
+            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-sizeAnimationSpeed`, 'Speed:'));
+            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01));
 
-            // Type-specific controls
-            controlsDiv.appendChild(createSubheading('Shape Details'));
-            if (figureType === 'centeredCircles' || figureType === 'rhodoneaCurve') {
-                 controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-toggleCenterCircle`, 'Show Center Circle', params.showCenterCircle));
-                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-centerRadiusPercent`, 'Center Circle Size:'));
-                 controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-centerRadiusPercent`, 0, 100, params.centerRadiusPercent, 1));
-            }
-
-            if (figureType === 'centeredCircles') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-numOuterCircles`, 'Outer Circles:'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-numOuterCircles`, 2, 24, params.numOuterCircles, 1));
-            } else if (figureType === 'rhodoneaCurve') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-n`, 'n (numerator):'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-n`, 1, 100, params.n, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d`, 'd (denominator):'));
-                controlsDiv.appendChild(createNumberInput(`figure${figureIndex+1}-d`, 1, 100, params.d, 1));
-            } else if (figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-R`, 'R (Fixed Circle):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-R`, 1, 100, params.R, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-r`, 'r (Rolling Circle):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-r`, 1, 100, params.r, 1));
-                controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-d_param`, 'd (Distance):'));
-                controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1));
-            }
+            // --- Rotation Section ---
+            controlsDiv.appendChild(createSubheading('Rotation'));
+            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-baseRotation`, 'Degrees:'));
+            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-baseRotation`, 0, 360, params.baseRotation / (Math.PI / 180), 1));
+            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-animateRotation`, 'Animate', params.animateRotation));
+            controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-reverseRotation`, 'Reverse', params.reverseRotation)); 
+            controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-rotationSpeed`, 'Speed:'));
+            controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-rotationSpeed`, 0.01, 1, params.rotationSpeed, 0.01));
             
             if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
                 updateFigureFillControlsVisibility(figureIndex);
