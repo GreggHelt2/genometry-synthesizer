@@ -21,12 +21,12 @@
         }
         .main-container {
             display: flex;
-            flex-wrap: nowrap; /* Force single row */
-            justify-content: flex-start; /* Align items to the start, allow overflow for scrolling */
+            flex-wrap: nowrap; 
+            justify-content: flex-start; 
             gap: 1rem; 
             width: 100%;
             max-width: 1600px; 
-            overflow-x: auto; /* Allow horizontal scrolling if content overflows */
+            overflow-x: auto; 
         }
         .figure-slot-container { 
             background-color: #374151; 
@@ -36,11 +36,10 @@
             display: flex;
             flex-direction: column;
             align-items: center; 
-            min-width: 340px; /* Set a minimum width to accommodate content */
-            flex-shrink: 0; /* Prevent shrinking below min-width */
+            min-width: 340px; 
+            flex-shrink: 0; 
             box-sizing: border-box;
         }
-        /* Removed media queries that altered .figure-slot-container width */
 
         .overlay-container { 
             background-color: #374151; 
@@ -346,7 +345,9 @@
             baseRotation: 0, animateRotation: false, reverseRotation: false, rotationSpeed: 0.1, currentRotation: 0,
             showCenterCircle: true, centerRadiusPercent: 50, numOuterCircles: 6,
             baseSizePercent: 75, animateSize: false, sizeAnimationSpeed: 0.2, currentSizePercent: 75, sizeAmplitude: 20,
-            blendingMode: 'defer' 
+            blendingMode: 'defer',
+            fillLoops: false, fillType: 'solid', fillColor1: '#007bff', fillColor2: '#0056b3', fillOpacity: 1, 
+            presetGradient: 'ocean' 
         };
 
         const defaultRhodoneaParams = {
@@ -606,10 +607,10 @@
             controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-sizeAnimationSpeed`, 'Speed:'));
             controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-sizeAnimationSpeed`, 0.01, 1, params.sizeAnimationSpeed, 0.01, figureIndex));
 
-            // Fill Options (Common for Rhodonea, Epitrochoid, Hypotrochoid)
-            if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
+            // Fill Options (Common for all types that support it)
+            if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
                 controlsDiv.appendChild(createSubheading('Fill Options'));
-                controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Loops', params.fillLoops));
+                controlsDiv.appendChild(createCheckbox(`figure${figureIndex+1}-fillLoops`, 'Fill Shape', params.fillLoops));
                 controlsDiv.appendChild(createLabel(`figure${figureIndex+1}-fillType`, 'Fill Type:'));
                 controlsDiv.appendChild(createSelect(`figure${figureIndex+1}-fillType`, fillTypeOptions, params.fillType));
                 
@@ -669,7 +670,7 @@
                 controlsDiv.appendChild(createRangeInput(`figure${figureIndex+1}-d_param`, 1, 150, params.d_param, 1, figureIndex));
             }
             
-            if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid') {
+            if (figureType === 'rhodoneaCurve' || figureType === 'epitrochoid' || figureType === 'hypotrochoid' || figureType === 'centeredCircles') {
                 updateFigureFillControlsVisibility(figureIndex);
             }
             
@@ -682,7 +683,7 @@
         function updateFigureFillControlsVisibility(figureIndex) { 
             const prefix = `figure${figureIndex + 1}-`;
             const params = figureParams[figureIndex];
-            if (params.type !== 'rhodoneaCurve' && params.type !== 'epitrochoid' && params.type !== 'hypotrochoid') return;
+            if (params.type !== 'rhodoneaCurve' && params.type !== 'epitrochoid' && params.type !== 'hypotrochoid' && params.type !== 'centeredCircles') return;
 
 
             const showSolid = params.fillType === 'solid';
@@ -759,9 +760,7 @@
             addListener(`${prefix}animateSize`, 'change', () => updateFigureParams(figureIndex));
             addListener(`${prefix}sizeAnimationSpeed`, 'input', () => updateFigureParams(figureIndex));
 
-            if (figureParams[figureIndex].type === 'centeredCircles') {
-                addListener(`${prefix}numOuterCircles`, 'input', () => updateFigureParams(figureIndex));
-            } else if (figureParams[figureIndex].type === 'rhodoneaCurve' || figureParams[figureIndex].type === 'epitrochoid' || figureParams[figureIndex].type === 'hypotrochoid') {
+            if (figureParams[figureIndex].type === 'centeredCircles' || figureParams[figureIndex].type === 'rhodoneaCurve' || figureParams[figureIndex].type === 'epitrochoid' || figureParams[figureIndex].type === 'hypotrochoid') {
                 addListener(`${prefix}fillLoops`, 'change', () => updateFigureParams(figureIndex));
                 addListener(`${prefix}fillType`, 'change', () => { 
                     updateFigureParams(figureIndex);
@@ -776,10 +775,12 @@
                 if (figureParams[figureIndex].type === 'rhodoneaCurve') {
                     addListener(`${prefix}n`, 'input', () => updateFigureParams(figureIndex));
                     addListener(`${prefix}d`, 'input', () => updateFigureParams(figureIndex));
-                } else { // Epitrochoid or Hypotrochoid
+                } else if (figureParams[figureIndex].type === 'epitrochoid' || figureParams[figureIndex].type === 'hypotrochoid') {
                     addListener(`${prefix}R`, 'input', () => updateFigureParams(figureIndex));
                     addListener(`${prefix}r`, 'input', () => updateFigureParams(figureIndex));
                     addListener(`${prefix}d_param`, 'input', () => updateFigureParams(figureIndex));
+                } else if (figureParams[figureIndex].type === 'centeredCircles') {
+                     addListener(`${prefix}numOuterCircles`, 'input', () => updateFigureParams(figureIndex));
                 }
             }
         }
@@ -809,9 +810,7 @@
             params.animateSize = document.getElementById(`${prefix}animateSize`).checked;
             params.sizeAnimationSpeed = parseFloat(document.getElementById(`${prefix}sizeAnimationSpeed`).value);
 
-            if (params.type === 'centeredCircles') {
-                params.numOuterCircles = parseInt(document.getElementById(`${prefix}numOuterCircles`).value);
-            } else if (params.type === 'rhodoneaCurve' || params.type === 'epitrochoid' || params.type === 'hypotrochoid') {
+            if (params.type === 'centeredCircles' || params.type === 'rhodoneaCurve' || params.type === 'epitrochoid' || params.type === 'hypotrochoid') {
                 params.fillLoops = document.getElementById(`${prefix}fillLoops`).checked;
                 params.fillType = document.getElementById(`${prefix}fillType`).value;
                 params.fillColor1 = document.getElementById(`${prefix}fillColor1`).value;
@@ -820,7 +819,9 @@
                 const presetSelect = document.getElementById(`${prefix}presetGradient`); 
                 if (presetSelect) params.presetGradient = presetSelect.value;
 
-                if (params.type === 'rhodoneaCurve') {
+                if (params.type === 'centeredCircles') {
+                    params.numOuterCircles = parseInt(document.getElementById(`${prefix}numOuterCircles`).value);
+                } else if (params.type === 'rhodoneaCurve') {
                     params.n = parseInt(document.getElementById(`${prefix}n`).value);
                     params.d = parseInt(document.getElementById(`${prefix}d`).value);
                     if (params.d === 0) params.d = 1; 
@@ -878,7 +879,7 @@
                 
                 if (i === 2 && newType !== 'none' && (!oldParams.color || oldParams.color === defaultCenteredCirclesParams.color || oldParams.color === defaultRhodoneaParams.color || oldParams.color === defaultEpitrochoidParams.color || oldParams.color === defaultHypotrochoidParams.color) ) {
                     figureParams[i].color = FIGURE3_DEFAULT_COLOR;
-                } else if (i === 2 && (newType === 'epitrochoid' || newType === 'hypotrochoid')) { 
+                } else if (i === 2 && (newType === 'epitrochoid' || newType === 'hypotrochoid' || newType === 'centeredCircles')) { 
                      figureParams[i].color = FIGURE3_DEFAULT_COLOR;
                 }
 
@@ -901,18 +902,15 @@
             ctx.rotate(params.currentRotation); 
             ctx.translate(-centerX, -centerY);
 
-            function drawCircle(x, y, radius, color) {
-                if (radius <= 0) return; 
-                ctx.strokeStyle = color; 
-                ctx.beginPath();
-                ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                ctx.stroke();
-            }
+            const figurePath = new Path2D(); 
 
             if (params.showCenterCircle) {
                 const figureRadius = 2 * currentOuterRadius; 
                 const actualCenterRadius = (params.centerRadiusPercent / 100) * figureRadius;
-                drawCircle(centerX, centerY, actualCenterRadius, params.color);
+                if (actualCenterRadius > 0) {
+                    figurePath.moveTo(centerX + actualCenterRadius, centerY); 
+                    figurePath.arc(centerX, centerY, actualCenterRadius, 0, 2 * Math.PI);
+                }
             }
 
             if (currentOuterRadius > 0 && params.numOuterCircles > 0) {
@@ -920,9 +918,51 @@
                     const angle = (2 * Math.PI / params.numOuterCircles) * i; 
                     const circleX = centerX + currentOuterRadius * Math.cos(angle);
                     const circleY = centerY + currentOuterRadius * Math.sin(angle);
-                    drawCircle(circleX, circleY, currentOuterRadius, params.color);
+                    figurePath.moveTo(circleX + currentOuterRadius, circleY); 
+                    figurePath.arc(circleX, circleY, currentOuterRadius, 0, 2 * Math.PI);
                 }
             }
+            
+            if (params.fillLoops && (params.showCenterCircle || params.numOuterCircles > 0)) {
+                let figureEffectiveRadius = 0;
+                if (params.numOuterCircles > 0) {
+                    figureEffectiveRadius = 2 * currentOuterRadius;
+                } else if (params.showCenterCircle) {
+                    const figureRadius = 2 * currentOuterRadius; 
+                    figureEffectiveRadius = (params.centerRadiusPercent / 100) * figureRadius;
+                }
+
+                if (figureEffectiveRadius > 0) {
+                    if (params.fillType === 'solid') {
+                        ctx.fillStyle = hexToRgba(params.fillColor1, params.fillOpacity);
+                    } else if (params.fillType === 'linear') {
+                        const gradient = ctx.createLinearGradient(centerX - figureEffectiveRadius, centerY, centerX + figureEffectiveRadius, centerY); 
+                        gradient.addColorStop(0, hexToRgba(params.fillColor1, params.fillOpacity));
+                        gradient.addColorStop(1, hexToRgba(params.fillColor2, params.fillOpacity));
+                        ctx.fillStyle = gradient;
+                    } else if (params.fillType === 'radial') {
+                        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, figureEffectiveRadius); 
+                        gradient.addColorStop(0, hexToRgba(params.fillColor1, params.fillOpacity));
+                        gradient.addColorStop(1, hexToRgba(params.fillColor2, params.fillOpacity));
+                        ctx.fillStyle = gradient;
+                    } else if (params.fillType === 'preset') {
+                        const preset = presetGradients.find(p => p.id === params.presetGradient);
+                        if (preset) {
+                            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, figureEffectiveRadius);
+                            preset.stops.forEach(stop => {
+                                gradient.addColorStop(stop.offset, hexToRgba(stop.color, params.fillOpacity));
+                            });
+                            ctx.fillStyle = gradient;
+                        } else { 
+                            ctx.fillStyle = hexToRgba(params.fillColor1, params.fillOpacity);
+                        }
+                    }
+                    ctx.fill(figurePath, "evenodd");
+                }
+            }
+
+            ctx.strokeStyle = params.color; 
+            ctx.stroke(figurePath); 
             ctx.restore(); 
         }
 
@@ -940,7 +980,7 @@
             ctx.rotate(params.currentRotation); 
             ctx.translate(-centerX, -centerY);
 
-            ctx.beginPath();
+            const figurePath = new Path2D();
             const maxTheta = 2 * Math.PI * params.d;
             const numSteps = Math.max(1000, 200 * params.d); 
             let firstPoint = true;
@@ -950,13 +990,13 @@
                 const x = centerX + r * Math.cos(theta);
                 const y = centerY + r * Math.sin(theta);
                 if (firstPoint) {
-                    ctx.moveTo(x, y);
+                    figurePath.moveTo(x, y);
                     firstPoint = false;
                 } else {
-                    ctx.lineTo(x, y);
+                    figurePath.lineTo(x, y);
                 }
             }
-            ctx.closePath(); 
+            figurePath.closePath(); 
 
             if (params.fillLoops && current_scale_a > 0) {
                 if (params.fillType === 'solid') {
@@ -983,18 +1023,18 @@
                         ctx.fillStyle = hexToRgba(params.fillColor1, params.fillOpacity);
                     }
                 }
-                ctx.fill("evenodd");
+                ctx.fill(figurePath, "evenodd");
             }
             
             if (current_scale_a > 0) {
                 ctx.strokeStyle = params.color; 
-                ctx.stroke();
+                ctx.stroke(figurePath);
             }
 
             if (params.showCenterCircle && params.centerRadiusPercent >= 0) { 
                 ctx.strokeStyle = params.color; 
                 ctx.lineWidth = params.currentLineWidth; 
-                ctx.beginPath();
+                ctx.beginPath(); // Separate path for center circle stroke
                 const rhodoneaFigureRadius = current_scale_a;
                 const centerCircleRadiusToDraw = (params.centerRadiusPercent / 100) * rhodoneaFigureRadius;
                 ctx.arc(centerX, centerY, Math.min(centerCircleRadiusToDraw, canvasWidth / 2), 0, 2 * Math.PI);
@@ -1020,8 +1060,7 @@
             ctx.translate(centerX, centerY);
             ctx.rotate(params.currentRotation);
             
-            ctx.beginPath(); 
-
+            const figurePath = new Path2D();
             const commonDivisor = gcd(Math.round(params.R), Math.round(params.r));
             const maxTheta = 2 * Math.PI * (params.r / commonDivisor); 
             const numSteps = Math.max(1000, 300 * Math.abs(params.r / commonDivisor));
@@ -1031,9 +1070,9 @@
                 const t = (i / numSteps) * maxTheta;
                 const x = (R_draw + r_draw) * Math.cos(t) - d_draw * Math.cos(((R_draw + r_draw) / r_draw) * t);
                 const y = (R_draw + r_draw) * Math.sin(t) - d_draw * Math.sin(((R_draw + r_draw) / r_draw) * t);
-                if (firstPoint) { ctx.moveTo(x, y); firstPoint = false; } else { ctx.lineTo(x, y); }
+                if (firstPoint) { figurePath.moveTo(x, y); firstPoint = false; } else { figurePath.lineTo(x, y); }
             }
-            ctx.closePath();
+            figurePath.closePath();
 
             if (params.fillLoops) { 
                 if (params.fillType === 'solid') {
@@ -1060,10 +1099,10 @@
                         ctx.fillStyle = hexToRgba(params.fillColor1, params.fillOpacity);
                     }
                 }
-                ctx.fill("evenodd");
+                ctx.fill(figurePath, "evenodd");
             }
             ctx.strokeStyle = params.color;
-            ctx.stroke();
+            ctx.stroke(figurePath);
             ctx.restore();
         }
         
@@ -1088,7 +1127,7 @@
             ctx.translate(centerX, centerY);
             ctx.rotate(params.currentRotation);
             
-            ctx.beginPath(); 
+            const figurePath = new Path2D(); 
 
             const commonDivisor = gcd(Math.round(params.R), Math.round(params.r));
             const maxTheta = 2 * Math.PI * (params.r / commonDivisor); 
@@ -1099,9 +1138,9 @@
                 const t = (i / numSteps) * maxTheta;
                 const x = (R_draw - r_draw) * Math.cos(t) + d_draw * Math.cos(((R_draw - r_draw) / r_draw) * t);
                 const y = (R_draw - r_draw) * Math.sin(t) - d_draw * Math.sin(((R_draw - r_draw) / r_draw) * t);
-                 if (firstPoint) { ctx.moveTo(x, y); firstPoint = false; } else { ctx.lineTo(x, y); }
+                 if (firstPoint) { figurePath.moveTo(x, y); firstPoint = false; } else { figurePath.lineTo(x, y); }
             }
-            ctx.closePath();
+            figurePath.closePath();
 
             if (params.fillLoops) { 
                  if (params.fillType === 'solid') {
@@ -1128,10 +1167,10 @@
                         ctx.fillStyle = hexToRgba(params.fillColor1, params.fillOpacity);
                     }
                 }
-                ctx.fill("evenodd");
+                ctx.fill(figurePath, "evenodd");
             }
             ctx.strokeStyle = params.color;
-            ctx.stroke();
+            ctx.stroke(figurePath);
             ctx.restore();
         }
 
@@ -1303,19 +1342,28 @@
             
             gradientsCanvasElem.addEventListener('click', function(event) {
                 const rect = gradientsCanvasElem.getBoundingClientRect();
-                const y = event.clientY - (rect.top + gradientsCanvasElem.clientTop); 
-                const stripHeight = 30;
-                const index = Math.floor(y / stripHeight);
+                const y = event.offsetY; 
+                const stripHeight = 30; 
+                let clickedIndex = -1;
 
-                if (index >= 0 && index < presetGradients.length) {
-                    const selectedPresetId = presetGradients[index].id;
+                for (let i = 0; i < presetGradients.length; i++) {
+                    const stripTop = i * stripHeight;
+                    const stripBottom = stripTop + stripHeight;
+                    if (y >= stripTop && y < stripBottom) {
+                        clickedIndex = i;
+                        break;
+                    }
+                }
+
+                if (clickedIndex !== -1) {
+                    const selectedPresetId = presetGradients[clickedIndex].id;
                     figureParams[activeFigureIndexForGradientChoice].presetGradient = selectedPresetId;
                     
                     const presetSelectElement = document.getElementById(`figure${activeFigureIndexForGradientChoice + 1}-presetGradient`);
                     if(presetSelectElement) presetSelectElement.value = selectedPresetId;
 
                     updateFigureParams(activeFigureIndexForGradientChoice); 
-                    // Do not close sidebar on click: gradientSidebarElem.classList.remove('visible');
+                    // Sidebar remains open
                 }
             });
 
