@@ -41,7 +41,7 @@
             box-sizing: border-box;
         }
 
-        .overlay-container { 
+        .overlay-container, .snapshots-container { 
             background-color: #374151; 
             border-radius: 0.75rem; 
             padding: 1rem; 
@@ -52,6 +52,75 @@
             width: 100%; 
             margin-top: 1rem; 
         }
+        .snapshots-container h3 {
+            margin-bottom: 1rem;
+        }
+        .snapshot-save-area {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 400px;
+        }
+        .snapshot-save-area input[type="text"] {
+            flex-grow: 1;
+            background-color: #4b5563;
+            color: #e5e7eb;
+            border: 1px solid #6b7280;
+            border-radius: 0.25rem;
+            padding: 0.3rem 0.5rem;
+        }
+        #savedSnapshotsList {
+            width: 100%;
+            max-height: 400px; 
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .snapshot-item {
+            background-color: #4b5563; 
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .snapshot-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            border: 1px solid #6b7280;
+        }
+        .snapshot-info {
+            flex-grow: 1;
+        }
+        .snapshot-info .name {
+            font-weight: 600;
+            color: #f3f4f6;
+        }
+        .snapshot-info .timestamp {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        .snapshot-actions button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+        .snapshot-actions button.delete {
+            background-color: #dc2626; 
+        }
+        .snapshot-actions button:hover {
+            opacity: 0.8;
+        }
+
 
         canvas {
             border: 1px solid #4b5563; 
@@ -327,6 +396,16 @@
         </div>
     </div>
 
+    <div class="snapshots-container">
+        <h3>Snapshots</h3>
+        <div class="snapshot-save-area">
+            <input type="text" id="snapshotName" placeholder="Snapshot Name (optional)">
+            <button id="saveSnapshotBtn" class="styled-button">Save Snapshot</button>
+        </div>
+        <div id="savedSnapshotsList">
+            </div>
+    </div>
+
     <div id="gradientSidebar">
         <h4>Choose Preset Gradient</h4>
         <canvas id="gradientsCanvas"></canvas>
@@ -419,6 +498,9 @@
         let gradientsCanvasElem;
         let gradientsCtxElem;
         let closeGradientSidebarButtonElem;
+        let snapshotNameInput;
+        let saveSnapshotBtn;
+        let savedSnapshotsListDiv;
 
 
         let lastTimestamp = 0;
@@ -1329,6 +1411,10 @@
             gradientsCanvasElem = document.getElementById('gradientsCanvas');
             gradientsCtxElem = gradientsCanvasElem.getContext('2d');
             closeGradientSidebarButtonElem = document.getElementById('closeGradientSidebar');
+            snapshotNameInput = document.getElementById('snapshotName');
+            saveSnapshotBtn = document.getElementById('saveSnapshotBtn');
+            savedSnapshotsListDiv = document.getElementById('savedSnapshotsList');
+
 
             overlayParams.mainBlendingMode = mainBlendingModeInputElem.value;
             
@@ -1366,6 +1452,9 @@
                     // Sidebar remains open
                 }
             });
+
+            saveSnapshotBtn.addEventListener('click', saveSnapshot);
+            renderSavedSnapshots();
 
 
             for (let i = 0; i < 3; i++) {
@@ -1425,6 +1514,145 @@
                 }, 100); 
             });
         };
+
+        // --- Snapshot Functions ---
+        function saveSnapshot() {
+            let name = snapshotNameInput.value.trim();
+            if (!name) {
+                name = `Snapshot ${new Date().toLocaleString()}`;
+            }
+
+            const thumbnailCanvas = document.createElement('canvas');
+            thumbnailCanvas.width = 80;
+            thumbnailCanvas.height = 80;
+            const thumbCtx = thumbnailCanvas.getContext('2d');
+            thumbCtx.drawImage(combinedCanvas, 0, 0, 80, 80);
+            const thumbnailDataUrl = thumbnailCanvas.toDataURL('image/jpeg', 0.5); // Lower quality for smaller size
+
+            const snapshot = {
+                id: Date.now(),
+                name: name,
+                timestamp: new Date().toLocaleString(),
+                figureParams: JSON.parse(JSON.stringify(figureParams)), // Deep copy
+                overlayParams: JSON.parse(JSON.stringify(overlayParams)), // Deep copy
+                thumbnail: thumbnailDataUrl
+            };
+
+            let snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
+            snapshots.unshift(snapshot); // Add to the beginning
+            try {
+                localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
+                renderSavedSnapshots();
+                snapshotNameInput.value = ''; // Clear input
+            } catch (e) {
+                console.error("Error saving to localStorage:", e);
+                alert("Could not save snapshot. Storage might be full.");
+            }
+        }
+
+        function loadSnapshot(snapshotId) {
+            const snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
+            const snapshot = snapshots.find(s => s.id === snapshotId);
+
+            if (snapshot) {
+                // Restore figureParams
+                for (let i = 0; i < snapshot.figureParams.length; i++) {
+                    if (snapshot.figureParams[i]) {
+                        figureParams[i] = JSON.parse(JSON.stringify(snapshot.figureParams[i])); // Deep copy
+                        // Repopulate controls for this figure
+                        const typeSelector = document.getElementById(`figure${i+1}Type`);
+                        if (typeSelector) typeSelector.value = figureParams[i].type;
+                        populateControls(i, figureParams[i].type);
+                    }
+                }
+                
+                // Restore overlayParams
+                overlayParams = JSON.parse(JSON.stringify(snapshot.overlayParams));
+                if (mainBlendingModeInputElem) {
+                    mainBlendingModeInputElem.value = overlayParams.mainBlendingMode;
+                }
+                
+                // Ensure all UI elements reflect the loaded state
+                // This might require re-calling populateControls for each figure after params are set
+                for(let i=0; i<3; i++) {
+                    if(figureParams[i] && figureParams[i].type !== 'none') {
+                        populateControls(i, figureParams[i].type);
+                    } else {
+                        // If a figure was 'none', ensure its controls are cleared
+                        const controlsDiv = document.getElementById(`figure${i + 1}Controls`);
+                        if(controlsDiv) controlsDiv.innerHTML = '';
+                    }
+                }
+
+
+            } else {
+                console.error("Snapshot not found:", snapshotId);
+            }
+        }
+
+        function deleteSnapshot(snapshotId) {
+            let snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
+            snapshots = snapshots.filter(s => s.id !== snapshotId);
+            localStorage.setItem('geometricPatternSnapshots', JSON.stringify(snapshots));
+            renderSavedSnapshots();
+        }
+
+        function renderSavedSnapshots() {
+            savedSnapshotsListDiv.innerHTML = '';
+            const snapshots = JSON.parse(localStorage.getItem('geometricPatternSnapshots')) || [];
+
+            if (snapshots.length === 0) {
+                savedSnapshotsListDiv.innerHTML = '<p class="text-gray-400 text-sm">No snapshots saved yet.</p>';
+                return;
+            }
+
+            snapshots.forEach(snapshot => {
+                const item = document.createElement('div');
+                item.className = 'snapshot-item';
+
+                const img = document.createElement('img');
+                img.src = snapshot.thumbnail;
+                img.alt = snapshot.name;
+                item.appendChild(img);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'snapshot-info';
+                
+                const nameEl = document.createElement('div');
+                nameEl.className = 'name';
+                nameEl.textContent = snapshot.name;
+                infoDiv.appendChild(nameEl);
+
+                const timestampEl = document.createElement('div');
+                timestampEl.className = 'timestamp';
+                timestampEl.textContent = snapshot.timestamp;
+                infoDiv.appendChild(timestampEl);
+                item.appendChild(infoDiv);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'snapshot-actions';
+
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = 'Load';
+                loadBtn.onclick = () => loadSnapshot(snapshot.id);
+                actionsDiv.appendChild(loadBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'delete';
+                deleteBtn.onclick = () => {
+                    if (confirm(`Are you sure you want to delete snapshot "${snapshot.name}"?`)) {
+                        deleteSnapshot(snapshot.id);
+                    }
+                };
+                actionsDiv.appendChild(deleteBtn);
+                item.appendChild(actionsDiv);
+
+                savedSnapshotsListDiv.appendChild(item);
+            });
+        }
+
+
     </script>
 </body>
 </html>
