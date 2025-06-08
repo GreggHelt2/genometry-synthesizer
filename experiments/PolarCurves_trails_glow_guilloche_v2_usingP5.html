@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guilloche Pattern Generator (p5.js)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+            background-color: #1a202c; 
+        }
+        .control-panel {
+            background-color: #2d3748; 
+            color: #e2e8f0; 
+        }
+        .control-panel input[type="range"], .control-panel select, .control-panel input[type="color"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 2.5rem;
+            background: #4a5568; 
+            outline: none;
+            opacity: 0.9;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            border-radius: 0.375rem; 
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            border: 1px solid #718096; 
+            color: #e2e8f0; 
+        }
+         .control-panel input[type="color"] {
+            padding: 0.125rem; 
+            height: 2.5rem; 
+         }
+        .control-panel input[type="range"]:hover {
+            opacity: 1;
+        }
+        .control-panel input[type="range"] {
+            height: 8px; 
+            padding-left: 0; 
+            padding-right: 0;
+        }
+        .control-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #63b3ed; 
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #2d3748; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .control-panel input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #63b3ed; 
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #2d3748;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .control-panel select {
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20fill%3D%22%23A0AEC0%22%3E%3Cpath%20d%3D%22M7.293%209.293a1%201%200%20011.414%200L10%2010.586l1.293-1.293a1%201%200%20111.414%201.414l-2%202a1%201%200%2001-1.414%200l-2-2a1%201%200%20010-1.414z%22%2F%3E%3C%2Fsvg%3E'); 
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem; 
+        }
+        .control-panel label {
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem; 
+            font-weight: 500; 
+            color: #a0aec0; 
+            margin-right: 0.5rem; 
+        }
+        .control-panel .value-display {
+            font-size: 0.875rem;
+            color: #e2e8f0; 
+            font-weight: 400;
+        }
+        .hidden-controls {
+            display: none !important;
+        }
+        .section-heading {
+            font-size: 1.125rem; 
+            font-weight: 600; 
+            color: #e2e8f0; 
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid #4a5568; 
+        }
+        .canvas-container {
+            background-color: #111827; 
+        }
+        #p5CanvasContainer canvas {
+            display: block;
+            margin: auto;
+        }
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; 
+        }
+        .color-picker-row input[type="color"] {
+            width: auto; 
+            min-width: 60px; 
+            flex-grow: 0; 
+        }
+    </style>
+</head>
+<body class="flex flex-col lg:flex-row h-screen overflow-hidden">
+
+    <div class="control-panel w-full lg:w-96 p-6 shadow-xl rounded-lg m-4 overflow-y-auto">
+        <h1 class="text-2xl font-bold mb-6 text-gray-100">Guilloche Controls (p5.js)</h1>
+
+        <div class="space-y-5"> 
+            <div>
+                <label for="patternType_select" class="block">Pattern Type:</label>
+                <select id="patternType_select" class="w-full">
+                    <option value="hypotrochoid">Hypotrochoid</option>
+                    <option value="epitrochoid">Epitrochoid</option>
+                    <option value="rhodonea">Rhodonea (Rose)</option>
+                    <option value="simpleCircle">Simple Circle</option>
+                </select>
+            </div>
+
+            <div id="trochoid_params_group">
+                 <h2 class="section-heading">Trochoid Parameters</h2>
+                <div>
+                    <label for="R_slider" class="block">Fixed Radius (R): <span id="R_value" class="value-display">100</span></label>
+                    <input type="range" id="R_slider" min="10" max="200" value="100" class="w-full">
+                </div>
+                <div>
+                    <label for="r_slider" class="block">Rolling Radius (r): <span id="r_value" class="value-display">30</span></label>
+                    <input type="range" id="r_slider" min="5" max="100" value="30" class="w-full">
+                </div>
+                <div>
+                    <label for="d_slider" class="block">Pen Distance (d): <span id="d_value" class="value-display">50</span></label>
+                    <input type="range" id="d_slider" min="1" max="150" value="50" class="w-full">
+                </div>
+            </div>
+
+            <div id="rhodonea_params_group" class="hidden-controls">
+                 <h2 class="section-heading">Rhodonea Parameters</h2>
+                 <div>
+                    <label for="rhodoneaA_slider" class="block">Amplitude (a): <span id="rhodoneaA_value" class="value-display">200</span></label>
+                    <input type="range" id="rhodoneaA_slider" min="0" max="200" value="200" step="1" class="w-full">
+                </div>
+                <div>
+                    <label for="rhodoneaN_slider" class="block">Numerator (n): <span id="rhodoneaN_value" class="value-display">4</span></label>
+                    <input type="range" id="rhodoneaN_slider" min="1" max="20" value="4" step="1" class="w-full">
+                </div>
+                <div>
+                    <label for="rhodoneaD_slider" class="block">Denominator (d): <span id="rhodoneaD_value" class="value-display">3</span></label>
+                    <input type="range" id="rhodoneaD_slider" min="1" max="20" value="3" step="1" class="w-full">
+                </div>
+                <div>
+                    <label for="rhodoneaC_slider" class="block">Offset (c): <span id="rhodoneaC_value" class="value-display">0</span></label>
+                    <input type="range" id="rhodoneaC_slider" min="-100" max="100" value="0" step="1" class="w-full">
+                </div>
+            </div>
+
+            <div id="simpleCircle_params_group" class="hidden-controls">
+                <h2 class="section-heading">Circle Parameters</h2>
+                <div>
+                   <label for="circleRadius_slider" class="block">Radius: <span id="circleRadius_value" class="value-display">100</span></label>
+                   <input type="range" id="circleRadius_slider" min="10" max="200" value="100" step="1" class="w-full">
+               </div>
+           </div>
+            
+            <!-- Complexity/Revolutions (Hint) slider removed -->
+
+            <div class="lg:flex lg:space-x-4"> 
+                <div class="lg:w-1/2 space-y-5"> 
+                    <h2 class="section-heading">Radial Sine Wave Variance 1</h2>
+                    <div>
+                        <label for="radialAmplitude_slider" class="block">Amplitude (A1): <span id="radialAmplitude_value" class="value-display">0</span></label>
+                        <input type="range" id="radialAmplitude_slider" min="-50" max="50" value="0" step="1" class="w-full">
+                    </div>
+                    <div>
+                        <label for="radialFrequency_slider" class="block">Frequency (B1): <span id="radialFrequency_value" class="value-display">1</span></label>
+                        <input type="range" id="radialFrequency_slider" min="0" max="50" value="1" step="0.1" class="w-full">
+                    </div>
+                    <div>
+                        <label for="radialPhase_slider" class="block">Phase (C1) (degrees): <span id="radialPhase_value" class="value-display">0</span></label>
+                        <input type="range" id="radialPhase_slider" min="0" max="360" value="0" step="1" class="w-full">
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2 space-y-5">
+                    <h2 class="section-heading">Radial Sine Wave Variance 2</h2>
+                    <div>
+                        <label for="radialAmplitude2_slider" class="block">Amplitude (A2): <span id="radialAmplitude2_value" class="value-display">0</span></label>
+                        <input type="range" id="radialAmplitude2_slider" min="-50" max="50" value="0" step="1" class="w-full">
+                    </div>
+                    <div>
+                        <label for="radialFrequency2_slider" class="block">Frequency (B2): <span id="radialFrequency2_value" class="value-display">1</span></label>
+                        <input type="range" id="radialFrequency2_slider" min="0" max="50" value="1" step="0.1" class="w-full">
+                    </div>
+                    <div>
+                        <label for="radialPhase2_slider" class="block">Phase (C2) (degrees): <span id="radialPhase2_value" class="value-display">0</span></label>
+                        <input type="range" id="radialPhase2_slider" min="0" max="360" value="0" step="1" class="w-full">
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4 border-gray-600"> 
+            <h2 class="section-heading">General Settings</h2>
+            <div>
+                <label for="lineWidth_slider" class="block">Line Thickness: <span id="lineWidth_value" class="value-display">2</span></label>
+                <input type="range" id="lineWidth_slider" min="0.1" max="10" value="2" step="0.1" class="w-full">
+            </div>
+            <div>
+                <label for="steps_slider" class="block">Drawing Steps: <span id="steps_value" class="value-display">1000</span></label>
+                <input type="range" id="steps_slider" min="100" max="5000" value="1000" step="50" class="w-full">
+            </div>
+            <div>
+                <label for="compositeOperation_select" class="block">Pattern Composite Op:</label>
+                <select id="compositeOperation_select" class="w-full">
+                    <option value="source-over">BLEND (Default)</option>
+                    <option value="lighter">ADD</option>
+                    <option value="multiply">MULTIPLY</option>
+                    <option value="screen">SCREEN</option>
+                    <option value="overlay">OVERLAY</option>
+                    <option value="darken">DARKEST</option>
+                    <option value="lighten">LIGHTEST</option>
+                    <option value="color-dodge">DODGE</option>
+                    <option value="color-burn">BURN</option>
+                    <option value="hard-light">HARD_LIGHT</option>
+                    <option value="soft-light">SOFT_LIGHT</option>
+                    <option value="difference">DIFFERENCE</option>
+                    <option value="exclusion">EXCLUSION</option>
+                    <option value="copy">REPLACE</option>
+                </select>
+            </div>
+            <div class="color-picker-row">
+                <label for="lineColor_picker">Line Color:</label>
+                <input type="color" id="lineColor_picker" value="#00FFFF">
+            </div>
+            <div class="color-picker-row">
+                <label for="bgColor_picker">Background Color:</label>
+                <input type="color" id="bgColor_picker" value="#000000">
+            </div>
+            <div>
+                <label for="outerGlowIntensity_slider" class="block">Outer Glow Intensity: <span id="outerGlowIntensity_value" class="value-display">0</span></label>
+                <input type="range" id="outerGlowIntensity_slider" min="0" max="30" value="0" step="1" class="w-full">
+            </div>
+            <div class="color-picker-row">
+                <label for="outerGlowColor_picker">Outer Glow Color:</label>
+                <input type="color" id="outerGlowColor_picker" value="#00FFFF">
+            </div>
+            <div>
+                <label for="innerGlowIntensity_slider" class="block">Inner Glow Intensity: <span id="innerGlowIntensity_value" class="value-display">0</span></label>
+                <input type="range" id="innerGlowIntensity_slider" min="0" max="30" value="0" step="1" class="w-full">
+            </div>
+            <div class="color-picker-row">
+                <label for="innerGlowColor_picker">Inner Glow Color:</label>
+                <input type="color" id="innerGlowColor_picker" value="#FFFFFF">
+            </div>
+            <div>
+                <label for="trailIntensity_slider" class="block">Trail Intensity (0=None, 1=Max): <span id="trailIntensity_value" class="value-display">0.9</span></label>
+                <input type="range" id="trailIntensity_slider" min="0" max="1" value="0.5" step="0.01" class="w-full">
+            </div>
+             <div>
+                <label for="trailDecayCompositeOperation_select" class="block">Trail Decay Composite Op:</label>
+                <select id="trailDecayCompositeOperation_select" class="w-full">
+                    <option value="source-over">BLEND (Default)</option>
+                    <option value="lighter">ADD</option>
+                    <option value="multiply">MULTIPLY</option>
+                    <option value="screen">SCREEN</option>
+                    <option value="overlay">OVERLAY</option>
+                    <option value="darken">DARKEST</option>
+                    <option value="lighten">LIGHTEST</option>
+                    <option value="color-dodge">DODGE</option>
+                    <option value="color-burn">BURN</option>
+                    <option value="hard-light">HARD_LIGHT</option>
+                    <option value="soft-light">SOFT_LIGHT</option>
+                    <option value="difference">DIFFERENCE</option>
+                    <option value="exclusion">EXCLUSION</option>
+                    <option value="copy">REPLACE</option>
+                </select>
+            </div>
+             <div>
+                <label for="rotation_slider" class="block">Rotation Speed: <span id="rotation_value" class="value-display">0</span></label>
+                <input type="range" id="rotation_slider" min="0" max="100" value="0" step="1" class="w-full">
+            </div>
+            <button id="resetButton" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-150">
+                Reset to Defaults
+            </button>
+        </div>
+    </div>
+
+    <div id="p5CanvasContainer" class="canvas-container flex-grow flex items-center justify-center p-4">
+        </div>
+
+    <script>
+        let settings = {};
+        let currentRotationAngle = 0;
+        let p5Canvas;
+        const domElements = {};
+
+        const defaultSettings = {
+            patternType: 'rhodonea',         
+            R: 100, r: 30, d: 50, 
+            rhodoneaA: 200,                  
+            rhodoneaN: 4,                    
+            rhodoneaD: 3,                    
+            rhodoneaC: 0, 
+            circleRadius: 100,
+            // lobes: 7, // Removed
+            lineWidth: 2, steps: 1000,
+            compositeOperation: 'source-over',
+            lineColor: '#00FFFF', 
+            bgColor: '#000000',   
+            outerGlowIntensity: 0, 
+            outerGlowColor: '#00FFFF',   
+            innerGlowIntensity: 0, 
+            innerGlowColor: '#FFFFFF',   
+            trailIntensity: 0.5, 
+            trailDecayCompositeOperation: 'source-over',
+            rotationSpeed: 0,
+            radialAmplitude: 0, radialFrequency: 1, radialPhase: 0,
+            radialAmplitude2: 0, radialFrequency2: 1, radialPhase2: 0 
+        };
+
+        function p5BlendMode(gcoString) {
+            switch (gcoString.toLowerCase()) {
+                case 'source-over': return BLEND;
+                case 'lighter': return ADD;
+                case 'multiply': return MULTIPLY;
+                case 'screen': return SCREEN;
+                case 'overlay': return OVERLAY;
+                case 'darken': return DARKEST;
+                case 'lighten': return LIGHTEST;
+                case 'color-dodge': return DODGE;
+                case 'color-burn': return BURN;
+                case 'hard-light': return HARD_LIGHT;
+                case 'soft-light': return SOFT_LIGHT;
+                case 'difference': return DIFFERENCE;
+                case 'exclusion': return EXCLUSION;
+                case 'copy': return REPLACE;
+                default: return BLEND;
+            }
+        }
+
+        function gcd(a, b) {
+            a = Math.abs(a); b = Math.abs(b);
+            if (b === 0) return a;
+            return gcd(b, a % b); 
+        }
+        
+        function setup() {
+            let canvasContainer = select('#p5CanvasContainer');
+            p5Canvas = createCanvas(100, 100); 
+            p5Canvas.parent(canvasContainer);
+            
+            domElements.patternType_select = document.getElementById('patternType_select');
+            domElements.R_slider = document.getElementById('R_slider');
+            domElements.r_slider = document.getElementById('r_slider');
+            domElements.d_slider = document.getElementById('d_slider');
+            domElements.rhodoneaA_slider = document.getElementById('rhodoneaA_slider');
+            domElements.rhodoneaN_slider = document.getElementById('rhodoneaN_slider');
+            domElements.rhodoneaD_slider = document.getElementById('rhodoneaD_slider');
+            domElements.rhodoneaC_slider = document.getElementById('rhodoneaC_slider');
+            domElements.circleRadius_slider = document.getElementById('circleRadius_slider');
+            // domElements.lobes_slider = document.getElementById('lobes_slider'); // Removed
+            domElements.lineWidth_slider = document.getElementById('lineWidth_slider');
+            domElements.steps_slider = document.getElementById('steps_slider');
+            domElements.compositeOperation_select = document.getElementById('compositeOperation_select');
+            domElements.lineColor_picker = document.getElementById('lineColor_picker');
+            domElements.bgColor_picker = document.getElementById('bgColor_picker');
+            domElements.outerGlowIntensity_slider = document.getElementById('outerGlowIntensity_slider'); 
+            domElements.outerGlowColor_picker = document.getElementById('outerGlowColor_picker');     
+            domElements.innerGlowIntensity_slider = document.getElementById('innerGlowIntensity_slider'); 
+            domElements.innerGlowColor_picker = document.getElementById('innerGlowColor_picker');         
+            domElements.trailIntensity_slider = document.getElementById('trailIntensity_slider');
+            domElements.trailDecayCompositeOperation_select = document.getElementById('trailDecayCompositeOperation_select');
+            domElements.rotation_slider = document.getElementById('rotation_slider');
+            domElements.radialAmplitude_slider = document.getElementById('radialAmplitude_slider');
+            domElements.radialFrequency_slider = document.getElementById('radialFrequency_slider');
+            domElements.radialPhase_slider = document.getElementById('radialPhase_slider');
+            domElements.radialAmplitude2_slider = document.getElementById('radialAmplitude2_slider');
+            domElements.radialFrequency2_slider = document.getElementById('radialFrequency2_slider');
+            domElements.radialPhase2_slider = document.getElementById('radialPhase2_slider');
+            domElements.resetButton = document.getElementById('resetButton');
+
+            domElements.R_value_display = document.getElementById('R_value');
+            domElements.r_value_display = document.getElementById('r_value');
+            domElements.d_value_display = document.getElementById('d_value');
+            domElements.rhodoneaA_value_display = document.getElementById('rhodoneaA_value');
+            domElements.rhodoneaN_value_display = document.getElementById('rhodoneaN_value');
+            domElements.rhodoneaD_value_display = document.getElementById('rhodoneaD_value');
+            domElements.rhodoneaC_value_display = document.getElementById('rhodoneaC_value');
+            domElements.circleRadius_value_display = document.getElementById('circleRadius_value');
+            // domElements.lobes_value_display = document.getElementById('lobes_value'); // Removed
+            domElements.lineWidth_value_display = document.getElementById('lineWidth_value');
+            domElements.steps_value_display = document.getElementById('steps_value');
+            domElements.outerGlowIntensity_value_display = document.getElementById('outerGlowIntensity_value'); 
+            domElements.innerGlowIntensity_value_display = document.getElementById('innerGlowIntensity_value'); 
+            domElements.trailIntensity_value_display = document.getElementById('trailIntensity_value');
+            domElements.rotation_value_display = document.getElementById('rotation_value');
+            domElements.radialAmplitude_value_display = document.getElementById('radialAmplitude_value');
+            domElements.radialFrequency_value_display = document.getElementById('radialFrequency_value');
+            domElements.radialPhase_value_display = document.getElementById('radialPhase_value');
+            domElements.radialAmplitude2_value_display = document.getElementById('radialAmplitude2_value');
+            domElements.radialFrequency2_value_display = document.getElementById('radialFrequency2_value');
+            domElements.radialPhase2_value_display = document.getElementById('radialPhase2_value');
+
+            resetToP5Defaults();
+            
+            const allInputs = document.querySelectorAll('.control-panel input, .control-panel select');
+            allInputs.forEach(input => {
+                input.addEventListener('input', handleP5InputChange);
+                input.addEventListener('change', handleP5InputChange); 
+            });
+            domElements.resetButton.addEventListener('click', resetToP5Defaults);
+            
+            p5ResizeCanvas(); 
+            loop(); 
+        }
+
+        function windowResized() {
+            p5ResizeCanvas();
+        }
+
+        function p5ResizeCanvas() {
+            const canvasContainerEl = document.getElementById('p5CanvasContainer');
+            if (!canvasContainerEl) return;
+
+            const containerWidth = canvasContainerEl.clientWidth;
+            const containerHeight = canvasContainerEl.clientHeight;
+            let size = Math.min(containerWidth, containerHeight);
+            size = Math.min(size, 800); 
+            size = Math.max(size, 50);  
+            resizeCanvas(size, size); 
+            if (!isLooping()) redraw(); 
+        }
+
+        function updateP5SettingsFromUI() {
+            settings.patternType = domElements.patternType_select.value;
+            settings.R = parseFloat(domElements.R_slider.value);
+            settings.r = parseFloat(domElements.r_slider.value);
+            settings.d = parseFloat(domElements.d_slider.value);
+            settings.rhodoneaA = parseFloat(domElements.rhodoneaA_slider.value);
+            settings.rhodoneaN = parseInt(domElements.rhodoneaN_slider.value);
+            settings.rhodoneaD = parseInt(domElements.rhodoneaD_slider.value);
+            settings.rhodoneaC = parseFloat(domElements.rhodoneaC_slider.value);
+            settings.circleRadius = parseFloat(domElements.circleRadius_slider.value);
+            // settings.lobes = parseInt(domElements.lobes_slider.value); // Removed
+            settings.lineWidth = parseFloat(domElements.lineWidth_slider.value);
+            settings.steps = parseInt(domElements.steps_slider.value);
+            settings.compositeOperation = domElements.compositeOperation_select.value;
+            settings.lineColor = domElements.lineColor_picker.value;
+            settings.bgColor = domElements.bgColor_picker.value; 
+            settings.outerGlowIntensity = parseInt(domElements.outerGlowIntensity_slider.value); 
+            settings.outerGlowColor = domElements.outerGlowColor_picker.value;                 
+            settings.innerGlowIntensity = parseInt(domElements.innerGlowIntensity_slider.value); 
+            settings.innerGlowColor = domElements.innerGlowColor_picker.value;                 
+            settings.trailIntensity = parseFloat(domElements.trailIntensity_slider.value); 
+            settings.trailDecayCompositeOperation = domElements.trailDecayCompositeOperation_select.value; 
+            settings.rotationSpeed = parseInt(domElements.rotation_slider.value);
+            settings.radialAmplitude = parseFloat(domElements.radialAmplitude_slider.value);
+            settings.radialFrequency = parseFloat(domElements.radialFrequency_slider.value);
+            settings.radialPhase = parseFloat(domElements.radialPhase_slider.value);
+            settings.radialAmplitude2 = parseFloat(domElements.radialAmplitude2_slider.value);
+            settings.radialFrequency2 = parseFloat(domElements.radialFrequency2_slider.value);
+            settings.radialPhase2 = parseFloat(domElements.radialPhase2_slider.value);
+
+            domElements.R_value_display.textContent = settings.R;
+            domElements.r_value_display.textContent = settings.r;
+            domElements.d_value_display.textContent = settings.d;
+            domElements.rhodoneaA_value_display.textContent = settings.rhodoneaA;
+            domElements.rhodoneaN_value_display.textContent = settings.rhodoneaN;
+            domElements.rhodoneaD_value_display.textContent = settings.rhodoneaD;
+            domElements.rhodoneaC_value_display.textContent = settings.rhodoneaC;
+            domElements.circleRadius_value_display.textContent = settings.circleRadius;
+            // domElements.lobes_value_display.textContent = settings.lobes; // Removed
+            domElements.lineWidth_value_display.textContent = settings.lineWidth.toFixed(1);
+            domElements.steps_value_display.textContent = settings.steps;
+            domElements.outerGlowIntensity_value_display.textContent = settings.outerGlowIntensity; 
+            domElements.innerGlowIntensity_value_display.textContent = settings.innerGlowIntensity; 
+            domElements.trailIntensity_value_display.textContent = settings.trailIntensity.toFixed(2);
+            domElements.rotation_value_display.textContent = settings.rotationSpeed;
+            domElements.radialAmplitude_value_display.textContent = settings.radialAmplitude;
+            domElements.radialFrequency_value_display.textContent = settings.radialFrequency.toFixed(1);
+            domElements.radialPhase_value_display.textContent = settings.radialPhase;
+            domElements.radialAmplitude2_value_display.textContent = settings.radialAmplitude2;
+            domElements.radialFrequency2_value_display.textContent = settings.radialFrequency2.toFixed(1);
+            domElements.radialPhase2_value_display.textContent = settings.radialPhase2;
+
+            toggleP5ParameterVisibility();
+        }
+        
+        function updateUIFromP5Settings() {
+            domElements.patternType_select.value = settings.patternType;
+            domElements.R_slider.value = settings.R;
+            domElements.r_slider.value = settings.r;
+            domElements.d_slider.value = settings.d;
+            domElements.rhodoneaA_slider.value = settings.rhodoneaA;
+            domElements.rhodoneaN_slider.value = settings.rhodoneaN;
+            domElements.rhodoneaD_slider.value = settings.rhodoneaD;
+            domElements.rhodoneaC_slider.value = settings.rhodoneaC;
+            domElements.circleRadius_slider.value = settings.circleRadius;
+            // domElements.lobes_slider.value = settings.lobes; // Removed
+            domElements.lineWidth_slider.value = settings.lineWidth;
+            domElements.steps_slider.value = settings.steps;
+            domElements.compositeOperation_select.value = settings.compositeOperation;
+            domElements.lineColor_picker.value = settings.lineColor;
+            domElements.bgColor_picker.value = settings.bgColor;
+            domElements.outerGlowIntensity_slider.value = settings.outerGlowIntensity; 
+            domElements.outerGlowColor_picker.value = settings.outerGlowColor;         
+            domElements.innerGlowIntensity_slider.value = settings.innerGlowIntensity; 
+            domElements.innerGlowColor_picker.value = settings.innerGlowColor;         
+            domElements.trailIntensity_slider.value = settings.trailIntensity;
+            domElements.trailDecayCompositeOperation_select.value = settings.trailDecayCompositeOperation;
+            domElements.rotation_slider.value = settings.rotationSpeed;
+            domElements.radialAmplitude_slider.value = settings.radialAmplitude;
+            domElements.radialFrequency_slider.value = settings.radialFrequency;
+            domElements.radialPhase_slider.value = settings.radialPhase;
+            domElements.radialAmplitude2_slider.value = settings.radialAmplitude2;
+            domElements.radialFrequency2_slider.value = settings.radialFrequency2;
+            domElements.radialPhase2_slider.value = settings.radialPhase2;
+            
+            domElements.R_value_display.textContent = settings.R;
+            domElements.r_value_display.textContent = settings.r;
+            domElements.d_value_display.textContent = settings.d;
+            domElements.rhodoneaA_value_display.textContent = settings.rhodoneaA;
+            domElements.rhodoneaN_value_display.textContent = settings.rhodoneaN;
+            domElements.rhodoneaD_value_display.textContent = settings.rhodoneaD;
+            domElements.rhodoneaC_value_display.textContent = settings.rhodoneaC;
+            domElements.circleRadius_value_display.textContent = settings.circleRadius;
+            // domElements.lobes_value_display.textContent = settings.lobes; // Removed
+            domElements.lineWidth_value_display.textContent = parseFloat(settings.lineWidth).toFixed(1);
+            domElements.steps_value_display.textContent = settings.steps;
+            domElements.outerGlowIntensity_value_display.textContent = settings.outerGlowIntensity; 
+            domElements.innerGlowIntensity_value_display.textContent = settings.innerGlowIntensity; 
+            domElements.trailIntensity_value_display.textContent = parseFloat(settings.trailIntensity).toFixed(2);
+            domElements.rotation_value_display.textContent = settings.rotationSpeed;
+            domElements.radialAmplitude_value_display.textContent = settings.radialAmplitude;
+            domElements.radialFrequency_value_display.textContent = parseFloat(settings.radialFrequency).toFixed(1);
+            domElements.radialPhase_value_display.textContent = settings.radialPhase;
+            domElements.radialAmplitude2_value_display.textContent = settings.radialAmplitude2;
+            domElements.radialFrequency2_value_display.textContent = parseFloat(settings.radialFrequency2).toFixed(1);
+            domElements.radialPhase2_value_display.textContent = settings.radialPhase2;
+
+            toggleP5ParameterVisibility();
+        }
+
+        function toggleP5ParameterVisibility() {
+            const trochoidParamsGroup = document.getElementById('trochoid_params_group');
+            const rhodoneaParamsGroup = document.getElementById('rhodonea_params_group');
+            const simpleCircleParamsGroup = document.getElementById('simpleCircle_params_group');
+            // const lobesComplexityGroup = document.getElementById('lobes_complexity_group'); // Removed
+
+            trochoidParamsGroup.classList.add('hidden-controls');
+            rhodoneaParamsGroup.classList.add('hidden-controls');
+            simpleCircleParamsGroup.classList.add('hidden-controls');
+            // lobesComplexityGroup.classList.remove('hidden-controls'); // Removed
+
+            if (settings.patternType === 'rhodonea') {
+                rhodoneaParamsGroup.classList.remove('hidden-controls');
+            } else if (settings.patternType === 'simpleCircle') {
+                simpleCircleParamsGroup.classList.remove('hidden-controls');
+            } else { 
+                trochoidParamsGroup.classList.remove('hidden-controls');
+            }
+        }
+
+        function handleP5InputChange() {
+            updateP5SettingsFromUI();
+            loop(); 
+        }
+
+        function resetToP5Defaults() {
+            settings = { ...defaultSettings }; 
+            currentRotationAngle = 0;
+            updateUIFromP5Settings(); 
+            loop(); 
+        }
+
+        function draw() {
+            let p5BgColor = color(settings.bgColor);
+            let clearingAlphaP5 = (1.0 - settings.trailIntensity) * 255; 
+            
+            blendMode(p5BlendMode(settings.trailDecayCompositeOperation));
+            background(red(p5BgColor), green(p5BgColor), blue(p5BgColor), clearingAlphaP5);
+            
+            push(); 
+
+            blendMode(p5BlendMode(settings.compositeOperation));
+            
+            translate(width / 2, height / 2);
+            rotate(currentRotationAngle);
+
+            if (settings.outerGlowIntensity > 0) {
+                drawingContext.shadowBlur = settings.outerGlowIntensity;
+                drawingContext.shadowColor = settings.outerGlowColor; 
+            } else {
+                drawingContext.shadowBlur = 0;
+                drawingContext.shadowColor = 'rgba(0,0,0,0)';
+            }
+            
+            let p5LineColor = color(settings.lineColor);
+            stroke(red(p5LineColor), green(p5LineColor), blue(p5LineColor), 255); 
+            strokeWeight(settings.lineWidth);
+            noFill();
+
+            beginShape();
+            drawBasePatternVertices(); 
+            endShape();
+
+            drawingContext.shadowBlur = 0;
+            drawingContext.shadowColor = 'rgba(0,0,0,0)';
+
+            if (settings.innerGlowIntensity > 0 && settings.lineWidth > 0.2) { 
+                let p5InnerGlowColorObject = color(settings.innerGlowColor);
+                let innerGlowLineAlphaP5 = map(settings.innerGlowIntensity, 0, 30, 0, 255);
+                let innerGlowShadowAlphaCSS = map(settings.innerGlowIntensity, 0, 30, 0, 0.75); 
+
+                drawingContext.shadowBlur = settings.innerGlowIntensity; 
+                drawingContext.shadowColor = 'rgba(' + red(p5InnerGlowColorObject) + ',' + green(p5InnerGlowColorObject) + ',' + blue(p5InnerGlowColorObject) + ',' + innerGlowShadowAlphaCSS + ')';
+                
+                stroke(red(p5InnerGlowColorObject), green(p5InnerGlowColorObject), blue(p5InnerGlowColorObject), innerGlowLineAlphaP5); 
+                strokeWeight(max(0.1, settings.lineWidth * 0.6)); 
+                
+                beginShape();
+                drawBasePatternVertices(); 
+                endShape();
+                
+                drawingContext.shadowBlur = 0; 
+                drawingContext.shadowColor = 'rgba(0,0,0,0)';
+            }
+            
+            pop(); 
+
+
+            if (settings.rotationSpeed > 0) {
+                currentRotationAngle += (settings.rotationSpeed / 1000);
+            }
+
+            if (settings.rotationSpeed <= 0 && settings.trailIntensity <= 0) { 
+                noLoop(); 
+            } else {
+                loop(); 
+            }
+        }
+
+        function drawBasePatternVertices() {
+            let t_max_p5;
+            const steps_p5 = settings.steps;
+            const radVar_A1 = settings.radialAmplitude;
+            const radVar_B1 = settings.radialFrequency;
+            const radVar_C1_radians = settings.radialPhase * (PI / 180);
+            const radVar_A2 = settings.radialAmplitude2;
+            const radVar_B2 = settings.radialFrequency2;
+            const radVar_C2_radians = settings.radialPhase2 * (PI / 180);
+
+            if (settings.patternType === 'hypotrochoid' || settings.patternType === 'epitrochoid') {
+                const R_fixed = settings.R; 
+                let r_actual = settings.r; 
+                const d_pen = settings.d; 
+                if (r_actual === 0) r_actual = 0.01; 
+
+                let term_sum_diff;
+                if (settings.patternType === 'hypotrochoid') {
+                    term_sum_diff = R_fixed - r_actual;
+                    if (r_actual > R_fixed && R_fixed > 0) r_actual = R_fixed; 
+                    const scale = 1000;
+                    let commonDivisor = (term_sum_diff === 0) ? (r_actual || 0.01) : (gcd(Math.round(term_sum_diff * scale), Math.round(r_actual * scale)) / scale);
+                    if (commonDivisor === 0 || isNaN(commonDivisor)) commonDivisor = r_actual || 0.01;
+                    t_max_p5 = 2 * PI * (r_actual / commonDivisor);
+                } else { 
+                    term_sum_diff = R_fixed + r_actual;
+                    const scale = 1000;
+                    let commonDivisor = gcd(Math.round(term_sum_diff * scale), Math.round(r_actual * scale)) / scale;
+                    if (commonDivisor === 0 || isNaN(commonDivisor)) commonDivisor = r_actual || 0.01;
+                    t_max_p5 = 2 * PI * (r_actual / commonDivisor);
+                }
+                if (isNaN(t_max_p5) || !isFinite(t_max_p5) || t_max_p5 < 0.01 || t_max_p5 > 2 * PI * 1000) {
+                    t_max_p5 = 2 * PI * 10; // Fallback to 10 revolutions
+                }
+                t_max_p5 = Math.min(t_max_p5, 2 * PI * 100); 
+
+                for (let i = 0; i <= steps_p5; i++) {
+                    const t = (i / steps_p5) * t_max_p5; 
+                    let x_base, y_base;
+                    const angle_factor = (r_actual === 0) ? 0 : term_sum_diff / r_actual;
+
+                    if (settings.patternType === 'hypotrochoid') {
+                        x_base = term_sum_diff * cos(t) + d_pen * cos(angle_factor * t);
+                        y_base = term_sum_diff * sin(t) - d_pen * sin(angle_factor * t);
+                    } else { 
+                        x_base = term_sum_diff * cos(t) - d_pen * cos(angle_factor * t);
+                        y_base = term_sum_diff * sin(t) - d_pen * sin(angle_factor * t);
+                    }
+                    addVertexWithRadialVariance(x_base, y_base, radVar_A1, radVar_B1, radVar_C1_radians, radVar_A2, radVar_B2, radVar_C2_radians);
+                }
+            } else if (settings.patternType === 'rhodonea') {
+                const rho_A = settings.rhodoneaA;
+                const rho_N = settings.rhodoneaN;
+                let rho_D = settings.rhodoneaD;
+                const rho_C = settings.rhodoneaC;
+                if (rho_D === 0) rho_D = 1; 
+                const commonDivisorND = gcd(rho_N, rho_D);
+                t_max_p5 = 2 * PI * (rho_D / commonDivisorND);
+                if (isNaN(t_max_p5) || !isFinite(t_max_p5) || t_max_p5 < 0.01) {
+                     t_max_p5 = 2 * PI * 10; // Fallback to 10 revolutions
+                }
+                t_max_p5 = Math.min(t_max_p5, 2 * PI * 50); 
+
+                for (let i = 0; i <= steps_p5; i++) {
+                    const theta_polar = (i / steps_p5) * t_max_p5; 
+                    const k = rho_N / rho_D;
+                    const base_radius = rho_C + (rho_A * cos(k * theta_polar));
+                    const x_base = base_radius * cos(theta_polar);
+                    const y_base = base_radius * sin(theta_polar);
+                    addVertexWithRadialVariance(x_base, y_base, radVar_A1, radVar_B1, radVar_C1_radians, radVar_A2, radVar_B2, radVar_C2_radians);
+                }
+            } else if (settings.patternType === 'simpleCircle') {
+                const radius = settings.circleRadius;
+                t_max_p5 = 2 * PI; 
+                for (let i = 0; i <= steps_p5; i++) {
+                    const theta_polar = (i / steps_p5) * t_max_p5;
+                    const x_base = radius * cos(theta_polar);
+                    const y_base = radius * sin(theta_polar);
+                    addVertexWithRadialVariance(x_base, y_base, radVar_A1, radVar_B1, radVar_C1_radians, radVar_A2, radVar_B2, radVar_C2_radians);
+                }
+            }
+        }
+
+
+        function addVertexWithRadialVariance(x_base, y_base, 
+                                            amp1, freq1, phase_rad1,
+                                            amp2, freq2, phase_rad2) {
+            let final_x = x_base;
+            let final_y = y_base;
+
+            if (amp1 !== 0 || amp2 !== 0) { 
+                const original_radius_from_center = sqrt(x_base * x_base + y_base * y_base);
+                const theta_of_base_point = atan2(y_base, x_base);
+                let total_sine_wave_offset = 0;
+
+                if (amp1 !== 0) {
+                    total_sine_wave_offset += amp1 * sin(freq1 * theta_of_base_point + phase_rad1);
+                }
+                if (amp2 !== 0) {
+                    total_sine_wave_offset += amp2 * sin(freq2 * theta_of_base_point + phase_rad2);
+                }
+                
+                let new_radius = original_radius_from_center + total_sine_wave_offset;
+                if (new_radius < 0) new_radius = 0; 
+
+                final_x = new_radius * cos(theta_of_base_point);
+                final_y = new_radius * sin(theta_of_base_point);
+            }
+            vertex(final_x, final_y);
+        }
+    </script>
+</body>
+</html>
