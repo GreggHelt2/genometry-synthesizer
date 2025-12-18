@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circle Spirograph Designer v1.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        canvas {
+            background-color: #111827; /* gray-900 */
+            border-radius: 0.5rem; /* rounded-lg */
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border: 1px solid #374151; /* gray-700 */
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 0.5rem 0.75rem;
+            align-items: center;
+        }
+        input[type="checkbox"] {
+            accent-color: #8b5cf6; /* violet-500 */
+        }
+        input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 2.5rem;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border-radius: 0.375rem;
+            border: 1px solid #4b5563; /* gray-600 */
+        }
+        input[type="color"]::-moz-color-swatch {
+            border-radius: 0.375rem;
+            border: 1px solid #4b5563; /* gray-600 */
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        input:disabled+label, option:disabled, select:disabled {
+            color: #6b7280; /* gray-500 */
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-200">
+
+    <div class="container mx-auto p-4">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">Circle Spirograph Designer</h1>
+            <p class="text-gray-400 mt-2">Create geometric patterns by connecting points on multiple circles.</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Controls Column -->
+            <div class="w-full lg:w-1/3 bg-gray-700 p-4 rounded-lg shadow-lg flex flex-col gap-4 overflow-y-auto" style="max-height: 85vh;">
+                <h2 class="text-xl font-bold text-center text-violet-400">Controls</h2>
+                
+                <!-- Global Settings -->
+                <div class="bg-gray-800 p-3 rounded-md space-y-3">
+                    <h3 class="text-lg font-semibold text-center text-gray-300 border-b border-gray-600 pb-2">Global Settings</h3>
+                    <div class="param-grid">
+                        <label for="numPoints" class="font-medium text-sm">Points / Circle</label>
+                        <input type="range" id="numPoints" min="1" max="20" value="7" step="1" class="w-full">
+                        <span id="numPoints-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">7</span>
+                    </div>
+                    <div class="param-grid">
+                        <label for="step" class="font-medium text-sm">Step</label>
+                        <input type="range" id="step" min="1" max="360" value="1" step="1" class="w-full">
+                        <span id="step-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">1</span>
+                    </div>
+                    <div class="text-center text-xs text-gray-400" id="step-factors">Factors: 1</div>
+                </div>
+
+                <!-- Circle Controls -->
+                <div class="bg-gray-800 p-3 rounded-md space-y-3">
+                    <h3 class="text-lg font-semibold text-center text-gray-300 border-b border-gray-600 pb-2">Circles (Up to 6)</h3>
+                    <div id="circle-controls-container" class="space-y-4">
+                        <!-- Circle controls will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Coset Controls -->
+                <div class="bg-gray-800 p-3 rounded-md space-y-3">
+                    <h3 class="text-lg font-semibold text-center text-gray-300 border-b border-gray-600 pb-2">Cosets</h3>
+                    <div class="text-center text-sm space-y-1">
+                        <p>Total Points (Z): <span id="total-points-val" class="font-bold text-violet-400">0</span></p>
+                        <p>Lines to Close: <span id="lines-val" class="font-bold text-violet-400">0</span></p>
+                        <p>Total Cosets: <span id="coset-count-val" class="font-bold text-violet-400">1</span></p>
+                    </div>
+                    <div><label class="cursor-pointer flex items-center justify-center gap-2"><input type="checkbox" id="showCosets"> Show All Cosets</label></div>
+                    <div class="param-grid">
+                        <label for="numCosets" class="font-medium text-sm">Number</label>
+                        <input type="range" id="numCosets" min="1" max="1" value="1" step="1" class="w-full">
+                        <span id="num-cosets-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">1</span>
+                    </div>
+                    <div class="param-grid" style="grid-template-columns: auto 1fr;">
+                        <label for="cosetSelection" class="font-medium text-sm">Selection</label>
+                        <select id="cosetSelection" class="w-full bg-gray-900 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm">
+                            <option value="sequential">Sequential</option>
+                            <option value="distributed">Distributed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Styling Controls -->
+                <div class="bg-gray-800 p-3 rounded-md space-y-3">
+                    <h3 class="text-lg font-semibold text-center text-gray-300 border-b border-gray-600 pb-2">Styling</h3>
+                    <div class="param-grid">
+                        <label for="lineWidth" class="font-medium text-sm">Thickness</label>
+                        <input type="range" id="lineWidth" min="0.1" max="10" value="1.0" step="0.1" class="w-full">
+                        <span id="line-width-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">1.0</span>
+                    </div>
+                    <div class="param-grid">
+                        <label for="lineOpacity" class="font-medium text-sm">Opacity</label>
+                        <input type="range" id="lineOpacity" min="0" max="1" value="0.8" step="0.01" class="w-full">
+                        <span id="line-opacity-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">0.80</span>
+                    </div>
+                    <div class="param-grid" style="grid-template-columns: auto 1fr;">
+                        <label for="colorByMethod" class="font-medium text-sm">Color By</label>
+                        <select id="colorByMethod" class="w-full bg-gray-900 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm">
+                            <option value="length">Length</option>
+                            <option value="distance">Midpoint Distance to Origin</option>
+                            <option value="angle">Line Angle</option>
+                        </select>
+                    </div>
+                    <div class="param-grid" style="grid-template-columns: auto 1fr 1fr;">
+                        <label class="font-medium text-sm">Range</label>
+                        <input type="color" id="colorRangeStart" value="#8b5cf6">
+                        <input type="color" id="colorRangeEnd" value="#34d399">
+                    </div>
+                </div>
+
+                 <!-- Display Controls -->
+                <div class="bg-gray-800 p-3 rounded-md space-y-3">
+                     <h3 class="text-lg font-semibold text-center text-gray-300 border-b border-gray-600 pb-2">Display</h3>
+                    <div><label class="cursor-pointer flex items-center justify-center gap-2"><input type="checkbox" id="showCircles"> Show Base Circles</label></div>
+                    <div><label class="cursor-pointer flex items-center justify-center gap-2"><input type="checkbox" id="showPoints"> Show Points</label></div>
+                    <div class="param-grid">
+                        <label for="pointSize" class="font-medium text-sm">Point Size</label>
+                        <input type="range" id="pointSize" min="0.5" max="10" value="2.0" step="0.1" class="w-full">
+                        <span id="pointSize-val" class="font-mono bg-gray-900 px-2 py-1 rounded text-sm">2.0</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Canvas Column -->
+            <div class="w-full lg:w-2/3 flex items-center justify-center">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- DOM Element Selection ---
+        const mainCanvas = document.getElementById('mainCanvas'), ctx = mainCanvas.getContext('2d');
+        const circleControlsContainer = document.getElementById('circle-controls-container');
+        const allInputs = [];
+
+        // --- State ---
+        let params = {
+            numPoints: 7,
+            step: 1,
+            circles: [],
+            showCosets: false,
+            numCosets: 1,
+            cosetSelection: 'sequential',
+            lineWidth: 1.0,
+            lineOpacity: 0.8,
+            colorByMethod: 'length',
+            colorRangeStart: '#8b5cf6',
+            colorRangeEnd: '#34d399',
+            showPoints: false,
+            pointSize: 2.0,
+            showCircles: false,
+        };
+        const MAX_CIRCLES = 6;
+        const circleColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'];
+
+        // --- Utility Functions ---
+        const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while(b) { [a, b] = [b, a % b]; } return a; };
+        const getPrimeFactorization = (num) => {
+            if (num <= 1) return "1";
+            num = Math.floor(num);
+            const factors = [];
+            let d = 2;
+            let n = num;
+            while (n > 1) {
+                while (n % d === 0) { factors.push(d); n /= d; }
+                d = d + 1;
+                if (d * d > n) { if (n > 1) factors.push(n); break; }
+            }
+            if (factors.length === 1 && factors[0] === num) return "Prime";
+            return factors.join(' x ');
+        };
+        const hexToRgb = (hex) => {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+        };
+        const distance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+
+        // --- Core Logic ---
+        /**
+         * Generates the sequence of points for the spirograph walk.
+         * @param {object} currentParams - The current application parameters.
+         * @param {number} linesToDraw - The number of line segments for this path.
+         * @param {number} offset - The starting offset for the coset.
+         * @returns {Array<object>} An array of {x, y} points.
+         */
+        function generateSpirographPoints(currentParams, linesToDraw, offset = 0) {
+            const finalPoints = [];
+            const { numPoints, step, circles } = currentParams;
+
+            const enabledCircles = circles.filter(c => c.enabled);
+            if (enabledCircles.length === 0 || numPoints === 0 || linesToDraw === 0) return [];
+
+            // 1. Pre-calculate the points for each enabled circle
+            const circlePointSets = enabledCircles.map(circle => {
+                const points = [];
+                const rotationRad = circle.rotation * (Math.PI / 180);
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * 2 * Math.PI + rotationRad;
+                    points.push({
+                        x: circle.radius * Math.cos(angle),
+                        y: circle.radius * Math.sin(angle)
+                    });
+                }
+                return points;
+            });
+            
+            const totalPointsInSystem = enabledCircles.length * numPoints;
+
+            // 2. Generate the walk sequence
+            for (let i = 0; i <= linesToDraw; i++) {
+                const currentIndex = (offset + i * step) % totalPointsInSystem;
+                
+                // De-interleave the index to find the correct circle and point
+                const circleIndex = currentIndex % enabledCircles.length;
+                const pointIndex = Math.floor(currentIndex / enabledCircles.length);
+
+                if (circlePointSets[circleIndex] && circlePointSets[circleIndex][pointIndex]) {
+                    finalPoints.push(circlePointSets[circleIndex][pointIndex]);
+                }
+            }
+            return finalPoints;
+        }
+
+        /**
+         * Draws a path on the canvas with individual segment coloring.
+         * @param {CanvasRenderingContext2D} ctx - The canvas context.
+         * @param {Array<object>} points - The points to draw.
+         */
+        function drawPath(ctx, points) {
+            if (points.length < 2) return;
+            const { lineWidth, lineOpacity, colorByMethod, colorRangeStart, colorRangeEnd } = params;
+            
+            const canvas = ctx.canvas;
+            const cssWidth = canvas.clientWidth;
+            const cssHeight = canvas.clientHeight;
+            const centerX = cssWidth / 2;
+            const centerY = cssHeight / 2;
+            const scale = Math.min(cssWidth, cssHeight) / 22; // Scale based on radius max of 10
+
+            // Determine min/max values for color mapping
+            let minVal = Infinity, maxVal = -Infinity;
+            if (points.length > 1) {
+                for (let i = 0; i < points.length - 1; i++) {
+                    const p1 = points[i], p2 = points[i+1];
+                    let val;
+                    if (colorByMethod === 'length') val = distance(p1, p2);
+                    else if (colorByMethod === 'distance') val = Math.sqrt(Math.pow((p1.x + p2.x)/2, 2) + Math.pow((p1.y + p2.y)/2, 2));
+                    else if (colorByMethod === 'angle') val = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                    
+                    if (val < minVal) minVal = val;
+                    if (val > maxVal) maxVal = val;
+                }
+            }
+            const range = maxVal - minVal;
+
+            const startColor = hexToRgb(colorRangeStart);
+            const endColor = hexToRgb(colorRangeEnd);
+            const lerp = (a, b, t) => a * (1 - t) + b * t;
+
+            // Draw each segment individually
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i+1];
+
+                let val;
+                if (colorByMethod === 'length') val = distance(p1, p2);
+                else if (colorByMethod === 'distance') val = Math.sqrt(Math.pow((p1.x + p2.x)/2, 2) + Math.pow((p1.y + p2.y)/2, 2));
+                else if (colorByMethod === 'angle') val = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+                const t = range > 0 ? (val - minVal) / range : 0;
+                
+                const r = Math.round(lerp(startColor.r, endColor.r, t));
+                const g = Math.round(lerp(startColor.g, endColor.g, t));
+                const b = Math.round(lerp(startColor.b, endColor.b, t));
+                
+                ctx.strokeStyle = `rgba(${r},${g},${b},${lineOpacity})`;
+                ctx.lineWidth = lineWidth;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX + p1.x * scale, centerY + p1.y * scale);
+                ctx.lineTo(centerX + p2.x * scale, centerY + p2.y * scale);
+                ctx.stroke();
+            }
+        }
+        
+        /**
+         * Draws the base circles.
+         */
+        function drawBaseCircles(ctx) {
+            if (!params.showCircles) return;
+            const canvas = ctx.canvas;
+            const cssWidth = canvas.clientWidth;
+            const cssHeight = canvas.clientHeight;
+            const centerX = cssWidth / 2;
+            const centerY = cssHeight / 2;
+            const scale = Math.min(cssWidth, cssHeight) / 22;
+
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.5;
+
+            params.circles.forEach((circle, i) => {
+                if (circle.enabled) {
+                    ctx.strokeStyle = circleColors[i];
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, circle.radius * scale, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            });
+            ctx.restore();
+        }
+
+        /**
+         * Draws points on the canvas.
+         */
+        function drawPoints(ctx, points) {
+            if (!params.showPoints || points.length === 0) return;
+            const canvas = ctx.canvas;
+            const cssWidth = canvas.clientWidth;
+            const cssHeight = canvas.clientHeight;
+            const centerX = cssWidth / 2;
+            const centerY = cssHeight / 2;
+            const scale = Math.min(cssWidth, cssHeight) / 22;
+
+            ctx.fillStyle = `rgba(255, 255, 255, 0.5)`;
+            for (const point of points) {
+                ctx.beginPath();
+                ctx.arc(centerX + point.x * scale, centerY + point.y * scale, params.pointSize, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        /**
+         * Main update and render loop.
+         */
+        function update() {
+            // 1. Read all parameters from the DOM
+            params.numPoints = parseInt(document.getElementById('numPoints').value);
+            params.step = parseInt(document.getElementById('step').value);
+            params.circles.forEach((circle, i) => {
+                circle.enabled = document.getElementById(`c-enabled-${i}`).checked;
+                circle.radius = parseFloat(document.getElementById(`c-radius-${i}`).value);
+                circle.rotation = parseInt(document.getElementById(`c-rotation-${i}`).value);
+            });
+            params.showCosets = document.getElementById('showCosets').checked;
+            params.numCosets = parseInt(document.getElementById('numCosets').value);
+            params.cosetSelection = document.getElementById('cosetSelection').value;
+            params.lineWidth = parseFloat(document.getElementById('lineWidth').value);
+            params.lineOpacity = parseFloat(document.getElementById('lineOpacity').value);
+            params.colorByMethod = document.getElementById('colorByMethod').value;
+            params.colorRangeStart = document.getElementById('colorRangeStart').value;
+            params.colorRangeEnd = document.getElementById('colorRangeEnd').value;
+            params.showPoints = document.getElementById('showPoints').checked;
+            params.pointSize = parseFloat(document.getElementById('pointSize').value);
+            params.showCircles = document.getElementById('showCircles').checked;
+
+
+            // Update value displays
+            document.getElementById('numPoints-val').textContent = params.numPoints;
+            document.getElementById('step-val').textContent = params.step;
+            document.getElementById('step-factors').textContent = `Factors: ${getPrimeFactorization(params.step)}`;
+            params.circles.forEach((c, i) => {
+                document.getElementById(`c-radius-val-${i}`).textContent = c.radius.toFixed(1);
+                document.getElementById(`c-rotation-val-${i}`).textContent = `${c.rotation}°`;
+            });
+            document.getElementById('line-width-val').textContent = params.lineWidth.toFixed(1);
+            document.getElementById('line-opacity-val').textContent = params.lineOpacity.toFixed(2);
+            document.getElementById('pointSize-val').textContent = params.pointSize.toFixed(1);
+            
+
+            // 2. Calculate dependent values
+            const enabledCirclesCount = params.circles.filter(c => c.enabled).length;
+            const totalPoints = enabledCirclesCount * params.numPoints;
+            const commonDivisor = gcd(params.step, totalPoints);
+            const linesToClose = totalPoints > 0 ? totalPoints / commonDivisor : 0;
+            const cosetCount = totalPoints > 0 ? commonDivisor : 1;
+
+            // Update UI with calculated values
+            document.getElementById('total-points-val').textContent = totalPoints;
+            document.getElementById('lines-val').textContent = linesToClose;
+            document.getElementById('coset-count-val').textContent = cosetCount;
+            
+            const numCosetsSlider = document.getElementById('numCosets');
+            numCosetsSlider.max = cosetCount;
+            if (params.numCosets > cosetCount) {
+                params.numCosets = cosetCount;
+                numCosetsSlider.value = cosetCount;
+            }
+            numCosetsSlider.disabled = params.showCosets;
+            document.getElementById('num-cosets-val').textContent = params.numCosets;
+            
+            const stepSlider = document.getElementById('step');
+            stepSlider.max = totalPoints > 1 ? totalPoints -1 : 1;
+            if(params.step > stepSlider.max) {
+                params.step = stepSlider.max;
+                stepSlider.value = stepSlider.max;
+            }
+
+            // 3. Clear canvas and render
+            ctx.clearRect(0, 0, mainCanvas.clientWidth, mainCanvas.clientHeight);
+
+            if (params.showCircles) {
+                drawBaseCircles(ctx);
+            }
+
+            const cosetLimit = params.showCosets ? cosetCount : params.numCosets;
+            let allRenderedPoints = [];
+
+            for (let i = 0; i < cosetLimit; i++) {
+                let offset;
+                if (params.cosetSelection === 'distributed' && cosetLimit > 1) {
+                    offset = Math.round(i * cosetCount / cosetLimit);
+                } else {
+                    offset = i;
+                }
+                const points = generateSpirographPoints(params, linesToClose, offset);
+                allRenderedPoints.push(...points);
+                drawPath(ctx, points);
+            }
+            
+            drawPoints(ctx, allRenderedPoints);
+        }
+
+        /**
+         * Sets up the initial UI and event listeners.
+         */
+        function initialize() {
+            // Create controls for each circle
+            for (let i = 0; i < MAX_CIRCLES; i++) {
+                params.circles.push({
+                    enabled: i < 3, // Enable first 3 by default
+                    radius: (i + 1) * 1.5,
+                    rotation: 0
+                });
+
+                const controlGroup = document.createElement('div');
+                controlGroup.className = 'border border-gray-600 p-2 rounded-md space-y-2';
+                controlGroup.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <label for="c-enabled-${i}" class="font-bold text-sm cursor-pointer" style="color: ${circleColors[i]}">Circle ${i + 1}</label>
+                        <input type="checkbox" id="c-enabled-${i}" ${params.circles[i].enabled ? 'checked' : ''}>
+                    </div>
+                    <div class="param-grid">
+                        <label for="c-radius-${i}" class="font-medium text-xs">Radius</label>
+                        <input type="range" id="c-radius-${i}" min="0.1" max="10" value="${params.circles[i].radius}" step="0.1" class="w-full">
+                        <span id="c-radius-val-${i}" class="font-mono bg-gray-900 px-2 py-1 rounded text-xs">${params.circles[i].radius.toFixed(1)}</span>
+                    </div>
+                    <div class="param-grid">
+                        <label for="c-rotation-${i}" class="font-medium text-xs">Rotation</label>
+                        <input type="range" id="c-rotation-${i}" min="0" max="360" value="${params.circles[i].rotation}" step="1" class="w-full">
+                        <span id="c-rotation-val-${i}" class="font-mono bg-gray-900 px-2 py-1 rounded text-xs">${params.circles[i].rotation}°</span>
+                    </div>
+                `;
+                circleControlsContainer.appendChild(controlGroup);
+            }
+
+            // Collect all inputs for event listeners
+            document.querySelectorAll('input, select').forEach(el => allInputs.push(el));
+            allInputs.forEach(input => {
+                const eventType = input.tagName.toLowerCase() === 'select' || input.type === 'checkbox' ? 'change' : 'input';
+                input.addEventListener(eventType, update);
+            });
+
+            // Initial setup
+            handleResize();
+        }
+
+        function handleResize() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = mainCanvas.getBoundingClientRect();
+            const size = Math.min(rect.width, window.innerHeight * 0.8) * dpr;
+            
+            mainCanvas.width = size;
+            mainCanvas.height = size;
+            
+            const scaleFactor = size / (size / dpr);
+            ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
+
+            update();
+        }
+
+        // --- Start Application ---
+        window.addEventListener('resize', handleResize);
+        initialize();
+    </script>
+</body>
+</html>
