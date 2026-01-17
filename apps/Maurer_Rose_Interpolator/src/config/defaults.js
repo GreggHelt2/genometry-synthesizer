@@ -42,6 +42,8 @@ export const DEFAULTS = {
         showRoseB: false,
         underlayOpacity: 0.15,
         opacity: 1,
+        color: '#ffffff',
+        colorMethod: 'solid',
     },
     settings: {
         theme: 'dark',

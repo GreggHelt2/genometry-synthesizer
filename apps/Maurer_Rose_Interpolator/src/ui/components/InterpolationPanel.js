@@ -48,6 +48,37 @@ export class InterpolationPanel extends Panel {
         container.appendChild(opLabel);
         container.appendChild(this.interpOpacitySlider);
 
+        // Interpolation Color & Method
+        const colorContainer = createElement('div', 'flex flex-col mb-4 mt-4 p-2 border border-gray-700 rounded bg-gray-900/50');
+        const colorLabel = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Interpolation Color' });
+        const colorRow = createElement('div', 'flex gap-2');
+
+        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+        this.colorInput.addEventListener('input', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_INTERPOLATION,
+                payload: { color: e.target.value }
+            });
+        });
+
+        this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
+        ['solid', 'length', 'angle', 'sequence'].forEach(m => {
+            const opt = createElement('option', '', { value: m, textContent: m.charAt(0).toUpperCase() + m.slice(1) });
+            this.methodSelect.appendChild(opt);
+        });
+        this.methodSelect.addEventListener('change', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_INTERPOLATION,
+                payload: { colorMethod: e.target.value }
+            });
+        });
+
+        colorRow.appendChild(this.colorInput);
+        colorRow.appendChild(this.methodSelect);
+        colorContainer.appendChild(colorLabel);
+        colorContainer.appendChild(colorRow);
+        container.appendChild(colorContainer);
+
         // Play/Pause Button
         this.playBtn = createElement('button', 'mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 w-full transition-colors', {
             textContent: 'Play Animation'
@@ -133,6 +164,13 @@ export class InterpolationPanel extends Panel {
 
         if (document.activeElement !== this.interpOpacitySlider) {
             this.interpOpacitySlider.value = state.interpolation.opacity ?? 1;
+        }
+
+        if (this.colorInput.value !== state.interpolation.color) {
+            this.colorInput.value = state.interpolation.color || '#ffffff';
+        }
+        if (this.methodSelect.value !== state.interpolation.colorMethod) {
+            this.methodSelect.value = state.interpolation.colorMethod || 'solid';
         }
 
         // Update Underlays

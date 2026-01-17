@@ -45,16 +45,25 @@ export class CanvasRenderer {
         const drawRose = (params, indexOffset) => {
             const points = generateMaurerPolyline(curve, params.totalDivs, params.step, 1, indexOffset);
 
-            // Check for Advanced Coloring
+            // Check for Advanced Coloring or Low Opacity (Density Plot)
             const baseOpacity = params.opacity ?? 1;
+            const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1;
 
-            if (params.colorMethod && params.colorMethod !== 'solid') {
-                const colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || color);
+            if (useSegments) {
+                let colors;
+                // If method is not solid, generate colors. If it IS solid (but opacity < 1), use single color array.
+                if (params.colorMethod && params.colorMethod !== 'solid') {
+                    colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || color);
+                } else {
+                    colors = [params.color || color]; // Fallback in drawColoredSegments uses [0] for all
+                }
+
                 this.polylineLayer.drawColoredSegments(points, colors, {
                     width: (params.showAllCosets && k > 1) ? 1 : 2,
                     opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
                 });
             } else {
+                // High performance single polyline for opaque solid colors
                 this.polylineLayer.draw(points, {
                     color: params.color || color,
                     width: (params.showAllCosets && k > 1) ? 1 : 2,
@@ -130,13 +139,30 @@ export class CanvasRenderer {
         const weight = state.interpolation.weight;
         const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
 
-        // TODO: Support Color Method for Interpolated Curve?
-        // For now, keep it solid white (or settings color) to stand out against underlays
-        this.polylineLayer.draw(pointsInterp, {
-            color: 'white',
-            width: state.settings.lineThickness,
-            opacity: state.interpolation.opacity ?? 1
-        });
+        // Interpolation Coloring & Opacity Logic
+        const interpColor = state.interpolation.color || 'white';
+        const interpMethod = state.interpolation.colorMethod || 'solid';
+        const interpOpacity = state.interpolation.opacity ?? 1;
+        const useSegments = (interpMethod !== 'solid') || interpOpacity < 1;
+
+        if (useSegments) {
+            let colors;
+            if (interpMethod !== 'solid') {
+                colors = Colorizer.generateSegmentColors(pointsInterp, interpMethod, interpColor);
+            } else {
+                colors = [interpColor];
+            }
+            this.polylineLayer.drawColoredSegments(pointsInterp, colors, {
+                width: state.settings.lineThickness,
+                opacity: interpOpacity
+            });
+        } else {
+            this.polylineLayer.draw(pointsInterp, {
+                color: interpColor,
+                width: state.settings.lineThickness,
+                opacity: interpOpacity
+            });
+        }
 
         this.ctx.restore();
     }
