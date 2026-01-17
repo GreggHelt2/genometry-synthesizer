@@ -24,4 +24,24 @@ export class PolylineLayer {
         this.ctx.stroke();
         this.ctx.globalAlpha = 1; // Reset
     }
+
+    drawColoredSegments(points, colors, style) {
+        if (!points || points.length < 2 || !colors || colors.length === 0) return;
+
+        this.ctx.lineWidth = style.width || 1;
+        this.ctx.globalAlpha = style.opacity ?? 1;
+
+        for (let i = 0; i < points.length - 1; i++) {
+            // Safety check for color index
+            const color = colors[i] || colors[0];
+
+            this.ctx.beginPath();
+            this.ctx.strokeStyle = color;
+            this.ctx.moveTo(points[i].x, points[i].y);
+            this.ctx.lineTo(points[i + 1].x, points[i + 1].y);
+            this.ctx.stroke();
+        }
+
+        this.ctx.globalAlpha = 1; // Reset
+    }
 }

@@ -16,6 +16,8 @@ export const DEFAULTS = {
         cosetIndex: 0,
         showAllCosets: false,
         color: '#ff6666', // Default Red-ish
+        colorMethod: 'solid',
+        opacity: 1,
     },
     roseB: {
         curveType: 'Rhodonea',
@@ -30,10 +32,16 @@ export const DEFAULTS = {
         cosetIndex: 0,
         showAllCosets: false,
         color: '#6666ff', // Default Blue-ish
+        colorMethod: 'solid',
+        opacity: 1,
     },
     interpolation: {
         weight: 0.0, // 0 to 1
         method: 'linear', // 'linear', 'lcm', etc.
+        showRoseA: false,
+        showRoseB: false,
+        underlayOpacity: 0.15,
+        opacity: 1,
     },
     settings: {
         theme: 'dark',

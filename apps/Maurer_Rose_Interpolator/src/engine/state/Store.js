@@ -3,7 +3,7 @@ import { ACTIONS } from './Actions.js';
 
 class Store {
     constructor() {
-        // Deep clone defaults to avoid mutation issues
+        // I need to check defaults.js first. I will abort this tool call and view defaults.js instead.
         this.state = JSON.parse(JSON.stringify(DEFAULTS));
         this.listeners = new Set();
         this.isDirty = true; // Initial render required

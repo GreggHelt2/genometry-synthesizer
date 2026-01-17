@@ -2,6 +2,7 @@ import { PolylineLayer } from './layers/PolylineLayer.js';
 import { RhodoneaCurve } from '../math/curves/RhodoneaCurve.js';
 import { generateMaurerPolyline } from '../math/maurer.js';
 import { interpolateLinear } from '../math/interpolation.js';
+import { Colorizer } from '../math/Colorizer.js';
 import { gcd } from '../math/lcm.js';
 
 export class CanvasRenderer {
@@ -41,16 +42,34 @@ export class CanvasRenderer {
         const curve = this.createCurve(roseParams);
         const k = gcd(roseParams.step, roseParams.totalDivs);
 
+        const drawRose = (params, indexOffset) => {
+            const points = generateMaurerPolyline(curve, params.totalDivs, params.step, 1, indexOffset);
+
+            // Check for Advanced Coloring
+            const baseOpacity = params.opacity ?? 1;
+
+            if (params.colorMethod && params.colorMethod !== 'solid') {
+                const colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || color);
+                this.polylineLayer.drawColoredSegments(points, colors, {
+                    width: (params.showAllCosets && k > 1) ? 1 : 2,
+                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                });
+            } else {
+                this.polylineLayer.draw(points, {
+                    color: params.color || color,
+                    width: (params.showAllCosets && k > 1) ? 1 : 2,
+                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                });
+            }
+        };
+
         if (roseParams.showAllCosets && k > 1) {
             for (let i = 0; i < k; i++) {
-                // Dimmer for all cosets
-                const points = generateMaurerPolyline(curve, roseParams.totalDivs, roseParams.step, 1, i);
-                this.polylineLayer.draw(points, { color, width: 1, opacity: 0.5 });
+                drawRose(roseParams, i);
             }
         } else {
             const offset = (k > 1) ? roseParams.cosetIndex : 0;
-            const points = generateMaurerPolyline(curve, roseParams.totalDivs, roseParams.step, 1, offset);
-            this.polylineLayer.draw(points, { color: roseParams.color || color, width: 2, opacity: 1 });
+            drawRose(roseParams, offset);
         }
 
         this.ctx.restore();
@@ -64,46 +83,59 @@ export class CanvasRenderer {
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
         this.ctx.scale(scale, scale);
 
-        const curveA = this.createCurve(state.roseA);
-        const curveB = this.createCurve(state.roseB);
-        // Interpolation complicates cosets (matching topology). 
-        // For V17 Grounded: Just render PRIMARY coset (or current selected)
-        // Advanced: We'd need to interpolate EACH coset pair if k matches, or LCM logic.
-
-        // Let's adhere to "Grounded" scope: Interpolate the SELECTED cosets.
-
-        const kA = gcd(state.roseA.step, state.roseA.totalDivs);
-        const kB = gcd(state.roseB.step, state.roseB.totalDivs);
-
-        const subA = (kA > 1) ? state.roseA.cosetIndex : 0;
-        const subB = (kB > 1) ? state.roseB.cosetIndex : 0;
-
-        const pointsA = generateMaurerPolyline(curveA, state.roseA.totalDivs, state.roseA.step, 1, subA);
-        const pointsB = generateMaurerPolyline(curveB, state.roseB.totalDivs, state.roseB.step, 1, subB);
-
-        const weight = state.interpolation.weight;
-        const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
-
-        // Convert hex to rgb for opacity handling (simplified)
-        // Ideally we'd have a utils function or use CSS string processing
-        // For 'preview', we used dynamic color. For interpolation, we want transparency.
-        // Let's us the new color properties but hardcode opacity for now, or just use hex?
-        // PolylineLayer might support hex.
-
         // Helper to convert hex to rgba
         const hexToRgba = (hex, alpha) => {
+            if (!hex) return `rgba(255, 255, 255, ${alpha})`;
             const r = parseInt(hex.slice(1, 3), 16);
             const g = parseInt(hex.slice(3, 5), 16);
             const b = parseInt(hex.slice(5, 7), 16);
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
 
-        this.polylineLayer.draw(pointsA, { color: hexToRgba(state.roseA.color, 0.15), width: 1 });
-        this.polylineLayer.draw(pointsB, { color: hexToRgba(state.roseB.color, 0.15), width: 1 });
+        // Draw Underlays if enabled
+        if (state.interpolation.showRoseA) {
+            const curveA = this.createCurve(state.roseA);
+            const kA = gcd(state.roseA.step, state.roseA.totalDivs);
+            const subA = (kA > 1) ? state.roseA.cosetIndex : 0;
+            const pointsA = generateMaurerPolyline(curveA, state.roseA.totalDivs, state.roseA.step, 1, subA);
+
+            this.polylineLayer.draw(pointsA, {
+                color: hexToRgba(state.roseA.color, state.interpolation.underlayOpacity),
+                width: 1
+            });
+        }
+
+        if (state.interpolation.showRoseB) {
+            const curveB = this.createCurve(state.roseB);
+            const kB = gcd(state.roseB.step, state.roseB.totalDivs);
+            const subB = (kB > 1) ? state.roseB.cosetIndex : 0;
+            const pointsB = generateMaurerPolyline(curveB, state.roseB.totalDivs, state.roseB.step, 1, subB);
+
+            this.polylineLayer.draw(pointsB, {
+                color: hexToRgba(state.roseB.color, state.interpolation.underlayOpacity),
+                width: 1
+            });
+        }
+
+        // Draw Interpolated Curve
+        const curveA = this.createCurve(state.roseA);
+        const curveB = this.createCurve(state.roseB);
+        const kA = gcd(state.roseA.step, state.roseA.totalDivs);
+        const kB = gcd(state.roseB.step, state.roseB.totalDivs);
+        const subA = (kA > 1) ? state.roseA.cosetIndex : 0;
+        const subB = (kB > 1) ? state.roseB.cosetIndex : 0;
+        const pointsA = generateMaurerPolyline(curveA, state.roseA.totalDivs, state.roseA.step, 1, subA);
+        const pointsB = generateMaurerPolyline(curveB, state.roseB.totalDivs, state.roseB.step, 1, subB);
+
+        const weight = state.interpolation.weight;
+        const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
+
+        // TODO: Support Color Method for Interpolated Curve?
+        // For now, keep it solid white (or settings color) to stand out against underlays
         this.polylineLayer.draw(pointsInterp, {
             color: 'white',
             width: state.settings.lineThickness,
-            opacity: state.settings.opacity
+            opacity: state.interpolation.opacity ?? 1
         });
 
         this.ctx.restore();

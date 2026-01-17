@@ -32,6 +32,22 @@ export class InterpolationPanel extends Panel {
         container.appendChild(label);
         container.appendChild(this.slider);
 
+        container.appendChild(this.slider);
+
+        // Interpolation Opacity
+        const opLabel = createElement('label', 'block text-sm mb-2 mt-4', { textContent: 'Interpolation Opacity' });
+        this.interpOpacitySlider = createElement('input', 'w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer', {
+            type: 'range', min: 0, max: 1, step: 0.01, value: 1
+        });
+        this.interpOpacitySlider.addEventListener('input', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_INTERPOLATION,
+                payload: { opacity: parseFloat(e.target.value) }
+            });
+        });
+        container.appendChild(opLabel);
+        container.appendChild(this.interpOpacitySlider);
+
         // Play/Pause Button
         this.playBtn = createElement('button', 'mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 w-full transition-colors', {
             textContent: 'Play Animation'
@@ -45,6 +61,34 @@ export class InterpolationPanel extends Panel {
             });
         });
         container.appendChild(this.playBtn);
+
+        // Underlays Section
+        const underlayContainer = createElement('div', 'mt-4 pt-4 border-t border-gray-700');
+        underlayContainer.appendChild(createElement('h3', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Underlays' }));
+
+        // Toggles
+        const toggleRow = createElement('div', 'flex gap-4 mb-2');
+        this.showACheck = this.createCheckbox('showRoseA', 'Show A');
+        this.showBCheck = this.createCheckbox('showRoseB', 'Show B');
+        toggleRow.appendChild(this.showACheck.container);
+        toggleRow.appendChild(this.showBCheck.container);
+        underlayContainer.appendChild(toggleRow);
+
+        // Opacity
+        const opacityLabel = createElement('label', 'block text-xs text-gray-400 mb-1', { textContent: 'Underlay Opacity' });
+        this.opacitySlider = createElement('input', 'w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer', {
+            type: 'range', min: 0, max: 1, step: 0.01
+        });
+        this.opacitySlider.addEventListener('input', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_INTERPOLATION,
+                payload: { underlayOpacity: parseFloat(e.target.value) }
+            });
+        });
+        underlayContainer.appendChild(opacityLabel);
+        underlayContainer.appendChild(this.opacitySlider);
+
+        container.appendChild(underlayContainer);
 
         // Recording Controls Section
         const recContainer = createElement('div', 'mt-6 pt-4 border-t border-gray-700');
@@ -87,6 +131,17 @@ export class InterpolationPanel extends Panel {
             this.slider.value = state.interpolation.weight;
         }
 
+        if (document.activeElement !== this.interpOpacitySlider) {
+            this.interpOpacitySlider.value = state.interpolation.opacity ?? 1;
+        }
+
+        // Update Underlays
+        this.showACheck.input.checked = state.interpolation.showRoseA;
+        this.showBCheck.input.checked = state.interpolation.showRoseB;
+        if (document.activeElement !== this.opacitySlider) {
+            this.opacitySlider.value = state.interpolation.underlayOpacity;
+        }
+
         const isPlaying = state.app.isPlaying;
         this.playBtn.textContent = isPlaying ? 'Pause Animation' : 'Play Animation';
 
@@ -107,5 +162,22 @@ export class InterpolationPanel extends Panel {
             this.recordBtn.classList.remove('bg-red-700', 'hover:bg-red-600', 'animate-pulse');
             this.recordBtn.classList.add('bg-green-700', 'hover:bg-green-600');
         }
+    }
+
+    createCheckbox(key, label) {
+        const container = createElement('div', 'flex items-center');
+        const input = createElement('input', 'mr-2', { type: 'checkbox' });
+        const labelEl = createElement('label', 'text-xs text-gray-300', { textContent: label });
+
+        input.addEventListener('change', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_INTERPOLATION,
+                payload: { [key]: e.target.checked }
+            });
+        });
+
+        container.appendChild(input);
+        container.appendChild(labelEl);
+        return { container, input };
     }
 }

@@ -63,9 +63,46 @@ export class RosePanel extends Panel {
         maurerAccordion.append(this.divsControl.container);
         maurerAccordion.append(this.stepControl.container);
 
+        maurerAccordion.append(this.stepControl.container);
+
+        // Opacity Control
+        this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Opacity');
+        maurerAccordion.append(this.opacityControl.container);
+
         // Color Control
-        this.colorControl = this.createColorInput('color', 'Rose Color');
-        maurerAccordion.append(this.colorControl.container);
+        // Color Control
+        // Custom composite control for Color + Method
+        const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
+        const colorLabel = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Rose Color & Method' });
+        const colorRow = createElement('div', 'flex gap-2');
+
+        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+        this.colorInput.addEventListener('input', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { color: e.target.value }
+            });
+        });
+
+        this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
+        ['solid', 'length', 'angle', 'sequence'].forEach(m => {
+            const opt = createElement('option', '', { value: m, textContent: m.charAt(0).toUpperCase() + m.slice(1) });
+            this.methodSelect.appendChild(opt);
+        });
+        this.methodSelect.addEventListener('change', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { colorMethod: e.target.value }
+            });
+        });
+
+        colorRow.appendChild(this.colorInput);
+        colorRow.appendChild(this.methodSelect);
+        colorContainer.appendChild(colorLabel);
+        colorContainer.appendChild(colorRow);
+
+        // this.colorControl = this.createColorInput('color', 'Rose Color');
+        maurerAccordion.append(colorContainer);
 
         // Coset Controls
         const cosetContainer = createElement('div', 'p-2 border-t border-gray-700 bg-gray-800');
@@ -161,9 +198,13 @@ export class RosePanel extends Panel {
         this.updateControl(this.rotControl, params.rot);
         this.updateControl(this.divsControl, params.totalDivs);
         this.updateControl(this.stepControl, params.step);
+        this.updateControl(this.opacityControl, params.opacity ?? 1);
 
-        if (this.colorControl.input.value !== params.color) {
-            this.colorControl.input.value = params.color;
+        if (this.colorInput.value !== params.color) {
+            this.colorInput.value = params.color;
+        }
+        if (this.methodSelect.value !== params.colorMethod) {
+            this.methodSelect.value = params.colorMethod || 'solid';
         }
 
         // Coset Logic
