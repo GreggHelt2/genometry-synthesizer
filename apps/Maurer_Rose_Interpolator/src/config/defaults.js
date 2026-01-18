@@ -44,6 +44,7 @@ export const DEFAULTS = {
         opacity: 1,
         color: '#ffffff',
         colorMethod: 'solid',
+        blendMode: 'source-over',
     },
     settings: {
         theme: 'dark',

@@ -45,9 +45,13 @@ export class CanvasRenderer {
         const drawRose = (params, indexOffset) => {
             const points = generateMaurerPolyline(curve, params.totalDivs, params.step, 1, indexOffset);
 
-            // Check for Advanced Coloring or Low Opacity (Density Plot)
+            // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
             const baseOpacity = params.opacity ?? 1;
-            const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1;
+            const blendMode = params.blendMode || 'source-over';
+            const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1 || blendMode !== 'source-over';
+
+            // Apply Blend Mode
+            this.ctx.globalCompositeOperation = blendMode;
 
             if (useSegments) {
                 let colors;
@@ -80,6 +84,9 @@ export class CanvasRenderer {
             const offset = (k > 1) ? roseParams.cosetIndex : 0;
             drawRose(roseParams, offset);
         }
+
+        // Reset Blend Mode
+        this.ctx.globalCompositeOperation = 'source-over';
 
         this.ctx.restore();
     }
@@ -143,7 +150,13 @@ export class CanvasRenderer {
         const interpColor = state.interpolation.color || 'white';
         const interpMethod = state.interpolation.colorMethod || 'solid';
         const interpOpacity = state.interpolation.opacity ?? 1;
-        const useSegments = (interpMethod !== 'solid') || interpOpacity < 1;
+        const interpBlend = state.interpolation.blendMode || 'source-over';
+        const useSegments = (interpMethod !== 'solid') || interpOpacity < 1 || interpBlend !== 'source-over';
+
+        // Apply Blend Mode
+        this.ctx.globalCompositeOperation = interpBlend;
+
+
 
         if (useSegments) {
             let colors;
@@ -153,16 +166,20 @@ export class CanvasRenderer {
                 colors = [interpColor];
             }
             this.polylineLayer.drawColoredSegments(pointsInterp, colors, {
-                width: state.settings.lineThickness,
+                // Use same width logic as renderPreview for consistency
+                width: 2, // Default thickness matching renderPreview
                 opacity: interpOpacity
             });
         } else {
             this.polylineLayer.draw(pointsInterp, {
                 color: interpColor,
-                width: state.settings.lineThickness,
+                width: 2, // Default thickness matching renderPreview
                 opacity: interpOpacity
             });
         }
+
+        // Reset Blend Mode
+        this.ctx.globalCompositeOperation = 'source-over';
 
         this.ctx.restore();
     }

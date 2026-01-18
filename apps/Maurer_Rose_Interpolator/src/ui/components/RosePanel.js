@@ -101,6 +101,41 @@ export class RosePanel extends Panel {
         colorContainer.appendChild(colorLabel);
         colorContainer.appendChild(colorRow);
 
+        // Blend Mode
+        const blendLabel = createElement('label', 'text-sm text-gray-300 mb-1 mt-2', { textContent: 'Blend Mode' });
+        this.blendSelect = createElement('select', 'w-full bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+        const blendModes = [
+            { value: 'source-over', label: 'Normal' },
+            { value: 'lighter', label: 'Lighter (Add)' },
+            { value: 'multiply', label: 'Multiply' },
+            { value: 'screen', label: 'Screen' },
+            { value: 'overlay', label: 'Overlay' },
+            { value: 'darken', label: 'Darken' },
+            { value: 'lighten', label: 'Lighten' },
+            { value: 'color-dodge', label: 'Color Dodge' },
+            { value: 'color-burn', label: 'Color Burn' },
+            { value: 'hard-light', label: 'Hard Light' },
+            { value: 'soft-light', label: 'Soft Light' },
+            { value: 'difference', label: 'Difference' },
+            { value: 'exclusion', label: 'Exclusion' },
+            { value: 'hue', label: 'Hue' },
+            { value: 'saturation', label: 'Saturation' },
+            { value: 'color', label: 'Color' },
+            { value: 'luminosity', label: 'Luminosity' }
+        ];
+        blendModes.forEach(m => {
+            const opt = createElement('option', '', { value: m.value, textContent: m.label });
+            this.blendSelect.appendChild(opt);
+        });
+        this.blendSelect.addEventListener('change', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { blendMode: e.target.value }
+            });
+        });
+        colorContainer.appendChild(blendLabel);
+        colorContainer.appendChild(this.blendSelect);
+
         // this.colorControl = this.createColorInput('color', 'Rose Color');
         maurerAccordion.append(colorContainer);
 
@@ -205,6 +240,9 @@ export class RosePanel extends Panel {
         }
         if (this.methodSelect.value !== params.colorMethod) {
             this.methodSelect.value = params.colorMethod || 'solid';
+        }
+        if (this.blendSelect.value !== params.blendMode) {
+            this.blendSelect.value = params.blendMode || 'source-over';
         }
 
         // Coset Logic
