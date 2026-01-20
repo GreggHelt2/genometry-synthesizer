@@ -1,0 +1,23 @@
+# Maurer Rose Interpolator Walkthrough
+
+I have started the single page web application for the Maurer Rose Interpolator v16.1.
+
+## Status: Running ✅
+
+The application is currently served locally and can be accessed at:
+**[http://localhost:8080/MRInterp_v16.1_split.html](http://localhost:8080/MRInterp_v16.1_split.html)**
+
+## Verification
+
+I verified that the application loads correctly by checking for the page title and the main canvas element.
+
+![Browser Verification](maurer_rose_verification_1768637000711.webp)
+
+## Technical Details
+
+- **Server**: Python HTTP Server
+- **Port**: 8080
+- **Directory**: `prototypes/Maurer_Rose_Interpolator_v16-1`
+- **Files**:
+    - `MRInterp_v16.1_split.html` (Main entry point)
+    - `MRInterp_v16.1_split.js` (Application logic)

@@ -1,0 +1,34 @@
+
+## V17 Initial Verification
+**Date:** 2026-01-17
+**Status:** Success
+
+The initial refactor (V17 Skeleton) has been implemented and verified.
+- **Architecture:** Vite + Vanilla JS, modular ES modules.
+- **State Management:** Central Store with Actions.
+- **Rendering:** CanvasRenderer with optimized loop potential.
+- **UI:** Accordion-based Panels for Rose A, Rose B, and Interpolation.
+
+### Verification Recording
+The application loaded successfully, displaying the Rose A panel and Canvas.
+
+![V17 Boot](file:///Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/maurer_v17_previews_check_1768643552875.webp)
+
+**Features Verified:**
+-   **Preview Canvases:** Rose A and Rose B panels now include independent preview canvases.
+-   **Main Canvas:** Interpolation canvas renders in the center.
+-   **Animation:** Play/Pause controls added and functional.
+-   **Curve Closure:** Verified that curves close correctly using Helt/Maurer logic (Z/gcd(d,Z)). Tested with n=3, d=4, Step=57, TotalDivs=361.
+-   **Cosets:** Implemented and verified Coset index selection and "Show All" functionality.
+-   **Advanced Coloring:** Added color pickers for Rose A/B and verified dynamic rendering.
+-   **Performance Optimization:** Implemented render loop pause when idle (no parameter changes and not playing). Verified responsiveness Maintained.
+-   **Layout Refactor:** Implemented 3-column layout with equal width, aligned headers/canvases, and header/footer placeholders. Fixed canvas resize loop, rendering regression, and interpolation rose scaling.
+-   **Video Recording:** Implemented MediaRecorder support (WebM/MP4) with configurable bitrate and start/stop controls.
+
+## Verification Screenshots
+
+![Medium Size Check](/Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/medium_size_check_1768652968624.png)
+![Resize Render Check](/Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/after_resize_1_1768652508490.png)
+![Resized Layout Verification](/Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/resized_layout_1768652369590.png)
+![Colorful Interpolation View](/Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/colorful_interpolate_view_1768648593175.png)
+![Colorful Interpolation View](/Users/gregg/.gemini/antigravity/brain/58616c35-4ab3-4a65-b081-75cce42e2f16/colorful_interpolate_view_1768648593175.png)
