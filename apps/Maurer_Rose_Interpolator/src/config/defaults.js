@@ -4,9 +4,9 @@
 export const DEFAULTS = {
     roseA: {
         curveType: 'Rhodonea',
-        n: 2,
-        d: 29,
-        A: 100,
+        n: 3,
+        d: 4,
+        A: 200,
         c: 0,
         rot: 0,
         // Maurer specific
@@ -15,15 +15,16 @@ export const DEFAULTS = {
         useCustomDivs: false,
         cosetIndex: 0,
         showAllCosets: false,
-        color: '#ff6666', // Default Red-ish
+        color: '#00FFFF', // Cyan
         colorMethod: 'solid',
-        opacity: 1,
+        opacity: 0.5,
+        blendMode: 'lighter',
     },
     roseB: {
         curveType: 'Rhodonea',
         n: 3,
-        d: 47,
-        A: 100,
+        d: 4,
+        A: 200,
         c: 0,
         rot: 0,
         totalDivs: 360,
@@ -31,9 +32,10 @@ export const DEFAULTS = {
         useCustomDivs: false,
         cosetIndex: 0,
         showAllCosets: false,
-        color: '#6666ff', // Default Blue-ish
+        color: '#FF0000', // Red
         colorMethod: 'solid',
-        opacity: 1,
+        opacity: 0.5,
+        blendMode: 'lighter',
     },
     interpolation: {
         weight: 0.0, // 0 to 1
@@ -41,10 +43,10 @@ export const DEFAULTS = {
         showRoseA: false,
         showRoseB: false,
         underlayOpacity: 0.15,
-        opacity: 1,
-        color: '#ffffff',
+        opacity: 0.5,
+        color: '#a855f7',
         colorMethod: 'solid',
-        blendMode: 'source-over',
+        blendMode: 'lighter',
     },
     settings: {
         theme: 'dark',

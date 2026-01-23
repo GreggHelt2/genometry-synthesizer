@@ -14,6 +14,9 @@ export class RosePanel extends Panel {
 
         // Subscribe to store updates
         store.subscribe(this.updateUI.bind(this));
+
+        // Initial UI update
+        this.updateUI(store.getState());
     }
 
     renderContent() {
