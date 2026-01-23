@@ -1,5 +1,6 @@
 import { Curve } from './Curve.js';
 
+
 export class RhodoneaCurve extends Curve {
     /**
      * @param {number} n - The numerator of the k value (frequency).
@@ -34,5 +35,22 @@ export class RhodoneaCurve extends Curve {
 
     getSignature() {
         return `Rhodonea:${this.n}:${this.d}:${this.A}:${this.c}:${this.rot}`;
+    }
+
+    getPeriodToClosure() {
+        // Inlined from calculateRhodoneaPeriodCycles
+        if (this.d === 0) return 0;
+
+        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+        const commonDivisor = gcd(this.n, this.d);
+        const n1 = this.n / commonDivisor;
+        const d1 = this.d / commonDivisor;
+
+        // Logic from prototype/papers:
+        // If both n1 and d1 are odd, the period is PI (0.5 cycles).
+        // Otherwise, the period is 2PI * d1
+        const cycles = (n1 % 2 !== 0 && d1 % 2 !== 0) ? (d1 / 2) : d1;
+
+        return cycles * 2 * Math.PI;
     }
 }

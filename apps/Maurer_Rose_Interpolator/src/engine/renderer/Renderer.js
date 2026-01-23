@@ -3,7 +3,7 @@ import { RhodoneaCurve } from '../math/curves/RhodoneaCurve.js';
 import { generateMaurerPolyline } from '../math/maurer.js';
 import { interpolateLinear } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
-import { gcd } from '../math/lcm.js';
+import { gcd } from '../math/MathOps.js';
 
 export class CanvasRenderer {
     constructor(canvas) {

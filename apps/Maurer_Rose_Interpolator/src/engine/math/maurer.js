@@ -1,4 +1,4 @@
-import { calculateRhodoneaPeriodCycles } from './lcm.js';
+
 
 /**
  * Generates the vertices for a Maurer Rose polyline.
@@ -20,17 +20,8 @@ export function generateMaurerPolyline(curve, totalDivs, step, cyclesMultiplier 
 
     const count = Math.ceil(linesToClose * cyclesMultiplier);
 
-    // Calculate the angular scale factor based on the Curve's period
-    // The curve params (n, d) determine how many 2PI cycles are needed to close the underlying Rose curve.
-    // The Maurer Rose logic maps the "Total Divisions" (Z) to this Full Period.
-
-    // Check if curve has n,d (Polymorphism: assume R{n,d} for now as per requirements)
-    let periodCycles = 1;
-    if (curve.n !== undefined && curve.d !== undefined) {
-        periodCycles = calculateRhodoneaPeriodCycles(curve.n, curve.d);
-    }
-
-    const totalAngle = periodCycles * 2 * Math.PI;
+    // Calculate the angular scale factor based on the generalized Curve domain (P-Curve)
+    const totalAngle = curve.getPeriodToClosure();
     const radiansPerDiv = totalAngle / totalDivs;
 
     for (let i = 0; i <= count; i++) {

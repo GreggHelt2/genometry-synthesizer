@@ -1,4 +1,4 @@
-import { lcm } from './lcm.js';
+import { lcm } from './MathOps.js';
 import { generateMaurerPolyline } from './maurer.js';
 
 /**

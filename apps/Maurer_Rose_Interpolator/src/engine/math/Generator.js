@@ -1,4 +1,4 @@
-import { gcd, getPrimeFactors } from './lcm.js';
+import { gcd, getPrimeFactors } from './MathOps.js';
 
 export class Generator {
     /**

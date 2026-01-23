@@ -3,7 +3,7 @@ import { Accordion } from './Accordion.js';
 import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
-import { gcd } from '../../engine/math/lcm.js'; // Import GCD helper
+import { gcd } from '../../engine/math/MathOps.js'; // Import GCD helper
 
 export class RosePanel extends Panel {
     constructor(id, title, roseId) {

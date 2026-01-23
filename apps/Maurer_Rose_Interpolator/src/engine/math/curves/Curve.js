@@ -26,4 +26,13 @@ export class Curve {
     getSignature() {
         throw new Error("Method 'getSignature()' must be implemented.");
     }
+
+    /**
+     * Returns the full domain (period) required to close the curve.
+     * For a simple circle, this is 2*PI. For Rhodonea, it depends on n and d.
+     * @returns {number} The domain range in radians.
+     */
+    getPeriodToClosure() {
+        throw new Error("Method 'getPeriodToClosure()' must be implemented.");
+    }
 }
