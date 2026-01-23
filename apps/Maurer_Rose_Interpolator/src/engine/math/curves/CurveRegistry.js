@@ -3,11 +3,13 @@ import { CircleCurve } from './CircleCurve.js';
 import { EpitrochoidCurve } from './EpitrochoidCurve.js';
 import { HypotrochoidCurve } from './HypotrochoidCurve.js';
 import { LissajousCurve } from './LissajousCurve.js';
+import { SuperformulaCurve } from './SuperformulaCurve.js';
 
 export const CurveRegistry = {
     'Rhodonea': RhodoneaCurve,
     'Circle': CircleCurve,
     'Epitrochoid': EpitrochoidCurve,
     'Hypotrochoid': HypotrochoidCurve,
-    'Lissajous': LissajousCurve
+    'Lissajous': LissajousCurve,
+    'Superformula': SuperformulaCurve
 };
