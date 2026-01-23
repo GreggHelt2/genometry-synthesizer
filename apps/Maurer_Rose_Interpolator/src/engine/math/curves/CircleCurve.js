@@ -5,9 +5,14 @@ export class CircleCurve extends Curve {
      * A simple unit circle (or scaled).
      * @param {number} radius - Radius of the circle.
      */
-    constructor(radius = 1) {
+    constructor(radius = 100) {
         super();
-        this.radius = radius;
+        // Handle if initialized with object (from Renderer) or direct value
+        if (typeof radius === 'object') {
+            this.radius = radius.radius || 100;
+        } else {
+            this.radius = radius;
+        }
     }
 
     getPoint(theta) {
@@ -22,6 +27,12 @@ export class CircleCurve extends Curve {
      */
     getPeriodToClosure() {
         return 2 * Math.PI;
+    }
+
+    static getParamsSchema() {
+        return [
+            { key: 'radius', type: 'number', label: 'Radius', min: 10, max: 300, step: 1, default: 100 }
+        ];
     }
 
     getSignature() {

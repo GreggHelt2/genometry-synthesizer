@@ -4,6 +4,7 @@ import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
 import { gcd } from '../../engine/math/MathOps.js'; // Import GCD helper
+import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 
 export class RosePanel extends Panel {
     constructor(id, title, roseId) {
@@ -43,18 +44,15 @@ export class RosePanel extends Panel {
         const coreAccordion = new Accordion('Core Parameters', true);
         this.controlsContainer.appendChild(coreAccordion.element);
 
-        // Controls
-        this.nControl = this.createSlider('n', 0, 100, 1, 'n (Numerator)');
-        this.dControl = this.createSlider('d', 1, 100, 1, 'd (Denominator)');
-        this.AControl = this.createSlider('A', 10, 300, 1, 'Amplitude (A)');
-        this.cControl = this.createSlider('c', 0, 200, 1, 'Offset (c)');
-        this.rotControl = this.createSlider('rot', 0, 360, 1, 'Rotation (deg)');
+        // Curve Type Selector
+        this.createCurveTypeSelector(coreAccordion);
 
-        coreAccordion.append(this.nControl.container);
-        coreAccordion.append(this.dControl.container);
-        coreAccordion.append(this.AControl.container);
-        coreAccordion.append(this.cControl.container);
-        coreAccordion.append(this.rotControl.container);
+        // Placeholder for dynamic controls
+        this.dynamicParamsContainer = createElement('div', 'flex flex-col');
+        coreAccordion.append(this.dynamicParamsContainer);
+
+        // Initial core params render is handled by updateUI calling renderCoreParams
+        // removed hardcoded sliders
 
         // Maurer Accordion
         const maurerAccordion = new Accordion('Maurer Settings', true);
@@ -157,24 +155,50 @@ export class RosePanel extends Panel {
         cosetContainer.appendChild(this.cosetIndexControl.container);
 
         this.controlsContainer.appendChild(cosetContainer);
-        this.createCheckbox = this.createCheckbox.bind(this);
     }
 
-    createColorInput(key, label) {
-        const container = createElement('div', 'flex items-center justify-between mb-2 p-2');
-        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label });
-        const input = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+    createCurveTypeSelector(parent) {
+        const container = createElement('div', 'flex flex-col mb-3 p-2 border-b border-gray-700');
+        const label = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Curve Type' });
+        const select = createElement('select', 'bg-gray-700 text-white text-sm rounded border border-gray-600 px-2 py-1', {});
 
-        input.addEventListener('input', (e) => {
+        Object.keys(CurveRegistry).forEach(type => {
+            const opt = createElement('option', '', { value: type, textContent: type });
+            select.appendChild(opt);
+        });
+
+        select.addEventListener('change', (e) => {
             store.dispatch({
                 type: this.actionType,
-                payload: { [key]: e.target.value }
+                payload: { curveType: e.target.value }
             });
         });
 
-        container.appendChild(labelEl);
-        container.appendChild(input);
-        return { container, input };
+        this.curveTypeSelect = select;
+        container.appendChild(label);
+        container.appendChild(select);
+        parent.append(container);
+    }
+
+    renderCoreParams(curveType, params) {
+        // Clear existing controls
+        this.dynamicParamsContainer.innerHTML = '';
+        this.paramControls = {}; // Map to store references to controls
+
+        const CurveClass = CurveRegistry[curveType] || CurveRegistry['Rhodonea'];
+        const schema = CurveClass.getParamsSchema();
+
+        schema.forEach(item => {
+            // For now assuming all are number sliders. 
+            // In future, check item.type (number, boolean, color, etc.)
+            const control = this.createSlider(item.key, item.min, item.max, item.step, item.label);
+            this.paramControls[item.key] = control;
+            this.dynamicParamsContainer.appendChild(control.container);
+
+            // Set initial value from current state params
+            const val = params[item.key] ?? item.default;
+            this.updateControl(control, val);
+        });
     }
 
     createCheckbox(key, label) {
@@ -191,6 +215,23 @@ export class RosePanel extends Panel {
 
         container.appendChild(input);
         container.appendChild(labelEl);
+        return { container, input };
+    }
+
+    createColorInput(key, label) {
+        const container = createElement('div', 'flex items-center justify-between mb-2 p-2');
+        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label });
+        const input = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+
+        input.addEventListener('input', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { [key]: e.target.value }
+            });
+        });
+
+        container.appendChild(labelEl);
+        container.appendChild(input);
         return { container, input };
     }
 
@@ -225,15 +266,31 @@ export class RosePanel extends Panel {
 
     updateUI(state) {
         const params = state[this.roseId];
-        // Only update if document.activeElement is NOT the input (prevention of jitter)
-        // Or just update valueDisplay?
-        // For simplicity, we update inputs if not focused.
 
-        this.updateControl(this.nControl, params.n);
-        this.updateControl(this.dControl, params.d);
-        this.updateControl(this.AControl, params.A);
-        this.updateControl(this.cControl, params.c);
-        this.updateControl(this.rotControl, params.rot);
+        // Update Curve Type Selector
+        if (this.curveTypeSelect && this.curveTypeSelect.value !== params.curveType) {
+            this.curveTypeSelect.value = params.curveType || 'Rhodonea';
+        }
+
+        // Check if we need to re-render params (simplistic check: if schema size differs or type changed)
+        // Ideally we track current rendered type
+        if (this.currentRenderedCurveType !== params.curveType) {
+            this.renderCoreParams(params.curveType || 'Rhodonea', params);
+            this.currentRenderedCurveType = params.curveType || 'Rhodonea';
+        }
+
+        // Update Dynamic Controls
+        if (this.paramControls) {
+            Object.keys(this.paramControls).forEach(key => {
+                const control = this.paramControls[key];
+                // Value might be 0, so check for undefined/null
+                const val = params[key];
+                if (val !== undefined) {
+                    this.updateControl(control, val);
+                }
+            });
+        }
+
         this.updateControl(this.divsControl, params.totalDivs);
         this.updateControl(this.stepControl, params.step);
         this.updateControl(this.opacityControl, params.opacity ?? 1);

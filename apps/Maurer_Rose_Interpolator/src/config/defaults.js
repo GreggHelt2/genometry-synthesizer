@@ -9,6 +9,7 @@ export const DEFAULTS = {
         A: 200,
         c: 0,
         rot: 0,
+        radius: 100, // For CircleCurve
         // Maurer specific
         totalDivs: 360,
         step: 29, // deg
@@ -27,6 +28,7 @@ export const DEFAULTS = {
         A: 200,
         c: 0,
         rot: 0,
+        radius: 100, // For CircleCurve
         totalDivs: 360,
         step: 47,
         useCustomDivs: false,

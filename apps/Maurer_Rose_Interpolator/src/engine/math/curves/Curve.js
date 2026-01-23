@@ -35,4 +35,13 @@ export class Curve {
     getPeriodToClosure() {
         throw new Error("Method 'getPeriodToClosure()' must be implemented.");
     }
+
+    /**
+     * Returns the schema for the curve's parameters.
+     * Used by the UI to dynamically generate controls.
+     * @returns {Array<{key: string, type: string, label: string, min: number, max: number, step: number, default: number}>}
+     */
+    static getParamsSchema() {
+        return [];
+    }
 }

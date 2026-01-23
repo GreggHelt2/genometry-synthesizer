@@ -1,5 +1,5 @@
 import { PolylineLayer } from './layers/PolylineLayer.js';
-import { RhodoneaCurve } from '../math/curves/RhodoneaCurve.js';
+import { CurveRegistry } from '../math/curves/CurveRegistry.js';
 import { generateMaurerPolyline } from '../math/maurer.js';
 import { interpolateLinear } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
@@ -185,12 +185,27 @@ export class CanvasRenderer {
     }
 
     createCurve(params) {
-        return new RhodoneaCurve(
-            params.n,
-            params.d,
-            params.A,
-            params.c,
-            (params.rot * Math.PI) / 180
-        );
+        // Look up class in registry using curveType (default to Rhodonea if missing)
+        const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
+
+        // Pass the entire params object. 
+        // RhodoneaCurve currently expects specific args, but we can conform to "constructor(params)" pattern 
+        // OR map them here. For now, let's keep the mapping for Rhodonea for safety if constructor didn't change,
+        // but CircleCurve handles object. Ideally all curves should take a config object.
+
+        // Check if it's Rhodonea to maintain legacy arg order (if we didn't refactor Rhodonea ctor)
+        if (params.curveType === 'Rhodonea' || !params.curveType) {
+            return new CurveClass(
+                params.n,
+                params.d,
+                params.A,
+                params.c,
+                (params.rot * Math.PI) / 180
+            );
+        }
+
+        // For Circle (and future others), pass the params object directly? 
+        // CircleCurve checks for object.
+        return new CurveClass(params);
     }
 }
