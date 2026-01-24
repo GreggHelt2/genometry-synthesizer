@@ -4,6 +4,7 @@ import { EpitrochoidCurve } from './EpitrochoidCurve.js';
 import { HypotrochoidCurve } from './HypotrochoidCurve.js';
 import { LissajousCurve } from './LissajousCurve.js';
 import { SuperformulaCurve } from './SuperformulaCurve.js';
+import { FarrisCurve } from './FarrisCurve.js';
 
 export const CurveRegistry = {
     'Rhodonea': RhodoneaCurve,
@@ -11,5 +12,6 @@ export const CurveRegistry = {
     'Epitrochoid': EpitrochoidCurve,
     'Hypotrochoid': HypotrochoidCurve,
     'Lissajous': LissajousCurve,
-    'Superformula': SuperformulaCurve
+    'Superformula': SuperformulaCurve,
+    'Farris Mystery': FarrisCurve
 };
