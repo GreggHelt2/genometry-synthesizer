@@ -1,5 +1,5 @@
 import { Curve } from './Curve.js';
-
+import { gcd } from '../MathOps.js';
 
 export class RhodoneaCurve extends Curve {
     /**
@@ -38,10 +38,8 @@ export class RhodoneaCurve extends Curve {
     }
 
     getRadiansToClosure() {
-        // Inlined from calculateRhodoneaPeriodCycles
         if (this.d === 0) return 0;
 
-        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
         const commonDivisor = gcd(this.n, this.d);
         const n1 = this.n / commonDivisor;
         const d1 = this.d / commonDivisor;
