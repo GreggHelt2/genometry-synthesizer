@@ -50,7 +50,7 @@ export class LissajousCurve extends Curve {
         return { x, y };
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         // The period of sin(a*t) is 2PI/a
         // The period of sin(b*t) is 2PI/b
         // The combined period is LCM(2PI/a, 2PI/b) = 2PI * LCM(1/a, 1/b)

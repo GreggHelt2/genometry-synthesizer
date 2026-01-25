@@ -25,7 +25,7 @@ export class CircleCurve extends Curve {
     /**
      * A circle closes in 2*PI.
      */
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         return 2 * Math.PI;
     }
 

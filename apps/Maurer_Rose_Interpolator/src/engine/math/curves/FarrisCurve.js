@@ -55,7 +55,7 @@ export class FarrisCurve extends Curve {
         return { x, y };
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         // Period is 2PI assuming fundamental period logic holds for integer k.
         // For general closure, it's 2PI / GCD(k1, k2, k3).
 

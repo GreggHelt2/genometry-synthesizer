@@ -54,7 +54,7 @@ export class HypotrochoidCurve extends Curve {
         return { x, y };
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         // The period depends on the ratio R/r.
         // Let R/r = p/q in simplest form.
         // The period is 2 * PI * q.

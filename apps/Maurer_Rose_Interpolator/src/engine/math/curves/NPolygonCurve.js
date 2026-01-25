@@ -64,7 +64,7 @@ export class NPolygonCurve extends Curve {
         return { x, y };
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         return 2 * Math.PI;
     }
 

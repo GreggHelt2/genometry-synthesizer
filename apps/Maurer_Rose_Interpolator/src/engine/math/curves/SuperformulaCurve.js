@@ -67,7 +67,7 @@ export class SuperformulaCurve extends Curve {
         return { x, y };
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         // Usually 2PI for integer m.
         // If m is rational? The Maurer rose logic generally works in 2PI or multiple.
         // For general plotting, 2PI covers the basic shape for m integers.

@@ -37,7 +37,7 @@ export class RhodoneaCurve extends Curve {
         return `Rhodonea:${this.n}:${this.d}:${this.A}:${this.c}:${this.rot}`;
     }
 
-    getPeriodToClosure() {
+    getRadiansToClosure() {
         // Inlined from calculateRhodoneaPeriodCycles
         if (this.d === 0) return 0;
 

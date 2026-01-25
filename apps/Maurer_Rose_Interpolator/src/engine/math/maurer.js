@@ -21,7 +21,7 @@ export function generateMaurerPolyline(curve, totalDivs, step, cyclesMultiplier 
     const count = Math.ceil(linesToClose * cyclesMultiplier);
 
     // Calculate the angular scale factor based on the generalized Curve domain (P-Curve)
-    const totalAngle = curve.getPeriodToClosure();
+    const totalAngle = curve.getRadiansToClosure();
     const radiansPerDiv = totalAngle / totalDivs;
 
     for (let i = 0; i <= count; i++) {
