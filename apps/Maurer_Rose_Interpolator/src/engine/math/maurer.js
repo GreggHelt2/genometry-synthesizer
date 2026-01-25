@@ -1,4 +1,5 @@
 
+import { getLinesToClose } from './MathOps.js';
 
 /**
  * Generates the vertices for a Maurer Rose polyline.
@@ -15,8 +16,9 @@ export function generateMaurerPolyline(curve, totalDivs, step, cyclesMultiplier 
 
     // Calculate lines required to close the figure using GCD of step and totalDivs
     // This determines how many integer steps we take before returning to 0 mod Z.
-    const gcdVal = (function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); })(step, totalDivs);
-    const linesToClose = totalDivs / gcdVal;
+    // note that this is completely independent of the kind of curve we are using, 
+    // it is based on group theory not geometry
+    const linesToClose = getLinesToClose(totalDivs, step);
 
     const count = Math.ceil(linesToClose * cyclesMultiplier);
 
