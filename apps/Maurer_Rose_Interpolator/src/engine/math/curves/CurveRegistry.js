@@ -5,6 +5,7 @@ import { HypotrochoidCurve } from './HypotrochoidCurve.js';
 import { LissajousCurve } from './LissajousCurve.js';
 import { SuperformulaCurve } from './SuperformulaCurve.js';
 import { FarrisCurve } from './FarrisCurve.js';
+import { NPolygonCurve } from './NPolygonCurve.js';
 
 export const CurveRegistry = {
     'Rhodonea': RhodoneaCurve,
@@ -13,5 +14,6 @@ export const CurveRegistry = {
     'Hypotrochoid': HypotrochoidCurve,
     'Lissajous': LissajousCurve,
     'Superformula': SuperformulaCurve,
-    'Farris Mystery': FarrisCurve
+    'Farris Mystery': FarrisCurve,
+    'N-Polygon': NPolygonCurve
 };
