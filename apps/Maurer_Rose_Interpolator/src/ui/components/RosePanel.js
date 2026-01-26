@@ -3,7 +3,7 @@ import { Accordion } from './Accordion.js';
 import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
-import { gcd } from '../../engine/math/MathOps.js'; // Import GCD helper
+import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 
 export class RosePanel extends Panel {
@@ -27,18 +27,21 @@ export class RosePanel extends Panel {
         // Preview Canvas
         const canvasContainer = createElement('div', 'w-full aspect-square bg-black border-b border-gray-700 relative');
         this.canvas = createElement('canvas', 'w-full h-full block');
-        // We must set width/height attributes for the canvas to render correctly, not just CSS
-        // This will be handled by the Renderer's resize, but we need initial attributes.
         this.canvas.width = 320;
         this.canvas.height = 320;
 
-        canvasContainer.appendChild(this.canvas);
         canvasContainer.appendChild(this.canvas);
         this.element.appendChild(canvasContainer);
 
         // Scrollable Controls Container
         this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
         this.element.appendChild(this.controlsContainer);
+
+        // Info Accordion (New)
+        const statsAccordion = new Accordion('Info', false);
+        this.statsContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
+        statsAccordion.append(this.statsContent);
+        this.controlsContainer.appendChild(statsAccordion.element);
 
         // Core Parameters Accordion
         const coreAccordion = new Accordion('Core Parameters', true);
@@ -51,9 +54,6 @@ export class RosePanel extends Panel {
         this.dynamicParamsContainer = createElement('div', 'flex flex-col');
         coreAccordion.append(this.dynamicParamsContainer);
 
-        // Initial core params render is handled by updateUI calling renderCoreParams
-        // removed hardcoded sliders
-
         // Maurer Accordion
         const maurerAccordion = new Accordion('Maurer Settings', true);
         this.controlsContainer.appendChild(maurerAccordion.element);
@@ -64,15 +64,11 @@ export class RosePanel extends Panel {
         maurerAccordion.append(this.divsControl.container);
         maurerAccordion.append(this.stepControl.container);
 
-        maurerAccordion.append(this.stepControl.container);
-
         // Opacity Control
         this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Opacity');
         maurerAccordion.append(this.opacityControl.container);
 
         // Color Control
-        // Color Control
-        // Custom composite control for Color + Method
         const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
         const colorLabel = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Rose Color & Method' });
         const colorRow = createElement('div', 'flex gap-2');
@@ -137,10 +133,10 @@ export class RosePanel extends Panel {
         colorContainer.appendChild(blendLabel);
         colorContainer.appendChild(this.blendSelect);
 
-        // this.colorControl = this.createColorInput('color', 'Rose Color');
         maurerAccordion.append(colorContainer);
 
-        // Coset Controls
+        // Coset Info (Keep the check, but maybe redundant if we have stats?)
+        // User asked for specific stats dropdown.
         const cosetContainer = createElement('div', 'p-2 border-t border-gray-700 bg-gray-800');
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2', { textContent: 'Cosets (k): 1' });
         this.showAllCheck = this.createCheckbox('showAllCosets', 'Show All Cosets');
@@ -150,8 +146,6 @@ export class RosePanel extends Panel {
 
         cosetContainer.appendChild(this.cosetInfo);
         cosetContainer.appendChild(this.showAllCheck.container);
-        cosetContainer.appendChild(this.cosetIndexControl.container);
-
         cosetContainer.appendChild(this.cosetIndexControl.container);
 
         this.controlsContainer.appendChild(cosetContainer);
@@ -181,21 +175,17 @@ export class RosePanel extends Panel {
     }
 
     renderCoreParams(curveType, params) {
-        // Clear existing controls
         this.dynamicParamsContainer.innerHTML = '';
-        this.paramControls = {}; // Map to store references to controls
+        this.paramControls = {};
 
         const CurveClass = CurveRegistry[curveType] || CurveRegistry['Rhodonea'];
         const schema = CurveClass.getParamsSchema();
 
         schema.forEach(item => {
-            // For now assuming all are number sliders. 
-            // In future, check item.type (number, boolean, color, etc.)
             const control = this.createSlider(item.key, item.min, item.max, item.step, item.label);
             this.paramControls[item.key] = control;
             this.dynamicParamsContainer.appendChild(control.container);
 
-            // Set initial value from current state params
             const val = params[item.key] ?? item.default;
             this.updateControl(control, val);
         });
@@ -272,8 +262,7 @@ export class RosePanel extends Panel {
             this.curveTypeSelect.value = params.curveType || 'Rhodonea';
         }
 
-        // Check if we need to re-render params (simplistic check: if schema size differs or type changed)
-        // Ideally we track current rendered type
+        // Re-render params if needed
         if (this.currentRenderedCurveType !== params.curveType) {
             this.renderCoreParams(params.curveType || 'Rhodonea', params);
             this.currentRenderedCurveType = params.curveType || 'Rhodonea';
@@ -283,7 +272,6 @@ export class RosePanel extends Panel {
         if (this.paramControls) {
             Object.keys(this.paramControls).forEach(key => {
                 const control = this.paramControls[key];
-                // Value might be 0, so check for undefined/null
                 const val = params[key];
                 if (val !== undefined) {
                     this.updateControl(control, val);
@@ -309,7 +297,6 @@ export class RosePanel extends Panel {
         const k = gcd(params.step, params.totalDivs);
         this.cosetInfo.textContent = `Cosets (k): ${k}`;
 
-        // Only show coset controls if k > 1
         if (k > 1) {
             this.showAllCheck.container.style.display = 'flex';
             this.showAllCheck.input.checked = params.showAllCosets;
@@ -325,6 +312,44 @@ export class RosePanel extends Panel {
             this.showAllCheck.container.style.display = 'none';
             this.cosetIndexControl.container.style.display = 'none';
         }
+
+        // Update Stats
+        this.updateStats(params, k);
+    }
+
+    updateStats(params, k) {
+        if (!this.statsContent) return;
+
+        // Instantiate temporary curve to get radiansToClosure
+        const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
+
+        // Renderer logic to create curve instance
+        let curve;
+        if (params.curveType === 'Rhodonea' || !params.curveType) {
+            curve = new CurveClass(
+                params.n, params.d, params.A, params.c, (params.rot * Math.PI) / 180
+            );
+        } else {
+            curve = new CurveClass(params);
+        }
+
+        const radiansToClose = curve.getRadiansToClosure();
+        const lines = getLinesToClose(params.totalDivs, params.step);
+
+        // Cycles Logic
+        const cycles = radiansToClose / (2 * Math.PI);
+        const isInt = Math.abs(cycles - Math.round(cycles)) < 1e-9;
+        const cycleString = isInt ? Math.round(cycles).toString() : cycles.toFixed(3);
+
+        // Cosets Shown Logic
+        const cosetsShown = params.showAllCosets ? k : 1;
+
+        this.statsContent.innerHTML = `
+            <div><span class="text-gray-400">Lines to Close:</span> <span class="text-blue-400">${lines}</span></div>
+            <div><span class="text-gray-400">Cycles to Close:</span> <span class="text-blue-400">${cycleString}</span></div>
+            <div><span class="text-gray-400">Total Cosets:</span> <span class="text-blue-400">${k}</span></div>
+            <div><span class="text-gray-400">Displayed Cosets:</span> <span class="text-blue-400">${cosetsShown}</span></div>
+        `;
     }
 
     updateControl(control, value) {

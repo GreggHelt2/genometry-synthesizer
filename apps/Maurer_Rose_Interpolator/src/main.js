@@ -26,8 +26,8 @@ class App {
         const mainContent = createElement('div', 'flex-1 flex flex-col md:flex-row overflow-hidden relative');
         app.appendChild(mainContent);
 
-        // Column 1: Rose A
-        this.panelA = new RosePanel('rose-a', 'Rose A', 'roseA');
+        // Column 1: Curve A
+        this.panelA = new RosePanel('rose-a', 'Curve A', 'roseA');
         // Override classes to ensure equal width (flex-1)
         this.panelA.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden border-r border-gray-700';
 
@@ -55,8 +55,8 @@ class App {
         centerControls.appendChild(this.interpPanel.element);
         this.centerArea.appendChild(centerControls);
 
-        // Column 3: Rose B
-        this.panelB = new RosePanel('rose-b', 'Rose B', 'roseB');
+        // Column 3: Curve B
+        this.panelB = new RosePanel('rose-b', 'Curve B', 'roseB');
         this.panelB.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden';
 
         // Mount Columns to Main Content
