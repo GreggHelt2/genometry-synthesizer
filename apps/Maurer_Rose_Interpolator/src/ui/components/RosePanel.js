@@ -44,15 +44,15 @@ export class RosePanel extends Panel {
         this.controlsContainer.appendChild(statsAccordion.element);
 
         // Core Parameters Accordion
-        const coreAccordion = new Accordion('Core Parameters', true);
-        this.controlsContainer.appendChild(coreAccordion.element);
+        this.coreAccordion = new Accordion('Base Curve', true);
+        this.controlsContainer.appendChild(this.coreAccordion.element);
 
         // Curve Type Selector
-        this.createCurveTypeSelector(coreAccordion);
+        this.createCurveTypeSelector(this.coreAccordion);
 
         // Placeholder for dynamic controls
         this.dynamicParamsContainer = createElement('div', 'flex flex-col');
-        coreAccordion.append(this.dynamicParamsContainer);
+        this.coreAccordion.append(this.dynamicParamsContainer);
 
         // Maurer Accordion
         const maurerAccordion = new Accordion('Maurer Settings', true);
@@ -262,6 +262,13 @@ export class RosePanel extends Panel {
             this.curveTypeSelect.value = params.curveType || 'Rhodonea';
         }
 
+        // Update Accordion Title
+        if (this.coreAccordion) {
+            this.coreAccordion.setTitle(`Base Curve: ${params.curveType || 'Rhodonea'}`);
+        }
+
+
+
         // Re-render params if needed
         if (this.currentRenderedCurveType !== params.curveType) {
             this.renderCoreParams(params.curveType || 'Rhodonea', params);
@@ -338,8 +345,7 @@ export class RosePanel extends Panel {
 
         // Cycles Logic
         const cycles = radiansToClose / (2 * Math.PI);
-        const isInt = Math.abs(cycles - Math.round(cycles)) < 1e-9;
-        const cycleString = isInt ? Math.round(cycles).toString() : cycles.toFixed(3);
+        const cycleString = parseFloat(cycles.toFixed(3));
 
         // Cosets Shown Logic
         const cosetsShown = params.showAllCosets ? k : 1;

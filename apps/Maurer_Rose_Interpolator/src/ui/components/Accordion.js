@@ -13,6 +13,13 @@ export class Accordion {
         this.icon.style.transform = this.isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
     }
 
+    setTitle(newTitle) {
+        this.title = newTitle;
+        if (this.titleEl) {
+            this.titleEl.textContent = newTitle;
+        }
+    }
+
     render() {
         const container = createElement('div', 'border-b border-gray-700 mb-2');
 
@@ -20,11 +27,11 @@ export class Accordion {
         const header = createElement('div', 'flex justify-between items-center p-2 cursor-pointer bg-gray-800 hover:bg-gray-700 select-none');
         header.addEventListener('click', () => this.toggle());
 
-        const titleEl = createElement('span', 'font-bold text-sm', { textContent: this.title });
+        this.titleEl = createElement('span', 'font-bold text-sm', { textContent: this.title });
         this.icon = createElement('span', 'transition-transform duration-200 text-xs', { textContent: '▼' }); // simple arrow
         if (this.isOpen) this.icon.style.transform = 'rotate(180deg)';
 
-        header.appendChild(titleEl);
+        header.appendChild(this.titleEl);
         header.appendChild(this.icon);
 
         // Content
