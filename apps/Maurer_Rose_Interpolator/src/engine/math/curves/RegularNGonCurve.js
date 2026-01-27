@@ -1,6 +1,6 @@
 import { Curve } from './Curve.js';
 
-export class NPolygonCurve extends Curve {
+export class RegularNGonCurve extends Curve {
     /**
      * @param {Object} params
      * @param {number} params.n - Number of sides (N)

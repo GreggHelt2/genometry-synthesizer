@@ -6,7 +6,7 @@ import { ACTIONS } from '../../engine/state/Actions.js';
 import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 
-export class RosePanel extends Panel {
+export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
         super(id, title);
         this.roseId = roseId; // 'roseA' or 'roseB'
@@ -55,18 +55,21 @@ export class RosePanel extends Panel {
         this.coreAccordion.append(this.dynamicParamsContainer);
 
         // Maurer Accordion
-        const maurerAccordion = new Accordion('Maurer Settings', true);
+        const maurerAccordion = new Accordion('Sequencer: Cyclic Additive Group Z+', true);
         this.controlsContainer.appendChild(maurerAccordion.element);
 
-        this.divsControl = this.createSlider('totalDivs', 1, 3600, 1, 'Total Divisions');
-        this.stepControl = this.createSlider('step', 1, 360, 1, 'Step (D)');
+        this.divsControl = this.createSlider('totalDivs', 1, 3600, 1, 'Modulo');
+        this.stepControl = this.createSlider('step', 1, 360, 1, 'Generator');
 
         maurerAccordion.append(this.divsControl.container);
         maurerAccordion.append(this.stepControl.container);
 
+        // Chordal Line Viz Accordion
+        const chordalVizAccordion = new Accordion('Chordal Line Viz', true);
+        this.controlsContainer.appendChild(chordalVizAccordion.element);
+
         // Opacity Control
         this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Opacity');
-        maurerAccordion.append(this.opacityControl.container);
 
         // Color Control
         const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
@@ -133,7 +136,8 @@ export class RosePanel extends Panel {
         colorContainer.appendChild(blendLabel);
         colorContainer.appendChild(this.blendSelect);
 
-        maurerAccordion.append(colorContainer);
+        chordalVizAccordion.append(colorContainer);
+        chordalVizAccordion.append(this.opacityControl.container);
 
         // Coset Info (Keep the check, but maybe redundant if we have stats?)
         // User asked for specific stats dropdown.

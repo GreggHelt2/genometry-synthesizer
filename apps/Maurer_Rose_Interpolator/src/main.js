@@ -1,7 +1,7 @@
 import { store } from './engine/state/Store.js';
 import { ACTIONS } from './engine/state/Actions.js'; // Added import
 import { CanvasRenderer } from './engine/renderer/Renderer.js';
-import { RosePanel } from './ui/components/RosePanel.js';
+import { ChordalRosettePanel } from './ui/components/ChordalRosettePanel.js';
 import { InterpolationPanel } from './ui/components/InterpolationPanel.js';
 import { createElement } from './ui/utils/dom.js';
 import { Recorder } from './engine/recorder/Recorder.js';
@@ -27,7 +27,7 @@ class App {
         app.appendChild(mainContent);
 
         // Column 1: Curve A
-        this.panelA = new RosePanel('rose-a', 'Curve A', 'roseA');
+        this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'roseA');
         // Override classes to ensure equal width (flex-1)
         this.panelA.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden border-r border-gray-700';
 
@@ -56,7 +56,7 @@ class App {
         this.centerArea.appendChild(centerControls);
 
         // Column 3: Curve B
-        this.panelB = new RosePanel('rose-b', 'Curve B', 'roseB');
+        this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'roseB');
         this.panelB.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden';
 
         // Mount Columns to Main Content
