@@ -35,7 +35,7 @@ class App {
         this.centerArea = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden border-r border-gray-700 relative');
 
         // Center Title (To align with Rose Panels)
-        const centerTitle = createElement('h2', 'text-xl font-bold p-4 text-center', { textContent: 'Interpolation' });
+        const centerTitle = createElement('h2', 'text-xl font-bold p-4 text-center', { textContent: 'Hybrid' });
         this.centerArea.appendChild(centerTitle);
 
         // Canvas Layer (Aligned with Preview Canvases)
