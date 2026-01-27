@@ -479,33 +479,46 @@ export class ChordalRosettePanel extends Panel {
         } else {
             curve = new CurveClass(params);
         }
-
         const radiansToClose = curve.getRadiansToClosure();
 
         // Calculate Lines/Sequence Length based on Sequencer Type
-        let lines;
         const currentSequencerType = params.sequencerType || 'Cyclic Additive Group Modulo N';
+        let lines;
+        let totalRosetteLines = 0;
+        let distributionString = '';
+        let isMultiplicative = false;
 
+        // reused currentSequencerType from above
         if (currentSequencerType === 'Multiplicative Group Modulo N') {
+            isMultiplicative = true;
             const SequencerClass = SequencerRegistry[currentSequencerType];
             if (SequencerClass) {
                 const seqInstance = new SequencerClass();
                 const cosets = seqInstance.getCosets(params.totalDivs, params);
+
                 if (cosets && cosets.length > 0) {
-                    // Use the user's selected coset index (clamped)
+                    // Calculate stats for ALL cosets to get distribution and total
+                    const distribution = {};
+                    cosets.forEach(seed => {
+                        const seq = seqInstance.generate(params.totalDivs, seed, params);
+                        // generate returns points. The number of chords (lines) is points.length - 1.
+                        const len = seq.length > 0 ? seq.length - 1 : 0;
+                        totalRosetteLines += len;
+                        distribution[len] = (distribution[len] || 0) + 1;
+                    });
+
+                    // Format Distribution String
+                    const sizes = Object.keys(distribution).map(Number).sort((a, b) => b - a);
+                    if (sizes.length === 1) {
+                        distributionString = `${sizes[0]}`;
+                    } else {
+                        distributionString = sizes.map(s => `${s} (${distribution[s]})`).join(', ');
+                    }
+
+                    // Use the user's selected coset index (clamped) for the simple "Lines" display
                     const index = Math.min(params.cosetIndex || 0, cosets.length - 1);
                     const sequence = seqInstance.generate(params.totalDivs, cosets[index], params);
-                    // generate returns points. The number of chords (lines) is points.length - 1.
-                    // (e.g. a closed cycle of length 18 returns 19 points: start...end,start)
                     lines = sequence.length > 0 ? sequence.length - 1 : 0;
-                    // For closed loops, number of lines = number of points (since it wraps to start)
-                    // If not closed, length - 1? Maurer polylines are usually closed or we render segments.
-                    // generate returns points. The number of segments is usually points.length if closed, or points.length-1.
-                    // But 'Lines to Close' usually implies the Period of the sequence.
-                    // For Mult Group: The sequence is [s, s*g, ... s*g^k]. Length is k+1? 
-                    // No, `generate` returns the array of visited nodes.
-                    // If the cycle is length 18, it returns 18 points.
-                    // 18 points = 18 lines if closed.
                 } else {
                     lines = 0;
                 }
@@ -515,6 +528,10 @@ export class ChordalRosettePanel extends Panel {
         } else {
             // Additive fallback
             lines = getLinesToClose(params.totalDivs, params.step);
+            // For additive, all cosets are same size = lines.
+            // Total = lines * k (number of cosets)
+            totalRosetteLines = lines * k;
+            distributionString = `${lines}`;
         }
 
         // Cycles Logic
@@ -540,8 +557,17 @@ export class ChordalRosettePanel extends Panel {
             coprimeString = `<div><span class="text-gray-400">Coprime:</span> <span class="${colorClass}">${isCoprime ? 'True' : 'False'}</span></div>`;
         }
 
+        let extraStats = '';
+        if (isMultiplicative) {
+            extraStats = `
+                <div><span class="text-gray-400">Lines (Distribution):</span> <span class="text-blue-400">${distributionString}</span></div>
+                <div><span class="text-gray-400">Total Lines:</span> <span class="text-blue-400">${totalRosetteLines}</span></div>
+             `;
+        }
+
         this.statsContent.innerHTML = `
-            <div><span class="text-gray-400">Lines to Close:</span> <span class="text-blue-400">${lines}</span></div>
+            <div><span class="text-gray-400">Lines (Current):</span> <span class="text-blue-400">${lines}</span></div>
+            ${extraStats}
             <div><span class="text-gray-400">Cycles to Close:</span> <span class="text-blue-400">${cycleString}</span></div>
             <div><span class="text-gray-400">Total Cosets:</span> <span class="text-blue-400">${k}</span></div>
             <div><span class="text-gray-400">Displayed Cosets:</span> <span class="text-blue-400">${cosetsShown}</span></div>

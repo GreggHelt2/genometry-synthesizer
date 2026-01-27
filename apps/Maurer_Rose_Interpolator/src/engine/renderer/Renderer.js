@@ -72,6 +72,32 @@ export class CanvasRenderer {
             const blendMode = params.blendMode || 'source-over';
             const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1 || blendMode !== 'source-over';
 
+            // Check for degeneracy (all points identical) using .x/.y or [0]/[1]
+            // We do this BEFORE segment logic to ensure single points (singularities) are always visible as dots
+            // regardless of opacity or blend mode settings.
+            const isDegenerate = points.length > 0 && points.every(p => {
+                const x = p.x !== undefined ? p.x : p[0];
+                const y = p.y !== undefined ? p.y : p[1];
+                const x0 = points[0].x !== undefined ? points[0].x : points[0][0];
+                const y0 = points[0].y !== undefined ? points[0].y : points[0][1];
+                return Math.abs(x - x0) < 0.001 && Math.abs(y - y0) < 0.001;
+            });
+
+            if (isDegenerate) {
+                // Draw a marker for fixed points / singularities
+                const p0 = points[0];
+                const x0 = p0.x !== undefined ? p0.x : p0[0];
+                const y0 = p0.y !== undefined ? p0.y : p0[1];
+
+                this.ctx.fillStyle = params.color || color;
+                this.ctx.globalAlpha = (params.showAllCosets && k > 1) ? 0.8 : 1;
+                this.ctx.beginPath();
+                this.ctx.arc(x0, y0, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.globalAlpha = 1;
+                return;
+            }
+
             // Apply Blend Mode
             this.ctx.globalCompositeOperation = blendMode;
 
@@ -84,31 +110,29 @@ export class CanvasRenderer {
                     colors = [params.color || color]; // Fallback in drawColoredSegments uses [0] for all
                 }
 
-                this.polylineLayer.drawColoredSegments(points, colors, {
-                    width: (params.showAllCosets && k > 1) ? 1 : 2,
-                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
-                });
-            } else {
-                // High performance single polyline for opaque solid colors
-                const isDegenerate = points.length > 0 && points.every(p => p[0] === points[0][0] && p[1] === points[0][1]);
-
-                if (isDegenerate) {
-                    // Draw a marker for fixed points
-                    this.ctx.fillStyle = params.color || color;
-                    this.ctx.globalAlpha = (params.showAllCosets && k > 1) ? 0.8 : 1;
-                    this.ctx.beginPath();
-                    this.ctx.arc(points[0][0], points[0][1], 3, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.globalAlpha = 1;
-                } else {
+                if (colors.length === 1 && blendMode === 'source-over') {
+                    // Optimization: Use single path drawing if only one color (handles Opacity/Blend Mode correctly)
                     this.polylineLayer.draw(points, {
-                        color: params.color || color,
+                        color: colors[0],
+                        width: (params.showAllCosets && k > 1) ? 1 : 2,
+                        opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                    });
+                } else {
+                    this.polylineLayer.drawColoredSegments(points, colors, {
                         width: (params.showAllCosets && k > 1) ? 1 : 2,
                         opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
                     });
                 }
+            } else {
+                // High performance single polyline for opaque solid colors
+                this.polylineLayer.draw(points, {
+                    color: params.color || color,
+                    width: (params.showAllCosets && k > 1) ? 1 : 2,
+                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                });
             }
         };
+
 
         if (roseParams.showAllCosets && k > 1) {
             if (disjointCosets) {
@@ -212,24 +236,24 @@ export class CanvasRenderer {
         const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
 
         // Unified k calculation for Interpolation
-        let kA;
+        let kA, cosetsA = null;
         if (sequencerA.getCosets) {
-            const cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
+            cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
             kA = cosetsA ? cosetsA.length : gcd(state.rosetteA.step, state.rosetteA.totalDivs);
         } else {
             kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
         }
 
-        let kB;
+        let kB, cosetsB = null;
         if (sequencerB.getCosets) {
-            const cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
+            cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
             kB = cosetsB ? cosetsB.length : gcd(state.rosetteB.step, state.rosetteB.totalDivs);
         } else {
             kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
         }
 
-        const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
-        const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
+        const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
+        const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
 
         const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
         const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
