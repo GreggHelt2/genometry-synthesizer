@@ -22,6 +22,15 @@ export class Sequencer {
     }
 
     /**
+     * Optional: Returns all disjoint coset seeds (indices) for "Show All" logic.
+     * If not implemented, Renderer might fallback to GCD logic or single offset.
+     * @returns {number[]|null} Array of seeds or null.
+     */
+    getCosets(n, params) {
+        return null;
+    }
+
+    /**
      * Returns the schema for UI generation.
      * @returns {Array<{key: string, label: string, type: string, min: number, max: number, step: number, default: number}>}
      */

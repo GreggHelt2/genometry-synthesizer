@@ -1,5 +1,5 @@
 import { Sequencer } from './Sequencer.js';
-import { modularPow, getTotient, initTotientCache } from '../NumberTheory.js';
+import { modularPow, getTotient, initTotientCache, getDisjointCycleSeeds } from '../NumberTheory.js';
 import { gcd } from '../MathOps.js';
 
 // Ensure cache is initialized
@@ -12,9 +12,16 @@ initTotientCache(10000);
  * Ideally used when gcd(g, n) = 1, but handles general case by just computing powers.
  */
 export class MultiplicativeGroupModuloNGenerator extends Sequencer {
+    getCosets(n, params) {
+        // Return seeds for all disjoint cycles
+        const generator = params.generator || 2;
+        return getDisjointCycleSeeds(n, generator);
+    }
     generate(n, start, params) {
         const generator = params.generator || 2;
-        const seed = params.seed ?? 1;
+        // If start is provided (from Renderer loop or cosetIndex mapping), use it.
+        // Otherwise default to 1 (standard multiplicative group start).
+        const seed = (start !== undefined && start !== null) ? start : 1;
 
         // Safety
         if (n < 2) return [0];
@@ -33,9 +40,6 @@ export class MultiplicativeGroupModuloNGenerator extends Sequencer {
         for (let i = 0; i < LIMIT; i++) {
             if (visited.has(val)) {
                 // If we return to the start, close the loop
-                // (Only for simple cycles; if we crash into a 'tail' like rho, we might not want to close to start)
-                // In multiplicative groups (finite), it's always pure cycles if we ignore 0 cases appropriately?
-                // Actually, if val === seq[0], we close.
                 if (seq.length > 0 && val === seq[0]) {
                     seq.push(val);
                 }
@@ -62,15 +66,6 @@ export class MultiplicativeGroupModuloNGenerator extends Sequencer {
                 // Or we make it relative? For now fixed range is fine.
                 step: 1,
                 default: 2
-            },
-            {
-                key: 'seed',
-                label: 'Seed (Start)',
-                type: 'slider',
-                min: 1,
-                max: 100,
-                step: 1,
-                default: 1
             }
         ];
     }

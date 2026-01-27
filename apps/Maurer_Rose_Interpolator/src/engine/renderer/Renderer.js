@@ -5,7 +5,7 @@ import { interpolateLinear } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
 import { gcd } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
-import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModulaNGenerator.js';
+import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModuloNGenerator.js';
 
 export class CanvasRenderer {
     constructor(canvas) {
@@ -51,11 +51,21 @@ export class CanvasRenderer {
 
         // k calculation remains for width/legacy behavior check, 
         // but real sequence logic is inside sequencer.generate() via generateMaurerPolyline
-        const k = gcd(roseParams.step, roseParams.totalDivs);
+        // Determine cosets/cycles
+        // Additive uses GCD. Multiplicative uses NumberTheory cycles.
+        // We check if sequencer can provide cosets.
+        let disjointCosets = null;
+        if (sequencer.getCosets) {
+            disjointCosets = sequencer.getCosets(roseParams.totalDivs, roseParams);
+        }
 
-        const drawRose = (params, indexOffset) => {
-            // Note: We pass params object which contains step, cyclesMultiplier etc.
-            const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, indexOffset, params);
+        // If no specific cosets returned, fallback to Additive GCD logic
+        // But for Multiplicative, getCosets returns the list.
+        const k = (disjointCosets) ? disjointCosets.length : gcd(roseParams.step, roseParams.totalDivs);
+
+        const drawRose = (params, startValue) => {
+            // Note: We pass startValue as the 'offset' argument to generateMaurerPolyline -> sequencer.generate
+            const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, startValue, params);
 
             // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
             const baseOpacity = params.opacity ?? 1;
@@ -89,12 +99,29 @@ export class CanvasRenderer {
         };
 
         if (roseParams.showAllCosets && k > 1) {
-            for (let i = 0; i < k; i++) {
-                drawRose(roseParams, i);
+            if (disjointCosets) {
+                // Iterate over explicit seeds
+                for (let i = 0; i < disjointCosets.length; i++) {
+                    drawRose(roseParams, disjointCosets[i]);
+                }
+            } else {
+                // Legacy additive offset loop
+                for (let i = 0; i < k; i++) {
+                    drawRose(roseParams, i);
+                }
             }
         } else {
-            const offset = (k > 1) ? roseParams.cosetIndex : 0;
-            drawRose(roseParams, offset);
+            // Single cycle
+            if (disjointCosets && disjointCosets.length > 0) {
+                // Use cosetIndex to select which disjoint cycle to show.
+                // We wrap it securely.
+                const idx = (roseParams.cosetIndex || 0) % disjointCosets.length;
+                const seed = disjointCosets[idx];
+                drawRose(roseParams, seed);
+            } else {
+                const offset = (k > 1) ? roseParams.cosetIndex : 0;
+                drawRose(roseParams, offset);
+            }
         }
 
         // Reset Blend Mode
@@ -124,7 +151,16 @@ export class CanvasRenderer {
         if (state.hybrid.showRoseA) {
             const curveA = this.createCurve(state.rosetteA);
             const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
-            const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+
+            // Unified k calculation
+            let kA;
+            if (sequencerA.getCosets) {
+                const cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
+                kA = cosetsA ? cosetsA.length : gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            } else {
+                kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            }
+
             const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
             // Pass state.rosetteA as params
             const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
@@ -138,7 +174,16 @@ export class CanvasRenderer {
         if (state.hybrid.showRoseB) {
             const curveB = this.createCurve(state.rosetteB);
             const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
-            const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+
+            // Unified k calculation
+            let kB;
+            if (sequencerB.getCosets) {
+                const cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
+                kB = cosetsB ? cosetsB.length : gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+            } else {
+                kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+            }
+
             const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
             const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
@@ -154,8 +199,23 @@ export class CanvasRenderer {
         const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
         const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
 
-        const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
-        const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+        // Unified k calculation for Interpolation
+        let kA;
+        if (sequencerA.getCosets) {
+            const cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
+            kA = cosetsA ? cosetsA.length : gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+        } else {
+            kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+        }
+
+        let kB;
+        if (sequencerB.getCosets) {
+            const cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
+            kB = cosetsB ? cosetsB.length : gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+        } else {
+            kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+        }
+
         const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
         const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
 

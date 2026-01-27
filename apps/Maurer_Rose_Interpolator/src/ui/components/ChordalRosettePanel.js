@@ -419,7 +419,29 @@ export class ChordalRosettePanel extends Panel {
         }
 
         // Coset Logic
-        const k = gcd(params.step, params.totalDivs);
+        // Determine k based on Sequencer
+        let k;
+        const currentSequencerType = params.sequencerType || 'Additive Group Modulo N';
+        // Note: Default changed from Cyclic Additive... to Additive... in other files, 
+        // ensure we use the same key or registry lookup handles it.
+        // Registry keys: 'Additive Group Modulo N', 'Multiplicative Group Modulo N'
+
+        const SequencerClass = SequencerRegistry[currentSequencerType];
+        if (SequencerClass) {
+            const seqInstance = new SequencerClass();
+            if (seqInstance.getCosets) {
+                const cosets = seqInstance.getCosets(params.totalDivs, params);
+                if (cosets) {
+                    k = cosets.length;
+                }
+            }
+        }
+
+        // Fallback for Additive or unknown
+        if (!k) {
+            k = gcd(params.step, params.totalDivs);
+        }
+
         this.cosetInfo.textContent = `Cosets (k): ${k}`;
 
         if (k > 1) {

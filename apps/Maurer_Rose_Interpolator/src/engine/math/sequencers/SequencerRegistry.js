@@ -1,4 +1,4 @@
-import { AdditiveGroupModuloNGenerator } from './AdditiveGroupModulaNGenerator.js';
+import { AdditiveGroupModuloNGenerator } from './AdditiveGroupModuloNGenerator.js';
 import { MultiplicativeGroupModuloNGenerator } from './MultiplicativeGroupModuloNGenerator.js';
 
 export const SequencerRegistry = {
