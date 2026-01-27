@@ -360,13 +360,21 @@ export class ChordalRosettePanel extends Panel {
         }
 
         // Sequencer Type
+        // Sequencer Type
+        // Ensure selector matches state
         if (this.sequencerSelector.value !== (params.sequencerType || 'Cyclic Additive Group Modulo N')) {
             this.sequencerSelector.value = params.sequencerType || 'Cyclic Additive Group Modulo N';
-            // Type changed, rebuild params
+        }
+
+        // Check if we need to rebuild params
+        const currentType = params.sequencerType || 'Cyclic Additive Group Modulo N';
+        if (this.currentRenderedSequencerType !== currentType) {
             this.updateSequencerParams(state);
+            this.currentRenderedSequencerType = currentType;
         } else if (!this.sequencerControls || Object.keys(this.sequencerControls).length === 0) {
-            // Initial build
+            // Initial build or empty
             this.updateSequencerParams(state);
+            this.currentRenderedSequencerType = currentType;
         }
 
         // Update Sequencer Accordion Title

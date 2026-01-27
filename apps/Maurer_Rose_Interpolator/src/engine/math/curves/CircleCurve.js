@@ -10,15 +10,18 @@ export class CircleCurve extends Curve {
         // Handle if initialized with object (from Renderer) or direct value
         if (typeof radius === 'object') {
             this.radius = radius.radius || 100;
+            this.rot = ((radius.rot || 0) * Math.PI) / 180;
         } else {
             this.radius = radius;
+            this.rot = 0;
         }
     }
 
     getPoint(theta) {
+        const totalAngle = theta + this.rot;
         return {
-            x: this.radius * Math.cos(theta),
-            y: this.radius * Math.sin(theta)
+            x: this.radius * Math.cos(totalAngle),
+            y: this.radius * Math.sin(totalAngle)
         };
     }
 
@@ -31,7 +34,8 @@ export class CircleCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'radius', type: 'number', label: 'Radius', min: 10, max: 300, step: 1, default: 100 }
+            { key: 'radius', type: 'number', label: 'Radius', min: 10, max: 300, step: 1, default: 100 },
+            { key: 'rot', type: 'slider', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
         ];
     }
 
