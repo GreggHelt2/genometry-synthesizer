@@ -90,11 +90,23 @@ export class CanvasRenderer {
                 });
             } else {
                 // High performance single polyline for opaque solid colors
-                this.polylineLayer.draw(points, {
-                    color: params.color || color,
-                    width: (params.showAllCosets && k > 1) ? 1 : 2,
-                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
-                });
+                const isDegenerate = points.length > 0 && points.every(p => p[0] === points[0][0] && p[1] === points[0][1]);
+
+                if (isDegenerate) {
+                    // Draw a marker for fixed points
+                    this.ctx.fillStyle = params.color || color;
+                    this.ctx.globalAlpha = (params.showAllCosets && k > 1) ? 0.8 : 1;
+                    this.ctx.beginPath();
+                    this.ctx.arc(points[0][0], points[0][1], 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+                } else {
+                    this.polylineLayer.draw(points, {
+                        color: params.color || color,
+                        width: (params.showAllCosets && k > 1) ? 1 : 2,
+                        opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                    });
+                }
             }
         };
 

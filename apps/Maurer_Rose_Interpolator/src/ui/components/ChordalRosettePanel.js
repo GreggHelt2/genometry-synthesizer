@@ -490,11 +490,28 @@ export class ChordalRosettePanel extends Panel {
         // Cosets Shown Logic
         const cosetsShown = params.showAllCosets ? k : 1;
 
+        // Determine Generator 'g' for Coprime Check
+        let gForCoprime = null;
+        const currentSequencerType = params.sequencerType || 'Additive Group Modulo N';
+        if (currentSequencerType.includes('Multiplicative')) {
+            gForCoprime = params.generator;
+        } else if (currentSequencerType.includes('Additive')) {
+            gForCoprime = params.step;
+        }
+
+        let coprimeString = '';
+        if (gForCoprime !== undefined && gForCoprime !== null) {
+            const isCoprime = gcd(params.totalDivs, gForCoprime) === 1;
+            const colorClass = isCoprime ? 'text-green-400' : 'text-red-400';
+            coprimeString = `<div><span class="text-gray-400">Coprime:</span> <span class="${colorClass}">${isCoprime ? 'True' : 'False'}</span></div>`;
+        }
+
         this.statsContent.innerHTML = `
             <div><span class="text-gray-400">Lines to Close:</span> <span class="text-blue-400">${lines}</span></div>
             <div><span class="text-gray-400">Cycles to Close:</span> <span class="text-blue-400">${cycleString}</span></div>
             <div><span class="text-gray-400">Total Cosets:</span> <span class="text-blue-400">${k}</span></div>
             <div><span class="text-gray-400">Displayed Cosets:</span> <span class="text-blue-400">${cosetsShown}</span></div>
+            ${coprimeString}
         `;
     }
 

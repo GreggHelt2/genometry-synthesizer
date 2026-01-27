@@ -86,34 +86,74 @@ export function isPrime(num) {
 export function getDisjointCycleSeeds(n, g) {
     if (n < 2) return [0];
 
-    // Track visited numbers.
-    // We only care about 1..n-1 for multiplicative group usually, 
-    // but 0 is its own trivial cycle (0 -> 0).
-    // The paper usually implies 1..n-1.
-    const visited = new Uint8Array(n); // 0 = unvisited
+    // For Multiplicative Group visualization, we only want to show Disjoint Cycles (attractors).
+    // Transients (pre-periods) should not be considered "cosets" as they merge into cycles.
+    // If g is not coprime to n, we have a functional graph with rho-structures.
+    // We want one seed per unique cycle.
+
+    const visited = new Uint8Array(n); // 0 = unvisited, 1 = visited globally
     const seeds = [];
 
-    // Always include 0? Residue designs usually skip it or handled separately.
-    // 0 * g = 0. It's a cycle of length 1.
-    // Let's iterate 1 to n-1.
-    for (let k = 1; k < n; k++) {
+    // Always check 0? 0*g = 0. Cycle {0}.
+    // If n > 1, 0 is a valid element.
+    // Let's iterate 0 to n-1 to be complete.
+    // (Previously started at 1, but 0 is valid in Z_n).
+    for (let k = 0; k < n; k++) {
         if (visited[k]) continue;
 
-        // k is a new cycle leader
-        seeds.push(k);
+        // Trace the path from k
+        // We need to detect if this path:
+        // A) Merges into an already visited cycle (Transient -> Old Cycle) => Discard
+        // B) Forms a new cycle (Transient -> New Cycle) => Add representative of New Cycle
 
-        // Mark entire orbit as visited
-        let val = k;
-        while (!visited[val]) {
-            visited[val] = 1;
-            val = (val * g) % n;
-            // If we hit a visited node (could be start, or merge into another cycle if not a group), stop.
-            // In pure multiplicative group, orbits are disjoint loops.
-            // In general residue designs (monoids), tails can merge. 
-            // If we hit ALREADY visited (from previous cycle), we stop. 
-            // If we hit current cycle start, we stop.
+        let path = [];
+        let curr = k;
+        let hitOld = false;
+
+        // Use a map for O(1) lookup in current path
+        let pathSet = new Set();
+
+        while (!visited[curr]) {
+            pathSet.add(curr);
+            path.push(curr);
+            visited[curr] = 1; // Mark as visited globally so outer loop skips it
+
+            curr = (curr * g) % n;
+
+            if (pathSet.has(curr)) {
+                // Cycle detected!
+                // The cycle part is from `curr` to end of `path` (if we track full path) or just `curr` depends on detection.
+                // In this logic, we found the loop closure.
+
+                // Calculate length of the cycle we just found.
+                // Since this is a functional graph component, we could have a tail + cycle.
+                // But for pure multiplicative group units, it's just a cycle.
+                // For non-units, we might have tails.
+                // Our current `seeds` push only pushes the cycle start.
+                // Let's count the cycle length.
+                let cycleLen = 0;
+                let scanner = curr;
+                do {
+                    cycleLen++;
+                    scanner = (scanner * g) % n;
+                } while (scanner !== curr && cycleLen < n);
+
+                seeds.push({ seed: curr, length: cycleLen });
+                break;
+            }
+        }
+
+        if (!pathSet.has(curr)) {
+            // We hit an OLD visited node.
+            // This means the current path is a transient feeding into an existing component.
+            // We discard this path (it adds no new cycles).
+            // Example: 4 -> 12 (visited). Stop.
         }
     }
 
-    return seeds;
+    // Sort seeds by cycle length descending
+    // This ensures the "Main" rosette (largest group component) is Coset Index 0
+    seeds.sort((a, b) => b.length - a.length);
+
+    return seeds.map(s => s.seed);
 }
