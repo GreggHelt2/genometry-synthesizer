@@ -15,7 +15,12 @@ export class MultiplicativeGroupModuloNGenerator extends Sequencer {
     getCosets(n, params) {
         // Return seeds for all disjoint cycles
         const generator = params.generator || 2;
-        return getDisjointCycleSeeds(n, generator);
+        const seeds = getDisjointCycleSeeds(n, generator);
+
+        // Filter out the 0 fixed point (which forms a cycle of size 1)
+        // because it is not considered a "Coset" in the Multiplicative Group context
+        // and creates a disconnected single point in the visualization.
+        return seeds.filter(s => s !== 0);
     }
     generate(n, start, params) {
         const generator = params.generator || 2;

@@ -481,7 +481,41 @@ export class ChordalRosettePanel extends Panel {
         }
 
         const radiansToClose = curve.getRadiansToClosure();
-        const lines = getLinesToClose(params.totalDivs, params.step);
+
+        // Calculate Lines/Sequence Length based on Sequencer Type
+        let lines;
+        const currentSequencerType = params.sequencerType || 'Cyclic Additive Group Modulo N';
+
+        if (currentSequencerType === 'Multiplicative Group Modulo N') {
+            const SequencerClass = SequencerRegistry[currentSequencerType];
+            if (SequencerClass) {
+                const seqInstance = new SequencerClass();
+                const cosets = seqInstance.getCosets(params.totalDivs, params);
+                if (cosets && cosets.length > 0) {
+                    // Use the user's selected coset index (clamped)
+                    const index = Math.min(params.cosetIndex || 0, cosets.length - 1);
+                    const sequence = seqInstance.generate(params.totalDivs, cosets[index], params);
+                    // generate returns points. The number of chords (lines) is points.length - 1.
+                    // (e.g. a closed cycle of length 18 returns 19 points: start...end,start)
+                    lines = sequence.length > 0 ? sequence.length - 1 : 0;
+                    // For closed loops, number of lines = number of points (since it wraps to start)
+                    // If not closed, length - 1? Maurer polylines are usually closed or we render segments.
+                    // generate returns points. The number of segments is usually points.length if closed, or points.length-1.
+                    // But 'Lines to Close' usually implies the Period of the sequence.
+                    // For Mult Group: The sequence is [s, s*g, ... s*g^k]. Length is k+1? 
+                    // No, `generate` returns the array of visited nodes.
+                    // If the cycle is length 18, it returns 18 points.
+                    // 18 points = 18 lines if closed.
+                } else {
+                    lines = 0;
+                }
+            } else {
+                lines = 0;
+            }
+        } else {
+            // Additive fallback
+            lines = getLinesToClose(params.totalDivs, params.step);
+        }
 
         // Cycles Logic
         const cycles = radiansToClose / (2 * Math.PI);
@@ -492,7 +526,7 @@ export class ChordalRosettePanel extends Panel {
 
         // Determine Generator 'g' for Coprime Check
         let gForCoprime = null;
-        const currentSequencerType = params.sequencerType || 'Additive Group Modulo N';
+        // reused currentSequencerType from above
         if (currentSequencerType.includes('Multiplicative')) {
             gForCoprime = params.generator;
         } else if (currentSequencerType.includes('Additive')) {
