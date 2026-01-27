@@ -109,48 +109,48 @@ export class CanvasRenderer {
         };
 
         // Draw Underlays if enabled
-        if (state.interpolation.showRoseA) {
-            const curveA = this.createCurve(state.roseA);
-            const kA = gcd(state.roseA.step, state.roseA.totalDivs);
-            const subA = (kA > 1) ? state.roseA.cosetIndex : 0;
-            const pointsA = generateMaurerPolyline(curveA, state.roseA.totalDivs, state.roseA.step, 1, subA);
+        if (state.hybrid.showRoseA) {
+            const curveA = this.createCurve(state.rosetteA);
+            const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
+            const pointsA = generateMaurerPolyline(curveA, state.rosetteA.totalDivs, state.rosetteA.step, 1, subA);
 
             this.polylineLayer.draw(pointsA, {
-                color: hexToRgba(state.roseA.color, state.interpolation.underlayOpacity),
+                color: hexToRgba(state.rosetteA.color, state.hybrid.underlayOpacity),
                 width: 1
             });
         }
 
-        if (state.interpolation.showRoseB) {
-            const curveB = this.createCurve(state.roseB);
-            const kB = gcd(state.roseB.step, state.roseB.totalDivs);
-            const subB = (kB > 1) ? state.roseB.cosetIndex : 0;
-            const pointsB = generateMaurerPolyline(curveB, state.roseB.totalDivs, state.roseB.step, 1, subB);
+        if (state.hybrid.showRoseB) {
+            const curveB = this.createCurve(state.rosetteB);
+            const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+            const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
+            const pointsB = generateMaurerPolyline(curveB, state.rosetteB.totalDivs, state.rosetteB.step, 1, subB);
 
             this.polylineLayer.draw(pointsB, {
-                color: hexToRgba(state.roseB.color, state.interpolation.underlayOpacity),
+                color: hexToRgba(state.rosetteB.color, state.hybrid.underlayOpacity),
                 width: 1
             });
         }
 
         // Draw Interpolated Curve
-        const curveA = this.createCurve(state.roseA);
-        const curveB = this.createCurve(state.roseB);
-        const kA = gcd(state.roseA.step, state.roseA.totalDivs);
-        const kB = gcd(state.roseB.step, state.roseB.totalDivs);
-        const subA = (kA > 1) ? state.roseA.cosetIndex : 0;
-        const subB = (kB > 1) ? state.roseB.cosetIndex : 0;
-        const pointsA = generateMaurerPolyline(curveA, state.roseA.totalDivs, state.roseA.step, 1, subA);
-        const pointsB = generateMaurerPolyline(curveB, state.roseB.totalDivs, state.roseB.step, 1, subB);
+        const curveA = this.createCurve(state.rosetteA);
+        const curveB = this.createCurve(state.rosetteB);
+        const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+        const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+        const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
+        const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
+        const pointsA = generateMaurerPolyline(curveA, state.rosetteA.totalDivs, state.rosetteA.step, 1, subA);
+        const pointsB = generateMaurerPolyline(curveB, state.rosetteB.totalDivs, state.rosetteB.step, 1, subB);
 
-        const weight = state.interpolation.weight;
+        const weight = state.hybrid.weight;
         const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
 
         // Interpolation Coloring & Opacity Logic
-        const interpColor = state.interpolation.color || 'white';
-        const interpMethod = state.interpolation.colorMethod || 'solid';
-        const interpOpacity = state.interpolation.opacity ?? 1;
-        const interpBlend = state.interpolation.blendMode || 'source-over';
+        const interpColor = state.hybrid.color || 'white';
+        const interpMethod = state.hybrid.colorMethod || 'solid';
+        const interpOpacity = state.hybrid.opacity ?? 1;
+        const interpBlend = state.hybrid.blendMode || 'source-over';
         const useSegments = (interpMethod !== 'solid') || interpOpacity < 1 || interpBlend !== 'source-over';
 
         // Apply Blend Mode

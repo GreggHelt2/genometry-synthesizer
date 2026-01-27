@@ -24,7 +24,7 @@ export class InterpolationPanel extends Panel {
 
         this.slider.addEventListener('input', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { weight: parseFloat(e.target.value) }
             });
         });
@@ -41,7 +41,7 @@ export class InterpolationPanel extends Panel {
         });
         this.interpOpacitySlider.addEventListener('input', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { opacity: parseFloat(e.target.value) }
             });
         });
@@ -56,7 +56,7 @@ export class InterpolationPanel extends Panel {
         this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
         this.colorInput.addEventListener('input', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { color: e.target.value }
             });
         });
@@ -68,7 +68,7 @@ export class InterpolationPanel extends Panel {
         });
         this.methodSelect.addEventListener('change', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { colorMethod: e.target.value }
             });
         });
@@ -106,7 +106,7 @@ export class InterpolationPanel extends Panel {
         });
         this.blendSelect.addEventListener('change', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { blendMode: e.target.value }
             });
         });
@@ -148,7 +148,7 @@ export class InterpolationPanel extends Panel {
         });
         this.opacitySlider.addEventListener('input', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { underlayOpacity: parseFloat(e.target.value) }
             });
         });
@@ -195,28 +195,28 @@ export class InterpolationPanel extends Panel {
 
     updateUI(state) {
         if (document.activeElement !== this.slider) {
-            this.slider.value = state.interpolation.weight;
+            this.slider.value = state.hybrid.weight;
         }
 
         if (document.activeElement !== this.interpOpacitySlider) {
-            this.interpOpacitySlider.value = state.interpolation.opacity ?? 1;
+            this.interpOpacitySlider.value = state.hybrid.opacity ?? 1;
         }
 
-        if (this.colorInput.value !== state.interpolation.color) {
-            this.colorInput.value = state.interpolation.color || '#ffffff';
+        if (this.colorInput.value !== state.hybrid.color) {
+            this.colorInput.value = state.hybrid.color || '#ffffff';
         }
-        if (this.methodSelect.value !== state.interpolation.colorMethod) {
-            this.methodSelect.value = state.interpolation.colorMethod || 'solid';
+        if (this.methodSelect.value !== state.hybrid.colorMethod) {
+            this.methodSelect.value = state.hybrid.colorMethod || 'solid';
         }
-        if (this.blendSelect.value !== state.interpolation.blendMode) {
-            this.blendSelect.value = state.interpolation.blendMode || 'source-over';
+        if (this.blendSelect.value !== state.hybrid.blendMode) {
+            this.blendSelect.value = state.hybrid.blendMode || 'source-over';
         }
 
         // Update Underlays
-        this.showACheck.input.checked = state.interpolation.showRoseA;
-        this.showBCheck.input.checked = state.interpolation.showRoseB;
+        this.showACheck.input.checked = state.hybrid.showRoseA;
+        this.showBCheck.input.checked = state.hybrid.showRoseB;
         if (document.activeElement !== this.opacitySlider) {
-            this.opacitySlider.value = state.interpolation.underlayOpacity;
+            this.opacitySlider.value = state.hybrid.underlayOpacity;
         }
 
         const isPlaying = state.app.isPlaying;
@@ -248,7 +248,7 @@ export class InterpolationPanel extends Panel {
 
         input.addEventListener('change', (e) => {
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { [key]: e.target.checked }
             });
         });

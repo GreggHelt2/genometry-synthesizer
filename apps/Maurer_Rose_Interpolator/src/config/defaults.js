@@ -2,7 +2,7 @@
  * Default configuration for the application.
  */
 export const DEFAULTS = {
-    roseA: {
+    rosetteA: {
         curveType: 'Rhodonea',
         n: 3,
         d: 4,
@@ -21,7 +21,7 @@ export const DEFAULTS = {
         opacity: 0.5,
         blendMode: 'lighter',
     },
-    roseB: {
+    rosetteB: {
         curveType: 'Rhodonea',
         n: 3,
         d: 4,
@@ -39,7 +39,7 @@ export const DEFAULTS = {
         opacity: 0.5,
         blendMode: 'lighter',
     },
-    interpolation: {
+    hybrid: {
         weight: 0.0, // 0 to 1
         method: 'linear', // 'linear', 'lcm', etc.
         showRoseA: false,

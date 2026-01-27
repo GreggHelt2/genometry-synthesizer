@@ -30,20 +30,20 @@ class Store {
 
     reducer(state, action) {
         switch (action.type) {
-            case ACTIONS.UPDATE_ROSE_A:
+            case ACTIONS.UPDATE_ROSETTE_A:
                 return {
                     ...state,
-                    roseA: { ...state.roseA, ...action.payload }
+                    rosetteA: { ...state.rosetteA, ...action.payload }
                 };
-            case ACTIONS.UPDATE_ROSE_B:
+            case ACTIONS.UPDATE_ROSETTE_B:
                 return {
                     ...state,
-                    roseB: { ...state.roseB, ...action.payload }
+                    rosetteB: { ...state.rosetteB, ...action.payload }
                 };
-            case ACTIONS.UPDATE_INTERPOLATION:
+            case ACTIONS.UPDATE_HYBRID:
                 return {
                     ...state,
-                    interpolation: { ...state.interpolation, ...action.payload }
+                    hybrid: { ...state.hybrid, ...action.payload }
                 };
             case ACTIONS.UPDATE_SETTINGS:
                 return {

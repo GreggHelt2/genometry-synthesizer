@@ -1,5 +1,5 @@
 import { store } from './engine/state/Store.js';
-import { ACTIONS } from './engine/state/Actions.js'; // Added import
+import { ACTIONS } from './engine/state/Actions.js';
 import { CanvasRenderer } from './engine/renderer/Renderer.js';
 import { ChordalRosettePanel } from './ui/components/ChordalRosettePanel.js';
 import { InterpolationPanel } from './ui/components/InterpolationPanel.js';
@@ -27,7 +27,7 @@ class App {
         app.appendChild(mainContent);
 
         // Column 1: Curve A
-        this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'roseA');
+        this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'rosetteA');
         // Override classes to ensure equal width (flex-1)
         this.panelA.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden border-r border-gray-700';
 
@@ -56,7 +56,7 @@ class App {
         this.centerArea.appendChild(centerControls);
 
         // Column 3: Curve B
-        this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'roseB');
+        this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'rosetteB');
         this.panelB.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden';
 
         // Mount Columns to Main Content
@@ -71,11 +71,11 @@ class App {
 
     initRenderer() {
         // Main Renderer (Interpolation)
-        this.mainRenderer = new CanvasRenderer(this.canvas);
+        this.hybridRenderer = new CanvasRenderer(this.canvas);
 
         // Preview Renderers (targeting the canvases created inside RosePanels)
-        this.previewRendererA = new CanvasRenderer(this.panelA.canvas);
-        this.previewRendererB = new CanvasRenderer(this.panelB.canvas);
+        this.rosetteRendererA = new CanvasRenderer(this.panelA.canvas);
+        this.rosetteRendererB = new CanvasRenderer(this.panelB.canvas);
 
         // Initial Resize
         this.handleResize();
@@ -96,15 +96,15 @@ class App {
 
         // Main Canvas
         const rect = this.canvasContainer.getBoundingClientRect();
-        this.mainRenderer.resize(rect.width, rect.height);
+        this.hybridRenderer.resize(rect.width, rect.height);
 
         // Previews
         // Use the container to measure, ensuring we respect the aspect-square from CSS
         const rectA = this.panelA.canvas.parentElement.getBoundingClientRect();
-        if (rectA.width > 0) this.previewRendererA.resize(rectA.width, rectA.height);
+        if (rectA.width > 0) this.rosetteRendererA.resize(rectA.width, rectA.height);
 
         const rectB = this.panelB.canvas.parentElement.getBoundingClientRect();
-        if (rectB.width > 0) this.previewRendererB.resize(rectB.width, rectB.height);
+        if (rectB.width > 0) this.rosetteRendererB.resize(rectB.width, rectB.height);
 
         // Force render
         this.renderAll(true);
@@ -118,7 +118,7 @@ class App {
             // Simple ping-pong logic
             let speed = 0.01 * state.app.animationSpeed;
             let dir = this.animDir || 1;
-            let newWeight = state.interpolation.weight + (speed * dir);
+            let newWeight = state.hybrid.weight + (speed * dir);
 
             if (newWeight >= 1) {
                 newWeight = 1;
@@ -130,7 +130,7 @@ class App {
             // Use this.animDir for next frame
 
             store.dispatch({
-                type: ACTIONS.UPDATE_INTERPOLATION,
+                type: ACTIONS.UPDATE_HYBRID,
                 payload: { weight: newWeight }
             });
         }
@@ -168,12 +168,12 @@ class App {
         }
 
         // Render Main
-        this.mainRenderer.renderInterpolation(state);
+        this.hybridRenderer.renderInterpolation(state);
 
         // Render Previews
         // Optimization: Previews only need update if Rose params changed, but for now global dirty is fine.
-        this.previewRendererA.renderPreview(state.roseA, 'rgba(255, 100, 100, 0.8)');
-        this.previewRendererB.renderPreview(state.roseB, 'rgba(100, 100, 255, 0.8)');
+        this.rosetteRendererA.renderPreview(state.rosetteA, 'rgba(255, 100, 100, 0.8)');
+        this.rosetteRendererB.renderPreview(state.rosetteB, 'rgba(100, 100, 255, 0.8)');
 
         store.clearDirty();
     }

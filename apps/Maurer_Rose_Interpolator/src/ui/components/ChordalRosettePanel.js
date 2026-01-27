@@ -9,8 +9,8 @@ import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
         super(id, title);
-        this.roseId = roseId; // 'roseA' or 'roseB'
-        this.actionType = roseId === 'roseA' ? ACTIONS.UPDATE_ROSE_A : ACTIONS.UPDATE_ROSE_B;
+        this.roseId = roseId; // 'rosetteA' or 'rosetteB'
+        this.actionType = roseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B;
         this.renderContent();
 
         // Subscribe to store updates
