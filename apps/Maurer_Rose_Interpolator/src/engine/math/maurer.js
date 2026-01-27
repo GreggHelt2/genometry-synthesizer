@@ -2,35 +2,28 @@
 import { getLinesToClose } from './MathOps.js';
 
 /**
- * Generates the vertices for a Maurer Rose polyline.
+ * Generates the vertices for a Maurer Rose polyline using a pluggable sequencer.
  * 
  * @param {import('./curves/Curve').Curve} curve - The parametric curve instance.
- * @param {number} totalDivs - The number of divisions (Z) for the full period (usually 360).
- * @param {number} step - The step size (D) in degrees (or divisions).
- * @param {number} cyclesMultiplier - (Optional) Multiplier for the number of cycles.
+ * @param {import('./sequencers/Sequencer').Sequencer} sequencer - The sequencer instance.
+ * @param {number} totalDivs - The modulo (n).
  * @param {number} offset - (Optional) Starting offset in divisions (for cosets).
+ * @param {Object} params - Additional params for the sequencer (e.g. step, cycles).
  * @returns {Array<{x: number, y: number}>} Array of point objects.
  */
-export function generateMaurerPolyline(curve, totalDivs, step, cyclesMultiplier = 1, offset = 0) {
+export function generateMaurerPolyline(curve, sequencer, totalDivs, offset = 0, params = {}) {
     const points = [];
 
-    // Calculate lines required to close the figure using GCD of step and totalDivs
-    // This determines how many integer steps we take before returning to 0 mod Z.
-    // note that this is completely independent of the kind of curve we are using, 
-    // it is based on group theory not geometry
-    const linesToClose = getLinesToClose(totalDivs, step);
-
-    const count = Math.ceil(linesToClose * cyclesMultiplier);
+    // Get the sequence of integer inputs (0..n-1 domain, potentially cycled)
+    const sequence = sequencer.generate(totalDivs, offset, params);
 
     // Calculate the angular scale factor based on the generalized Curve domain (P-Curve)
     const totalAngle = curve.getRadiansToClosure();
     const radiansPerDiv = totalAngle / totalDivs;
 
-    for (let i = 0; i <= count; i++) {
-        // k is the angle passed to the Rose function
-        const currentDiv = offset + (i * step);
-        const k = currentDiv * radiansPerDiv;
-
+    for (let i = 0; i < sequence.length; i++) {
+        // Map integer value to angle k
+        const k = sequence[i] * radiansPerDiv;
         points.push(curve.getPoint(k));
     }
 

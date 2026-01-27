@@ -1,0 +1,57 @@
+import { Sequencer } from './Sequencer.js';
+import { gcd } from '../MathOps.js';
+
+/**
+ * Standard Maurer Rose Logic.
+ * Sequence defined by the additive group Z_n with a generator (step).
+ * val = (start + i * step) % n
+ */
+export class AdditiveGroupModuloNGenerator extends Sequencer {
+    generate(n, start, params) {
+        // Unpack params, defaulting to standard Maurer values if missing
+        const step = params.step || 1;
+        const cyclesMultiplier = params.cyclesMultiplier || 1;
+
+        // Calculate length based on closure
+        // Total steps to return to start in modulo n is n / gcd(n, step)
+        // Note: maurer.js previously used getLinesToClose which is effectively LCD logic
+        // We replicate that here to maintain exact behavior.
+
+        // Lines to close = n / gcd(n, step) * (if we want full cycles?) 
+        // Original logic: getLinesToClose(n, step)
+        const g = gcd(n, step);
+        const linesToClose = n / g;
+
+        const count = Math.ceil(linesToClose * cyclesMultiplier);
+        const seq = [];
+
+        // Generate the sequence of raw values (accumulating angle)
+        // Note: The original maurer.js pushed `k`. Here we return integer steps.
+        // maurer.js will convert these integers to angles.
+        // HOWEVER: maurer.js logic was: currentDiv = offset + (i * step)
+        // It did NOT modulo them immediately because it multiplied by radiansPerDiv later.
+        // To support "multidirectional" or "random" sequences, we should probably output
+        // the actual integer index.
+        // For the standard Rose, the linear growth is important for the polyline connectivity.
+
+        for (let i = 0; i <= count; i++) {
+            seq.push(start + (i * step));
+        }
+
+        return seq;
+    }
+
+    getParamsSchema() {
+        return [
+            {
+                key: 'step',
+                label: 'Generator',
+                type: 'slider',
+                min: 1,
+                max: 360, // This is dynamic in the specialized UI, but schema can offer hints
+                step: 1,
+                default: 29
+            }
+        ];
+    }
+}

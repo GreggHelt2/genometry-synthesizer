@@ -4,6 +4,7 @@
 export const DEFAULTS = {
     rosetteA: {
         curveType: 'Rhodonea',
+        sequencerType: 'Cyclic Additive Group Modulo N',
         n: 3,
         d: 4,
         A: 200,
@@ -23,6 +24,7 @@ export const DEFAULTS = {
     },
     rosetteB: {
         curveType: 'Rhodonea',
+        sequencerType: 'Cyclic Additive Group Modulo N',
         n: 3,
         d: 4,
         A: 200,

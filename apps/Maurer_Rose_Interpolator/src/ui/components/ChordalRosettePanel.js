@@ -3,6 +3,7 @@ import { Accordion } from './Accordion.js';
 import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
+import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 
@@ -54,15 +55,20 @@ export class ChordalRosettePanel extends Panel {
         this.dynamicParamsContainer = createElement('div', 'flex flex-col');
         this.coreAccordion.append(this.dynamicParamsContainer);
 
-        // Maurer Accordion
-        const maurerAccordion = new Accordion('Sequencer: Cyclic Additive Group Z+', true);
-        this.controlsContainer.appendChild(maurerAccordion.element);
+        // Maurer Accordion (Sequencer)
+        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true);
+        this.controlsContainer.appendChild(this.maurerAccordion.element);
 
+        // Sequencer Type Selector
+        this.createSequencerTypeSelector(this.maurerAccordion);
+
+        // Modulo (Permanent)
         this.divsControl = this.createSlider('totalDivs', 1, 3600, 1, 'Modulo');
-        this.stepControl = this.createSlider('step', 1, 360, 1, 'Generator');
+        this.maurerAccordion.append(this.divsControl.container);
 
-        maurerAccordion.append(this.divsControl.container);
-        maurerAccordion.append(this.stepControl.container);
+        // Dynamic Sequencer Params Container
+        this.sequencerParamsContainer = createElement('div', 'flex flex-col');
+        this.maurerAccordion.append(this.sequencerParamsContainer);
 
         // Chordal Line Viz Accordion
         const chordalVizAccordion = new Accordion('Chordal Line Viz', true);
@@ -195,6 +201,69 @@ export class ChordalRosettePanel extends Panel {
         });
     }
 
+    createSequencerTypeSelector(containerAccordion) {
+        const container = createElement('div', 'flex flex-col mb-2 p-2 relative');
+        const label = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Sequence Generator' });
+
+        const select = createElement('select', 'w-full bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 cursor-pointer');
+
+        Object.keys(SequencerRegistry).forEach(key => {
+            const opt = createElement('option', '', { value: key, textContent: key });
+            select.appendChild(opt);
+        });
+
+        select.addEventListener('change', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { sequencerType: e.target.value }
+            });
+            // Re-render params immediately might be handled by updateUI, but let's ensure cleanup
+        });
+
+        this.sequencerSelector = select;
+
+        container.appendChild(label);
+        container.appendChild(select);
+
+        // Insert at top of accordion
+        if (containerAccordion.content.firstChild) {
+            containerAccordion.content.insertBefore(container, containerAccordion.content.firstChild);
+        } else {
+            containerAccordion.append(container);
+        }
+    }
+
+    updateSequencerParams(state) {
+        // Clear existing dynamic params
+        this.sequencerParamsContainer.innerHTML = '';
+        this.sequencerControls = {};
+
+        const sequencerType = state[this.roseId].sequencerType || 'Cyclic Additive Group Modulo N';
+        const SequencerClass = SequencerRegistry[sequencerType];
+
+        if (!SequencerClass) return;
+
+        // Instantiate temporarily to get schema (ideally schema is static, but pattern is instance method for now)
+        const sequencerInstance = new SequencerClass();
+        const schema = sequencerInstance.getParamsSchema();
+
+        schema.forEach(param => {
+            if (param.type === 'slider') {
+                // Use existing createSlider helper
+                // Map the param key to a top-level state key (assuming flat state for now as per plan)
+                // Note: sliders expect 'stateKey' to dispatch payload { [key]: val }
+                const control = this.createSlider(param.key, param.min, param.max, param.step, param.label);
+
+                // Manually set value since createSlider inits to 0 and relies on updateUI loop
+                // But updateUI loop might not have found this control yet if we just created it.
+                // We will let the main updateUI loop handle value setting.
+
+                this.sequencerControls[param.key] = control;
+                this.sequencerParamsContainer.appendChild(control.container);
+            }
+        });
+    }
+
     createCheckbox(key, label) {
         const container = createElement('div', 'flex items-center mb-2');
         const input = createElement('input', 'mr-2', { type: 'checkbox' });
@@ -290,10 +359,47 @@ export class ChordalRosettePanel extends Panel {
             });
         }
 
-        this.updateControl(this.divsControl, params.totalDivs);
-        this.updateControl(this.stepControl, params.step);
-        this.updateControl(this.opacityControl, params.opacity ?? 1);
+        // Sequencer Type
+        if (this.sequencerSelector.value !== (params.sequencerType || 'Cyclic Additive Group Modulo N')) {
+            this.sequencerSelector.value = params.sequencerType || 'Cyclic Additive Group Modulo N';
+            // Type changed, rebuild params
+            this.updateSequencerParams(state);
+        } else if (!this.sequencerControls || Object.keys(this.sequencerControls).length === 0) {
+            // Initial build
+            this.updateSequencerParams(state);
+        }
 
+        // Update Sequencer Accordion Title
+        if (this.maurerAccordion) {
+            this.maurerAccordion.setTitle(`Chordal Sequencer: ${params.sequencerType || 'Cyclic Additive Group Modulo N'}`);
+        }
+
+        // Modulo (Standard)
+        if (document.activeElement !== this.divsControl.input) { // Changed from .slider to .input
+            this.updateControl(this.divsControl, params.totalDivs);
+        }
+
+        // Update Dynamic Sequencer Controls
+        if (this.sequencerControls) {
+            Object.keys(this.sequencerControls).forEach(key => {
+                const control = this.sequencerControls[key];
+                if (document.activeElement !== control.input) { // Changed from .slider to .input
+                    // Start checking in top-level params (flat structure)
+                    // If undefined, maybe it's a default? The slider should handle it?
+                    // The control creation set min/max/step.
+                    const val = params[key];
+                    if (val !== undefined) {
+                        this.updateControl(control, val);
+                    }
+                }
+            });
+        }
+
+
+
+        if (document.activeElement !== this.opacityControl.input) { // Changed from .slider to .input
+            this.updateControl(this.opacityControl, params.opacity ?? 1);
+        }
         if (this.colorInput.value !== params.color) {
             this.colorInput.value = params.color;
         }

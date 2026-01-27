@@ -4,6 +4,8 @@ import { generateMaurerPolyline } from '../math/maurer.js';
 import { interpolateLinear } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
 import { gcd } from '../math/MathOps.js';
+import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
+import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModulaNGenerator.js';
 
 export class CanvasRenderer {
     constructor(canvas) {
@@ -31,6 +33,11 @@ export class CanvasRenderer {
         this.ctx.clearRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
     }
 
+    getSequencer(type) {
+        const SequencerClass = SequencerRegistry[type] || AdditiveGroupModuloNGenerator;
+        return new SequencerClass();
+    }
+
     renderPreview(roseParams, color = 'white') {
         this.clear();
         this.ctx.save();
@@ -40,10 +47,15 @@ export class CanvasRenderer {
         this.ctx.scale(scale, scale);
 
         const curve = this.createCurve(roseParams);
+        const sequencer = this.getSequencer(roseParams.sequencerType);
+
+        // k calculation remains for width/legacy behavior check, 
+        // but real sequence logic is inside sequencer.generate() via generateMaurerPolyline
         const k = gcd(roseParams.step, roseParams.totalDivs);
 
         const drawRose = (params, indexOffset) => {
-            const points = generateMaurerPolyline(curve, params.totalDivs, params.step, 1, indexOffset);
+            // Note: We pass params object which contains step, cyclesMultiplier etc.
+            const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, indexOffset, params);
 
             // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
             const baseOpacity = params.opacity ?? 1;
@@ -111,9 +123,11 @@ export class CanvasRenderer {
         // Draw Underlays if enabled
         if (state.hybrid.showRoseA) {
             const curveA = this.createCurve(state.rosetteA);
+            const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
             const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
             const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
-            const pointsA = generateMaurerPolyline(curveA, state.rosetteA.totalDivs, state.rosetteA.step, 1, subA);
+            // Pass state.rosetteA as params
+            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
 
             this.polylineLayer.draw(pointsA, {
                 color: hexToRgba(state.rosetteA.color, state.hybrid.underlayOpacity),
@@ -123,9 +137,10 @@ export class CanvasRenderer {
 
         if (state.hybrid.showRoseB) {
             const curveB = this.createCurve(state.rosetteB);
+            const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
             const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
             const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
-            const pointsB = generateMaurerPolyline(curveB, state.rosetteB.totalDivs, state.rosetteB.step, 1, subB);
+            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
             this.polylineLayer.draw(pointsB, {
                 color: hexToRgba(state.rosetteB.color, state.hybrid.underlayOpacity),
@@ -136,12 +151,16 @@ export class CanvasRenderer {
         // Draw Interpolated Curve
         const curveA = this.createCurve(state.rosetteA);
         const curveB = this.createCurve(state.rosetteB);
+        const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
+        const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
+
         const kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
         const kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
         const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
         const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
-        const pointsA = generateMaurerPolyline(curveA, state.rosetteA.totalDivs, state.rosetteA.step, 1, subA);
-        const pointsB = generateMaurerPolyline(curveB, state.rosetteB.totalDivs, state.rosetteB.step, 1, subB);
+
+        const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+        const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
         const weight = state.hybrid.weight;
         const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
