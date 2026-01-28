@@ -18,8 +18,8 @@ export class CanvasRenderer {
 
     resize(width, height) {
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = width * dpr;
-        this.canvas.height = height * dpr;
+        this.canvas.width = Math.floor(width * dpr);
+        this.canvas.height = Math.floor(height * dpr);
 
         this.width = this.canvas.width;
         this.height = this.canvas.height;
@@ -41,7 +41,7 @@ export class CanvasRenderer {
     renderPreview(roseParams, color = 'white') {
         this.clear();
         this.ctx.save();
-        this.ctx.translate(this.logicalWidth / 2, this.logicalHeight / 2);
+        this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
 
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
         this.ctx.scale(scale, scale);
@@ -169,7 +169,7 @@ export class CanvasRenderer {
     renderInterpolation(state) {
         this.clear();
         this.ctx.save();
-        this.ctx.translate(this.logicalWidth / 2, this.logicalHeight / 2);
+        this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
 
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
         this.ctx.scale(scale, scale);
