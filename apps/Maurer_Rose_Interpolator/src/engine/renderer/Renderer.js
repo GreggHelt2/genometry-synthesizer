@@ -40,7 +40,14 @@ export class CanvasRenderer {
 
     renderPreview(roseParams, color = 'white') {
         this.clear();
+        this.clear();
         this.ctx.save();
+
+        // Anti-aliasing
+        const aa = roseParams.antiAlias !== false;
+        this.ctx.imageSmoothingEnabled = aa;
+        this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
+
         this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
 
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
@@ -168,7 +175,16 @@ export class CanvasRenderer {
 
     renderInterpolation(state) {
         this.clear();
+        this.clear();
         this.ctx.save();
+
+        // Anti-aliasing (check either rosette or hybrid config - defaulting to A's preference for now or adding to hybrid)
+        // Let's use Rosette A's setting as the driver for simplicity, or hardcode/detect. 
+        // Or better, check if ANY have it disabled? Let's check state.rosetteA.antiAlias
+        const aa = state.rosetteA.antiAlias !== false;
+        this.ctx.imageSmoothingEnabled = aa;
+        this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
+
         this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
 
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;

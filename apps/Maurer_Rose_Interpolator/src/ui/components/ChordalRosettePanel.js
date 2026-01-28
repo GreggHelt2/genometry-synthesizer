@@ -148,6 +148,10 @@ export class ChordalRosettePanel extends Panel {
         this.lineWidthControl = this.createSlider('lineWidth', 0.1, 10, 0.1, 'Line Width');
         chordalVizAccordion.append(this.lineWidthControl.container);
 
+        // Anti-aliasing
+        this.antiAliasControl = this.createCheckbox('antiAlias', 'Anti-aliasing');
+        chordalVizAccordion.append(this.antiAliasControl.container);
+
         chordalVizAccordion.append(this.opacityControl.container);
 
         // Coset Info (Keep the check, but maybe redundant if we have stats?)
@@ -415,6 +419,9 @@ export class ChordalRosettePanel extends Panel {
         }
         if (this.lineWidthControl && document.activeElement !== this.lineWidthControl.input) {
             this.updateControl(this.lineWidthControl, params.lineWidth ?? 2);
+        }
+        if (this.antiAliasControl) {
+            this.antiAliasControl.input.checked = params.antiAlias !== false; // Default true
         }
         if (this.colorInput.value !== params.color) {
             this.colorInput.value = params.color;
