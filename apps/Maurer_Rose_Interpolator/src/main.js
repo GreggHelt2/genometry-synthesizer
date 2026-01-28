@@ -19,7 +19,7 @@ class App {
         app.className = 'flex flex-col h-screen w-screen bg-black text-white';
 
         // 1. Header Row
-        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 font-bold text-sm text-gray-400', { textContent: 'Maurer Rose Interpolator v17' });
+        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 font-bold text-sm text-gray-400', { textContent: 'Chordal Rosette Explorer v1.0' });
         app.appendChild(header);
 
         // 2. Main Content Row (Flex Container for Columns)
@@ -161,7 +161,7 @@ class App {
                 if (blob) {
                     const format = this.interpPanel.formatSelect.value;
                     const ext = format.includes('mp4') ? 'mp4' : 'webm';
-                    const filename = `maurer_rose_${Date.now()}.${ext}`;
+                    const filename = `chordal_rosette_${Date.now()}.${ext}`;
                     this.recorder.download(blob, filename);
                 }
             });

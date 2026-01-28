@@ -21,6 +21,7 @@ export const DEFAULTS = {
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
+        lineWidth: 2,
     },
     rosetteB: {
         curveType: 'Rhodonea',
@@ -40,6 +41,7 @@ export const DEFAULTS = {
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
+        lineWidth: 2,
     },
     hybrid: {
         weight: 0.0, // 0 to 1

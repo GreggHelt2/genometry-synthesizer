@@ -143,6 +143,11 @@ export class ChordalRosettePanel extends Panel {
         colorContainer.appendChild(this.blendSelect);
 
         chordalVizAccordion.append(colorContainer);
+
+        // Line Width
+        this.lineWidthControl = this.createSlider('lineWidth', 0.1, 10, 0.1, 'Line Width');
+        chordalVizAccordion.append(this.lineWidthControl.container);
+
         chordalVizAccordion.append(this.opacityControl.container);
 
         // Coset Info (Keep the check, but maybe redundant if we have stats?)
@@ -407,6 +412,9 @@ export class ChordalRosettePanel extends Panel {
 
         if (document.activeElement !== this.opacityControl.input) { // Changed from .slider to .input
             this.updateControl(this.opacityControl, params.opacity ?? 1);
+        }
+        if (this.lineWidthControl && document.activeElement !== this.lineWidthControl.input) {
+            this.updateControl(this.lineWidthControl, params.lineWidth ?? 2);
         }
         if (this.colorInput.value !== params.color) {
             this.colorInput.value = params.color;

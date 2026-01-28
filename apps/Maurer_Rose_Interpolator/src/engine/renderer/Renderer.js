@@ -114,21 +114,21 @@ export class CanvasRenderer {
                     // Optimization: Use single path drawing if only one color (handles Opacity/Blend Mode correctly)
                     this.polylineLayer.draw(points, {
                         color: colors[0],
-                        width: (params.showAllCosets && k > 1) ? 1 : 2,
-                        opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                        width: params.lineWidth || 2,
+                        opacity: baseOpacity
                     });
                 } else {
                     this.polylineLayer.drawColoredSegments(points, colors, {
-                        width: (params.showAllCosets && k > 1) ? 1 : 2,
-                        opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                        width: params.lineWidth || 2,
+                        opacity: baseOpacity
                     });
                 }
             } else {
                 // High performance single polyline for opaque solid colors
                 this.polylineLayer.draw(points, {
                     color: params.color || color,
-                    width: (params.showAllCosets && k > 1) ? 1 : 2,
-                    opacity: (params.showAllCosets && k > 1) ? 0.5 * baseOpacity : 1 * baseOpacity
+                    width: params.lineWidth || 2,
+                    opacity: baseOpacity
                 });
             }
         };
