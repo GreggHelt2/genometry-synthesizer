@@ -141,31 +141,21 @@ export class CanvasRenderer {
         };
 
 
-        if (roseParams.showAllCosets && k > 1) {
+        // Advanced Coset Rendering Logic
+        const indicesToDraw = this.getDrawIndices(k, roseParams);
+
+        indicesToDraw.forEach(idx => {
+            let seed;
             if (disjointCosets) {
-                // Iterate over explicit seeds
-                for (let i = 0; i < disjointCosets.length; i++) {
-                    drawRose(roseParams, disjointCosets[i]);
-                }
+                // If we have explicit disjoint cosets (Multiplicative), map index to seed
+                // Wrapping index safely
+                seed = disjointCosets[idx % disjointCosets.length];
             } else {
-                // Legacy additive offset loop
-                for (let i = 0; i < k; i++) {
-                    drawRose(roseParams, i);
-                }
+                // Additive/GCD: index is the offset
+                seed = idx;
             }
-        } else {
-            // Single cycle
-            if (disjointCosets && disjointCosets.length > 0) {
-                // Use cosetIndex to select which disjoint cycle to show.
-                // We wrap it securely.
-                const idx = (roseParams.cosetIndex || 0) % disjointCosets.length;
-                const seed = disjointCosets[idx];
-                drawRose(roseParams, seed);
-            } else {
-                const offset = (k > 1) ? roseParams.cosetIndex : 0;
-                drawRose(roseParams, offset);
-            }
-        }
+            drawRose(roseParams, seed);
+        });
 
         // Reset Blend Mode
         this.ctx.globalCompositeOperation = 'source-over';
@@ -213,13 +203,17 @@ export class CanvasRenderer {
                 kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
             }
 
-            const subA = (kA > 1) ? state.rosetteA.cosetIndex : 0;
-            // Pass state.rosetteA as params
-            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+            const indicesA = this.getDrawIndices(kA, state.rosetteA);
+            indicesA.forEach(idx => {
+                const subA = (sequencerA.getCosets && kA > 1)
+                    ? sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA)[idx % kA]
+                    : idx;
 
-            this.polylineLayer.draw(pointsA, {
-                color: hexToRgba(state.rosetteA.color, state.hybrid.underlayOpacity),
-                width: 1
+                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+                this.polylineLayer.draw(pointsA, {
+                    color: hexToRgba(state.rosetteA.color, state.hybrid.underlayOpacity),
+                    width: 1
+                });
             });
         }
 
@@ -236,12 +230,17 @@ export class CanvasRenderer {
                 kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
             }
 
-            const subB = (kB > 1) ? state.rosetteB.cosetIndex : 0;
-            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+            const indicesB = this.getDrawIndices(kB, state.rosetteB);
+            indicesB.forEach(idx => {
+                const subB = (sequencerB.getCosets && kB > 1)
+                    ? sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB)[idx % kB]
+                    : idx;
 
-            this.polylineLayer.draw(pointsB, {
-                color: hexToRgba(state.rosetteB.color, state.hybrid.underlayOpacity),
-                width: 1
+                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+                this.polylineLayer.draw(pointsB, {
+                    color: hexToRgba(state.rosetteB.color, state.hybrid.underlayOpacity),
+                    width: 1
+                });
             });
         }
 
@@ -338,5 +337,38 @@ export class CanvasRenderer {
         // For Circle (and future others), pass the params object directly? 
         // CircleCurve checks for object.
         return new CurveClass(params);
+    }
+    getDrawIndices(k, params) {
+        const count = Math.min(params.cosetCount || 1, k);
+        const dist = params.cosetDistribution || 'sequential';
+        const startOffset = params.cosetIndex || 0;
+
+        const indices = [];
+
+        if (dist === 'sequential') {
+            for (let i = 0; i < count; i++) {
+                indices.push((startOffset + i) % k);
+            }
+        } else if (dist === 'distributed') {
+            if (count === 1) {
+                indices.push(startOffset % k);
+            } else {
+                for (let i = 0; i < count; i++) {
+                    const idx = Math.round(i * k / count);
+                    indices.push((startOffset + idx) % k);
+                }
+            }
+        } else if (dist === 'two-way') {
+            for (let i = 0; i < count; i++) {
+                let idx;
+                if (i % 2 === 0) {
+                    idx = Math.floor(i / 2);
+                } else {
+                    idx = k - 1 - Math.floor(i / 2);
+                }
+                indices.push((startOffset + idx) % k);
+            }
+        }
+        return indices;
     }
 }

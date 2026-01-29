@@ -182,20 +182,42 @@ export class ChordalRosettePanel extends Panel {
 
         chordalVizAccordion.append(this.opacityControl.container);
 
-        // Coset Info (Keep the check, but maybe redundant if we have stats?)
-        // User asked for specific stats dropdown.
-        const cosetContainer = createElement('div', 'p-2 border-t border-gray-700 bg-gray-800');
-        this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2', { textContent: 'Cosets (k): 1' });
-        this.showAllCheck = this.createCheckbox('showAllCosets', 'Show All Cosets');
+        // Coset Visualization Accordion
+        const cosetAccordion = new Accordion('Coset Visualization', false); // Default closed? Or true?
+        this.controlsContainer.appendChild(cosetAccordion.element);
 
-        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Coset Index');
-        this.cosetIndexControl.container.style.display = 'none'; // Hide by default
+        this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets (k): 1' });
+        cosetAccordion.append(this.cosetInfo);
 
-        cosetContainer.appendChild(this.cosetInfo);
-        cosetContainer.appendChild(this.showAllCheck.container);
-        cosetContainer.appendChild(this.cosetIndexControl.container);
+        // Coset Count Slider
+        this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
+        cosetAccordion.append(this.cosetCountControl.container);
 
-        this.controlsContainer.appendChild(cosetContainer);
+        // Distribution Dropdown
+        const distContainer = createElement('div', 'flex flex-col mb-2');
+        const distLabel = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Distribution' });
+        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+
+        ['Sequential', 'Distributed', 'Two-Way'].forEach(m => {
+            const val = m.toLowerCase();
+            const opt = createElement('option', '', { value: val, textContent: m });
+            this.distSelect.appendChild(opt);
+        });
+
+        this.distSelect.addEventListener('change', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { cosetDistribution: e.target.value }
+            });
+        });
+
+        distContainer.appendChild(distLabel);
+        distContainer.appendChild(this.distSelect);
+        cosetAccordion.append(distContainer);
+
+        // Coset Index (Start Offset)
+        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
+        cosetAccordion.append(this.cosetIndexControl.container);
     }
 
     createCurveTypeSelector(parent) {
@@ -485,22 +507,24 @@ export class ChordalRosettePanel extends Panel {
             k = gcd(params.step, params.totalDivs);
         }
 
-        this.cosetInfo.textContent = `Cosets (k): ${k}`;
+        this.cosetInfo.textContent = `Total Cosets (k): ${k}`;
 
-        if (k > 1) {
-            this.showAllCheck.container.style.display = 'flex';
-            this.showAllCheck.input.checked = params.showAllCosets;
+        // Update Coset Count Slider Range
+        if (this.cosetCountControl) {
+            this.cosetCountControl.input.max = k;
+            this.updateControl(this.cosetCountControl, Math.min(params.cosetCount || 1, k));
+            // Dispatch update if clamped? No, simple render update is fine.
+        }
 
-            if (!params.showAllCosets) {
-                this.cosetIndexControl.container.style.display = 'flex';
-                this.cosetIndexControl.input.max = k - 1;
-                this.updateControl(this.cosetIndexControl, params.cosetIndex);
-            } else {
-                this.cosetIndexControl.container.style.display = 'none';
-            }
-        } else {
-            this.showAllCheck.container.style.display = 'none';
-            this.cosetIndexControl.container.style.display = 'none';
+        // Update Distribution
+        if (this.distSelect && this.distSelect.value !== params.cosetDistribution) {
+            this.distSelect.value = params.cosetDistribution || 'sequential';
+        }
+
+        // Update Coset Index (Offset) Range
+        if (this.cosetIndexControl) {
+            this.cosetIndexControl.input.max = k - 1;
+            this.updateControl(this.cosetIndexControl, params.cosetIndex || 0);
         }
 
         // Update Stats
@@ -582,7 +606,7 @@ export class ChordalRosettePanel extends Panel {
         const cycleString = parseFloat(cycles.toFixed(3));
 
         // Cosets Shown Logic
-        const cosetsShown = params.showAllCosets ? k : 1;
+        const cosetsShown = Math.min(params.cosetCount || 1, k);
 
         // Determine Generator 'g' for Coprime Check
         let gForCoprime = null;

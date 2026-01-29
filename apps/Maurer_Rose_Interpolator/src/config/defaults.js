@@ -23,6 +23,8 @@ export const DEFAULTS = {
         blendMode: 'lighter',
         lineWidth: 2,
         antiAlias: true,
+        cosetCount: 1,
+        cosetDistribution: 'sequential', // 'sequential', 'distributed', 'two-way'
     },
     rosetteB: {
         curveType: 'Rhodonea',
