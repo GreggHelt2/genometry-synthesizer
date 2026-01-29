@@ -6,6 +6,7 @@ import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
+import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
 
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
@@ -69,6 +70,33 @@ export class ChordalRosettePanel extends Panel {
         // Dynamic Sequencer Params Container
         this.sequencerParamsContainer = createElement('div', 'flex flex-col');
         this.maurerAccordion.append(this.sequencerParamsContainer);
+
+        // --- Relatives Navigation ---
+        const relativesAccordion = new Accordion('Relatives Navigation', true);
+        this.relativesTypeSelect = createElement('select', 'w-full bg-gray-700 text-white p-1 rounded mb-2');
+
+        ['Prime', 'Twin Prime', 'Cousin Prime', 'Lines To Close Matches'].forEach(type => {
+            let val = type.toLowerCase();
+            if (type === 'Lines To Close Matches') val = 'ltc';
+            else if (type === 'Twin Prime') val = 'twin';
+            else if (type === 'Cousin Prime') val = 'cousin';
+            else if (type === 'Prime') val = 'prime';
+
+            const opt = createElement('option', '', { value: val, textContent: type });
+            this.relativesTypeSelect.appendChild(opt);
+        });
+
+        const relNavContainer = createElement('div', 'flex gap-2');
+
+        ['Prev', 'Random', 'Next'].forEach(dir => {
+            const btn = createElement('button', 'flex-1 bg-gray-600 hover:bg-gray-500 rounded px-2 py-1 text-sm', { textContent: dir });
+            btn.addEventListener('click', () => this.handleRelativesNav(dir.toLowerCase()));
+            relNavContainer.appendChild(btn);
+        });
+
+        relativesAccordion.append(this.relativesTypeSelect);
+        relativesAccordion.append(relNavContainer);
+        this.controlsContainer.appendChild(relativesAccordion.element);
 
         // Chordal Line Viz Accordion
         const chordalVizAccordion = new Accordion('Chordal Line Viz', true);
@@ -594,6 +622,25 @@ export class ChordalRosettePanel extends Panel {
         control.valueDisplay.textContent = value;
         if (document.activeElement !== control.input) {
             control.input.value = value;
+        }
+    }
+    handleRelativesNav(direction) {
+        const type = this.relativesTypeSelect.value;
+        // Access state directly or via params being passed around?
+        // updateUI sets 'this.state' usually? No, updateUI takes state arg.
+        // We can access 'store.getState()[this.roseId]'
+        const state = store.getState()[this.roseId];
+        const currentGen = state.step; // 'Generator' slider maps to 'step' in params
+        const totalDivs = state.totalDivs; // Modulo
+
+        const newVal = RelativesFinder.findRelative(currentGen, type, direction, totalDivs);
+
+        if (newVal !== null && newVal !== currentGen) {
+            store.dispatch({
+                type: this.actionType,
+                payload: { step: newVal }
+            });
+            // Control update will happen via updateUI subscription
         }
     }
 }
