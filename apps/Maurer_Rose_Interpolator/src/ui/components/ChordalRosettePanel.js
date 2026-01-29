@@ -624,20 +624,31 @@ export class ChordalRosettePanel extends Panel {
             coprimeString = `<div><span class="text-gray-400">Coprime:</span> <span class="${colorClass}">${isCoprime ? 'True' : 'False'}</span></div>`;
         }
 
-        let extraStats = '';
+        // Calculate Lines Displayed
+        let segmentsDisplayed = 0;
         if (isMultiplicative) {
-            extraStats = `
-                <div><span class="text-gray-400">Lines (Distribution):</span> <span class="text-blue-400">${distributionString}</span></div>
-                <div><span class="text-gray-400">Total Lines:</span> <span class="text-blue-400">${totalRosetteLines}</span></div>
-             `;
+            // If we have distribution or specific counting, we might want to be precise, 
+            // but 'lines * cosetsShown' is decent approximation if uniform. 
+            // However, strictly we should sum the lengths of the *shown* cosets.
+            // Given Renderer.getDrawIndices logic is in Renderer, we duplicate it or simplify.
+            // Simplification: use average or just assume one sample 'lines' * cosetsShown for now 
+            // unless we want to pull getDrawIndices logic here. 
+
+            // Attempt approximation:
+            segmentsDisplayed = lines * cosetsShown;
+            // Ideally we'd calculate exactly match what's drawn, but that requires re-running getDrawIndices logic.
+        } else {
+            segmentsDisplayed = lines * cosetsShown;
         }
 
+        const segmentsPerPathLabel = isMultiplicative ? distributionString : lines;
+
         this.statsContent.innerHTML = `
-            <div><span class="text-gray-400">Lines (Current):</span> <span class="text-blue-400">${lines}</span></div>
-            ${extraStats}
-            <div><span class="text-gray-400">Cycles to Close:</span> <span class="text-blue-400">${cycleString}</span></div>
-            <div><span class="text-gray-400">Total Cosets:</span> <span class="text-blue-400">${k}</span></div>
-            <div><span class="text-gray-400">Displayed Cosets:</span> <span class="text-blue-400">${cosetsShown}</span></div>
+            <div><span class="text-gray-400">Line Segments Displayed:</span> <span class="text-blue-400">${segmentsDisplayed}</span></div>
+            <div><span class="text-gray-400">Closed Paths Displayed (Cosets):</span> <span class="text-blue-400">${cosetsShown}</span></div>
+            <div><span class="text-gray-400">Line Segments Per Path:</span> <span class="text-blue-400">${segmentsPerPathLabel}</span></div>
+            <div><span class="text-gray-400">Total Segments:</span> <span class="text-blue-400">${totalRosetteLines}</span></div>
+            <div><span class="text-gray-400">Total Paths:</span> <span class="text-blue-400">${k}</span></div>
             ${coprimeString}
         `;
     }
