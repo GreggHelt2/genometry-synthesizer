@@ -303,17 +303,19 @@ export class CanvasRenderer {
 
         // Multi-Coset Matching Logic
         if (kA === kB && kA > 1) {
-            // If they match, we iterate through ALL coset pairs (0..k-1)
-            // Implicitly aligning coset[i] of A with coset[i] of B
-            for (let i = 0; i < kA; i++) {
-                const subA = (cosetsA) ? cosetsA[i] : i;
-                const subB = (cosetsB) ? cosetsB[i] : i;
+            // Apply Hybrid Coset Visualization Settings (Count, Dist, Index)
+            // Use hybrid params to determine WHICH indices to draw
+            const indices = this.getDrawIndices(kA, state.hybrid);
+
+            indices.forEach(idx => {
+                const subA = (cosetsA) ? cosetsA[idx % kA] : idx; // Wrap just in case
+                const subB = (cosetsB) ? cosetsB[idx % kB] : idx;
 
                 const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
                 const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
                 drawHybridPolyline(pointsA, pointsB);
-            }
+            });
         } else {
             // Fallback: Single Selected Coset (User's specific selection for mismatch or single)
             const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);

@@ -1,7 +1,10 @@
 import { Panel } from './Panel.js';
+import { Accordion } from './Accordion.js';
 import { createElement } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
+import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
+import { gcd } from '../../engine/math/MathOps.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -115,6 +118,47 @@ export class InterpolationPanel extends Panel {
 
         container.appendChild(colorContainer);
 
+        // Coset Visualization Accordion (Hybrid)
+        this.cosetAccordion = new Accordion('Coset Visualization', false);
+        this.cosetAccordion.element.style.marginTop = '1rem';
+
+        // Info text
+        this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets Match (k): -' });
+        this.cosetAccordion.append(this.cosetInfo);
+
+        // Coset Count
+        this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
+        this.cosetAccordion.append(this.cosetCountControl.container);
+
+        // Distribution
+        const distContainer = createElement('div', 'flex flex-col mb-2');
+        const distLabel = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Distribution' });
+        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+
+        ['Sequential', 'Distributed', 'Two-Way'].forEach(m => {
+            const val = m.toLowerCase();
+            const opt = createElement('option', '', { value: val, textContent: m });
+            this.distSelect.appendChild(opt);
+        });
+
+        this.distSelect.addEventListener('change', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_HYBRID,
+                payload: { cosetDistribution: e.target.value }
+            });
+        });
+
+        distContainer.appendChild(distLabel);
+        distContainer.appendChild(this.distSelect);
+        this.cosetAccordion.append(distContainer);
+
+        // Coset Index
+        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
+        this.cosetAccordion.append(this.cosetIndexControl.container);
+
+        // Append accordion to main container
+        container.appendChild(this.cosetAccordion.element);
+
         // Play/Pause Button
         this.playBtn = createElement('button', 'mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 w-full transition-colors', {
             textContent: 'Play Animation'
@@ -202,6 +246,45 @@ export class InterpolationPanel extends Panel {
             this.interpOpacitySlider.value = state.hybrid.opacity ?? 1;
         }
 
+        // --- Hybrid Coset Logic ---
+        // Helper to get k
+        const getK = (params) => {
+            const seqType = params.sequencerType || 'Additive Group Modulo N';
+            const SequencerClass = SequencerRegistry[seqType];
+            if (SequencerClass) {
+                const seq = new SequencerClass();
+                if (seq.getCosets) {
+                    const c = seq.getCosets(params.totalDivs, params);
+                    if (c) return c.length;
+                }
+            }
+            return gcd(params.step, params.totalDivs);
+        };
+
+        const kA = getK(state.rosetteA);
+        const kB = getK(state.rosetteB);
+
+        if (kA === kB && kA > 1) {
+            this.cosetAccordion.element.style.display = 'block';
+            this.cosetInfo.textContent = `Cosets Match (k): ${kA}`;
+
+            // Update Max
+            this.cosetCountControl.input.max = kA;
+            this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, kA));
+
+            this.cosetIndexControl.input.max = kA - 1;
+            this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % kA);
+
+            if (this.distSelect.value !== state.hybrid.cosetDistribution) {
+                this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
+            }
+
+        } else {
+            // Hide or disable if not matching
+            this.cosetAccordion.element.style.display = 'none';
+        }
+        // --------------------------
+
         if (this.colorInput.value !== state.hybrid.color) {
             this.colorInput.value = state.hybrid.color || '#ffffff';
         }
@@ -255,6 +338,41 @@ export class InterpolationPanel extends Panel {
 
         container.appendChild(input);
         container.appendChild(labelEl);
+        return { container, input };
+    }
+
+    createSlider(key, min, max, step, label) {
+        const container = createElement('div', 'flex flex-col mb-1');
+        const topRow = createElement('div', 'flex justify-between items-end mb-1');
+        const labelEl = createElement('label', 'text-xs text-gray-400', { textContent: label });
+        const textVal = createElement('span', 'text-xs text-blue-400 font-mono', { textContent: min });
+
+        topRow.appendChild(labelEl);
+        topRow.appendChild(textVal);
+
+        const input = createElement('input', 'w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer', {
+            type: 'range', min, max, step, value: min
+        });
+
+        // Update text on input
+        input.addEventListener('input', (e) => {
+            textVal.textContent = parseFloat(e.target.value);
+            // Dispatch
+            store.dispatch({
+                type: ACTIONS.UPDATE_HYBRID,
+                payload: { [key]: parseFloat(e.target.value) }
+            });
+        });
+
+        // External update helper
+        input.updateDisplay = (val) => {
+            textVal.textContent = val;
+            input.value = val;
+        };
+
+        container.appendChild(topRow);
+        container.appendChild(input);
+
         return { container, input };
     }
 }
