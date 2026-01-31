@@ -7,6 +7,7 @@ import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistr
 import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
+import { ParamGui } from './ParamGui.js';
 
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
@@ -17,6 +18,12 @@ export class ChordalRosettePanel extends Panel {
 
         // Subscribe to store updates
         store.subscribe(this.updateUI.bind(this));
+
+        // Subscribe to LinkManager updates
+        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            this.linkManager = linkManager;
+            linkManager.subscribe(this.updateLinkVisuals.bind(this));
+        });
 
         // Initial UI update
         this.updateUI(store.getState());
@@ -361,36 +368,62 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createSlider(key, min, max, step, label) {
-        const container = createElement('div', 'flex flex-col mb-3');
-        const header = createElement('div', 'flex justify-between mb-1');
-        const labelEl = createElement('label', 'text-xs text-gray-400', { textContent: label });
-        const valueDisplay = createElement('span', 'text-xs text-blue-400 font-mono', { textContent: '0' });
+        // Use ParamGui
+        const paramGui = new ParamGui({
+            key,
+            label,
+            min,
+            max,
+            step,
+            value: 0, // Default, will be updated by updateUI
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { [key]: val }
+                });
+            },
+            onLinkToggle: (isActive) => {
+                // Determine counterpart key (assumes A <-> B mirroring for now)
+                // My key: this.roseId + '.' + key
+                // Other key: (this.roseId=A?B:A) + '.' + key
+                const myKey = `${this.roseId}.${key}`;
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = `${otherRoseId}.${key}`;
 
-        header.appendChild(labelEl);
-        header.appendChild(valueDisplay);
-
-        const input = createElement('input', 'w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer', {
-            type: 'range',
-            min, max, step
+                // Toggle link in manager
+                // We barely trust the 'isActive' from UI state since LinkManager is source of truth for links
+                // But for now, click = toggle
+                import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    const linked = linkManager.toggleLink(myKey, otherKey);
+                    // Update visual state to match reality (handled by ParamGui internal state? no, should be driven by props)
+                    // But ParamGui tracks its own isLinked.
+                    // Ideally we sync ParamGui.isLinked with LinkManager status.
+                    if (linked !== isActive) {
+                        // Visual mismatch corrected
+                        paramGui.setLinkActive(linked);
+                    }
+                });
+            }
         });
 
-        input.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            valueDisplay.textContent = val;
-            store.dispatch({
-                type: this.actionType,
-                payload: { [key]: val }
-            });
-        });
-
-        container.appendChild(header);
-        container.appendChild(input);
-
-        return { container, input, valueDisplay };
+        // Adapter to match old structure expecting { container, input, valueDisplay }
+        // We attach the full instance so updateUI can use .setValue
+        return {
+            container: paramGui.getElement(),
+            instance: paramGui,
+            // creating fake input/valueDisplay props to avoid breaking immediate legacy access if any remains?
+            // Actually, I should update the usages of these return values.
+            // The usages are:
+            // 1. this.divsControl = this.createSlider(...)
+            input: paramGui.slider
+        };
     }
 
     updateUI(state) {
         const params = state[this.roseId];
+
+        // Sync visuals if subscribed
+        this.updateLinkVisuals();
 
         // Update Curve Type Selector
         if (this.curveTypeSelect && this.curveTypeSelect.value !== params.curveType) {
@@ -514,7 +547,8 @@ export class ChordalRosettePanel extends Panel {
 
         // Update Coset Count Slider Range
         if (this.cosetCountControl) {
-            this.cosetCountControl.input.max = k;
+            // this.cosetCountControl.input.max = k; // OLD
+            this.cosetCountControl.instance.setMax(k); // NEW
             this.updateControl(this.cosetCountControl, Math.min(params.cosetCount || 1, k));
             // Dispatch update if clamped? No, simple render update is fine.
         }
@@ -526,7 +560,8 @@ export class ChordalRosettePanel extends Panel {
 
         // Update Coset Index (Offset) Range
         if (this.cosetIndexControl) {
-            this.cosetIndexControl.input.max = k - 1;
+            // this.cosetIndexControl.input.max = k - 1; // OLD
+            this.cosetIndexControl.instance.setMax(k - 1); // NEW
             this.updateControl(this.cosetIndexControl, params.cosetIndex || 0);
         }
 
@@ -656,10 +691,46 @@ export class ChordalRosettePanel extends Panel {
         `;
     }
 
+    updateLinkVisuals() {
+        if (!this.linkManager) return;
+
+        // Helper to check and update a control
+        const checkControl = (control, paramKey) => {
+            if (!control || !control.instance) return;
+
+            const myKey = `${this.roseId}.${paramKey}`;
+            const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+            const otherKey = `${otherRoseId}.${paramKey}`;
+
+            const isLinked = this.linkManager.areLinked(myKey, otherKey);
+            control.instance.setLinkActive(isLinked);
+        };
+
+        // 1. Param Controls
+        if (this.paramControls) {
+            Object.entries(this.paramControls).forEach(([key, control]) => {
+                checkControl(control, key);
+            });
+        }
+
+        // 2. Sequencer Controls
+        if (this.sequencerControls) {
+            Object.entries(this.sequencerControls).forEach(([key, control]) => {
+                checkControl(control, key);
+            });
+        }
+    }
+
     updateControl(control, value) {
-        control.valueDisplay.textContent = value;
-        if (document.activeElement !== control.input) {
-            control.input.value = value;
+        if (control.instance) {
+            // New ParamGui Path
+            control.instance.setValue(value);
+        } else {
+            // Legacy Path (if any remaining)
+            control.valueDisplay.textContent = value;
+            if (document.activeElement !== control.input) {
+                control.input.value = value;
+            }
         }
     }
     handleRelativesNav(direction) {
