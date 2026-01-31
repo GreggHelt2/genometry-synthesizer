@@ -130,6 +130,10 @@ export class InterpolationPanel extends Panel {
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets Match (k): -' });
         this.cosetAccordion.append(this.cosetInfo);
 
+        // LCM Match Toggle
+        this.lcmMatchCheck = this.createCheckbox('matchCosetsByLCM', 'Match Cosets by LCM');
+        this.cosetAccordion.append(this.lcmMatchCheck.container);
+
         // Coset Count
         this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
         this.cosetAccordion.append(this.cosetCountControl.container);
@@ -267,24 +271,57 @@ export class InterpolationPanel extends Panel {
 
         const kA = getK(state.rosetteA);
         const kB = getK(state.rosetteB);
+        const useLCM = state.hybrid.matchCosetsByLCM;
+        const ringsLCM = lcm(kA, kB);
+        const isMatching = (kA === kB && kA > 1);
+        const isLCMMatching = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
-        if (kA === kB && kA > 1) {
+        // Always show if either has cosets, so user can toggle LCM
+        if (kA > 1 || kB > 1) {
             this.cosetAccordion.element.style.display = 'block';
-            this.cosetInfo.textContent = `Cosets Match (k): ${kA}`;
+            this.lcmMatchCheck.input.checked = useLCM;
+
+            let effectiveK = 1;
+            let matchType = '';
+
+            if (isMatching) {
+                effectiveK = kA;
+                matchType = 'Exact';
+                this.cosetInfo.textContent = `Cosets Match (k): ${kA}`;
+            } else if (isLCMMatching) {
+                effectiveK = ringsLCM;
+                matchType = 'LCM';
+                this.cosetInfo.textContent = `Counts: A=${kA}, B=${kB} [LCM=${effectiveK}]`;
+            } else {
+                // Mismatch and NOT using LCM
+                this.cosetInfo.textContent = `Mismatch: A=${kA}, B=${kB} (Single Ring Mode)`;
+                // Disable controls or set max to 1
+                effectiveK = 1;
+            }
+
+            // Logic to enable/disable controls based on mode
+            const enableControls = (isMatching || isLCMMatching);
+            this.cosetCountControl.container.style.opacity = enableControls ? '1' : '0.5';
+            this.cosetCountControl.input.disabled = !enableControls;
+
+            this.distSelect.disabled = !enableControls;
+            this.distSelect.parentElement.style.opacity = enableControls ? '1' : '0.5';
+
+            this.cosetIndexControl.container.style.opacity = enableControls ? '1' : '0.5';
+            this.cosetIndexControl.input.disabled = !enableControls;
 
             // Update Max
-            this.cosetCountControl.input.max = kA;
-            this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, kA));
+            this.cosetCountControl.input.max = effectiveK;
+            this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, effectiveK));
 
-            this.cosetIndexControl.input.max = kA - 1;
-            this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % kA);
-
+            this.cosetIndexControl.input.max = Math.max(1, effectiveK - 1);
+            this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % effectiveK);
             if (this.distSelect.value !== state.hybrid.cosetDistribution) {
                 this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
             }
 
         } else {
-            // Hide or disable if not matching
+            // Hide if both are single coset
             this.cosetAccordion.element.style.display = 'none';
         }
 

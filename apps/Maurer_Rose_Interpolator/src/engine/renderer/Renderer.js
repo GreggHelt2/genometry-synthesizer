@@ -321,14 +321,23 @@ export class CanvasRenderer {
         };
 
         // Multi-Coset Matching Logic
-        if (kA === kB && kA > 1) {
-            // Apply Hybrid Coset Visualization Settings (Count, Dist, Index)
-            // Use hybrid params to determine WHICH indices to draw
-            const indices = this.getDrawIndices(kA, state.hybrid);
+        const useLCM = state.hybrid.matchCosetsByLCM;
+        const ringsLCM = lcm(kA, kB);
+        const isExactMatch = (kA === kB && kA > 1);
+        const isLCMMatch = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
+
+        if (isExactMatch || isLCMMatch) {
+            const targetK = isExactMatch ? kA : ringsLCM;
+
+            // Apply Hybrid Coset Visualization Settings
+            const indices = this.getDrawIndices(targetK, state.hybrid);
 
             indices.forEach(idx => {
-                const subA = (cosetsA) ? cosetsA[idx % kA] : idx; // Wrap just in case
-                const subB = (cosetsB) ? cosetsB[idx % kB] : idx;
+                // Modulo mapping allows 1-to-1 or Many-to-Many via LCM
+                // If Exact: idx % kA is just idx
+                // If LCM: idx % kA wraps around source rings to duplicate them
+                const subA = (cosetsA) ? cosetsA[idx % kA] : idx % kA;
+                const subB = (cosetsB) ? cosetsB[idx % kB] : idx % kB;
 
                 const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
                 const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
