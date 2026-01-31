@@ -4,7 +4,9 @@ import { createElement } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
-import { gcd } from '../../engine/math/MathOps.js';
+import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
+import { generateMaurerPolyline } from '../../engine/math/maurer.js';
+import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js'; // Needed if we generate points to count
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -14,9 +16,11 @@ export class InterpolationPanel extends Panel {
     }
 
     renderContent() {
-        // Title is now handled by the parent layout
-        // const title = createElement('h2', 'text-xl font-bold p-4 text-center', { textContent: 'Interpolation' });
-        // this.element.appendChild(title);
+        // Info Accordion
+        this.infoAccordion = new Accordion('Hybrid Info', false);
+        this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
+        this.infoAccordion.append(this.infoContent);
+        this.element.appendChild(this.infoAccordion.element);
 
         // Slider
         const container = createElement('div', 'p-4');
@@ -283,6 +287,9 @@ export class InterpolationPanel extends Panel {
             // Hide or disable if not matching
             this.cosetAccordion.element.style.display = 'none';
         }
+
+        // Update Info
+        this.updateInfo(state, kA, kB);
         // --------------------------
 
         if (this.colorInput.value !== state.hybrid.color) {
@@ -322,6 +329,60 @@ export class InterpolationPanel extends Panel {
             this.recordBtn.classList.remove('bg-red-700', 'hover:bg-red-600', 'animate-pulse');
             this.recordBtn.classList.add('bg-green-700', 'hover:bg-green-600');
         }
+    }
+
+    updateInfo(state, kA, kB) {
+        if (!this.infoContent) return;
+
+        const getSegs = (params, k) => {
+            const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
+            // Mock curve instance just for getPoint (though generateMaurerPolyline needs it)
+            // But we can just pass a dummy or reconstruct.
+            // Reconstruct properly to be safe.
+            const curve = (params.curveType === 'Rhodonea' || !params.curveType)
+                ? new CurveClass(params.n, params.d, params.A, params.c, (params.rot * Math.PI) / 180)
+                : new CurveClass(params);
+
+            const SeqClass = SequencerRegistry[params.sequencerType || 'Additive Group Modulo N'];
+            const seq = new SeqClass();
+
+            // Get coset start param
+            let start = 0;
+            if (seq.getCosets && k > 1) {
+                const cosets = seq.getCosets(params.totalDivs, params);
+                if (cosets) {
+                    const idx = (params.cosetIndex || 0) % cosets.length;
+                    start = cosets[idx];
+                }
+            } else if (k > 1) {
+                start = params.cosetIndex || 0;
+            }
+
+            const points = generateMaurerPolyline(curve, seq, params.totalDivs, start, params);
+            return points.length > 0 ? points.length - 1 : 0;
+        };
+
+        const segsA = getSegs(state.rosetteA, kA);
+        const segsB = getSegs(state.rosetteB, kB);
+
+        const lcmVal = lcm(segsA, segsB);
+        let status = 'Exact Match';
+        let detail = '(No Upsampling)';
+        let color = 'text-green-400';
+
+        if (segsA !== segsB) {
+            status = 'Resampled';
+            detail = `(Upsampled to ${lcmVal})`;
+            color = 'text-blue-400';
+        }
+
+        this.infoContent.innerHTML = `
+            <div><span class="text-gray-400">Segments A:</span> <span class="text-blue-400">${segsA}</span></div>
+            <div><span class="text-gray-400">Segments B:</span> <span class="text-blue-400">${segsB}</span></div>
+            <div><span class="text-gray-400">LCM (Target):</span> <span class="text-blue-400">${lcmVal}</span></div>
+            <div><span class="text-gray-400">Status:</span> <span class="${color}">${status}</span></div>
+            <div class="text-[10px] text-gray-500">${detail}</div>
+        `;
     }
 
     createCheckbox(key, label) {
