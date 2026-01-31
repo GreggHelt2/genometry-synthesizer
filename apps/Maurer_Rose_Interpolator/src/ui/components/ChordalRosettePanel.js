@@ -86,6 +86,9 @@ export class ChordalRosettePanel extends Panel {
             this.relativesTypeSelect.appendChild(opt);
         });
 
+        // Set Default
+        this.relativesTypeSelect.value = 'ltc';
+
         const relNavContainer = createElement('div', 'flex gap-2');
 
         ['Prev', 'Random', 'Next'].forEach(dir => {
