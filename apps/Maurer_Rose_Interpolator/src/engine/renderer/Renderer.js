@@ -267,15 +267,6 @@ export class CanvasRenderer {
             kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
         }
 
-        const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
-        const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
-
-        const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-        const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-
-        const weight = state.hybrid.weight;
-        const pointsInterp = interpolateLinear(pointsA, pointsB, weight);
-
         // Interpolation Coloring & Opacity Logic
         const interpColor = state.hybrid.color || 'white';
         const interpMethod = state.hybrid.colorMethod || 'solid';
@@ -286,26 +277,52 @@ export class CanvasRenderer {
         // Apply Blend Mode
         this.ctx.globalCompositeOperation = interpBlend;
 
+        const drawHybridPolyline = (ptsA, ptsB) => {
+            const weight = state.hybrid.weight;
+            const pointsInterp = interpolateLinear(ptsA, ptsB, weight);
 
-
-        if (useSegments) {
-            let colors;
-            if (interpMethod !== 'solid') {
-                colors = Colorizer.generateSegmentColors(pointsInterp, interpMethod, interpColor);
+            if (useSegments) {
+                let colors;
+                if (interpMethod !== 'solid') {
+                    colors = Colorizer.generateSegmentColors(pointsInterp, interpMethod, interpColor);
+                } else {
+                    colors = [interpColor];
+                }
+                this.polylineLayer.drawColoredSegments(pointsInterp, colors, {
+                    width: 2,
+                    opacity: interpOpacity
+                });
             } else {
-                colors = [interpColor];
+                this.polylineLayer.draw(pointsInterp, {
+                    color: interpColor,
+                    width: 2,
+                    opacity: interpOpacity
+                });
             }
-            this.polylineLayer.drawColoredSegments(pointsInterp, colors, {
-                // Use same width logic as renderPreview for consistency
-                width: 2, // Default thickness matching renderPreview
-                opacity: interpOpacity
-            });
+        };
+
+        // Multi-Coset Matching Logic
+        if (kA === kB && kA > 1) {
+            // If they match, we iterate through ALL coset pairs (0..k-1)
+            // Implicitly aligning coset[i] of A with coset[i] of B
+            for (let i = 0; i < kA; i++) {
+                const subA = (cosetsA) ? cosetsA[i] : i;
+                const subB = (cosetsB) ? cosetsB[i] : i;
+
+                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+
+                drawHybridPolyline(pointsA, pointsB);
+            }
         } else {
-            this.polylineLayer.draw(pointsInterp, {
-                color: interpColor,
-                width: 2, // Default thickness matching renderPreview
-                opacity: interpOpacity
-            });
+            // Fallback: Single Selected Coset (User's specific selection for mismatch or single)
+            const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
+            const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
+
+            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+
+            drawHybridPolyline(pointsA, pointsB);
         }
 
         // Reset Blend Mode
