@@ -438,6 +438,7 @@ export class ChordalRosettePanel extends Panel {
 
 
         // Re-render params if needed
+        // Re-render params if needed
         if (this.currentRenderedCurveType !== params.curveType) {
             this.renderCoreParams(params.curveType || 'Rhodonea', params);
             this.currentRenderedCurveType = params.curveType || 'Rhodonea';

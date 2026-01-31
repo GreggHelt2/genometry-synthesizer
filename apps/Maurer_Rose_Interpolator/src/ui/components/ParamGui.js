@@ -34,21 +34,96 @@ export class ParamGui {
             value
         });
 
-        // 3. Number Input
-        this.numberInput = createElement('input', 'w-16 bg-gray-800 text-blue-400 font-mono text-xs border border-gray-600 rounded px-1 py-0.5 text-right', {
+        // 3. Number Input Group
+        this.inputWrapper = createElement('div', 'flex items-center bg-gray-900 border border-gray-600 rounded overflow-hidden w-20');
+
+        this.numberInput = createElement('input', 'w-full bg-transparent text-blue-400 font-mono text-xs px-2 py-0.5 text-right outline-none appearance-none', {
             type: 'number',
             min, max, step,
             value
         });
 
-        // 4. Link Button
-        this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors', {
-            title: 'Link Parameter'
-        });
-        // Link Icon (Chain)
-        this.linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+        // Spin Buttons Wrapper
+        const spinnerContainer = createElement('div', 'flex flex-col border-l border-gray-700 h-full w-5');
+
+        const btnClass = 'flex-1 flex items-center justify-center hover:bg-gray-700 cursor-pointer text-gray-400 hover:text-white transition-colors h-3';
+
+        this.upBtn = createElement('div', btnClass + ' border-b border-gray-800');
+        this.upBtn.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+
+        this.downBtn = createElement('div', btnClass);
+        this.downBtn.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+        spinnerContainer.appendChild(this.upBtn);
+        spinnerContainer.appendChild(this.downBtn);
+
+        this.inputWrapper.appendChild(this.numberInput);
+        this.inputWrapper.appendChild(spinnerContainer);
 
         // --- Event Listeners ---
+
+        // Spin Button Logic w/ Auto-Repeat
+        const stepValue = (dir) => {
+            let val = parseFloat(this.numberInput.value);
+            if (isNaN(val)) val = (min || 0);
+            val += dir * (this.step || 1);
+
+            // Clamp
+            if (this.max !== undefined) val = Math.min(val, this.max);
+            if (this.min !== undefined) val = Math.max(val, this.min);
+
+            // Round/Format to precision of step to avoid float errors
+            // Simple heuristic: count decimals in step
+            const decimals = (this.step && this.step.toString().split('.')[1]?.length) || 0;
+            val = parseFloat(val.toFixed(decimals));
+
+            this.handleUserChange(val);
+        };
+
+        let repeatTimer = null;
+        let delayTimer = null;
+        const REPEAT_DELAY = 500; // ms before auto-repeat starts
+        const REPEAT_INTERVAL = 75; // ms between steps
+
+        const startRepeating = (dir) => {
+            // Immediate step
+            stepValue(dir);
+            // Delay then repeat
+            delayTimer = setTimeout(() => {
+                repeatTimer = setInterval(() => {
+                    stepValue(dir);
+                }, REPEAT_INTERVAL);
+            }, REPEAT_DELAY);
+        };
+
+        const stopRepeating = () => {
+            if (delayTimer) clearTimeout(delayTimer);
+            if (repeatTimer) clearInterval(repeatTimer);
+            delayTimer = null;
+            repeatTimer = null;
+        };
+
+        const onMouseDown = (e, dir) => {
+            e.preventDefault();
+            // Cleanup any existing timers just in case
+            stopRepeating();
+            startRepeating(dir);
+
+            // Listen for global mouseup to stop even if dragged off
+            window.addEventListener('mouseup', onMouseUp, { once: true });
+        };
+
+        const onMouseUp = () => {
+            stopRepeating();
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+
+        this.upBtn.addEventListener('mousedown', (e) => onMouseDown(e, 1));
+        // Removed mouseleave to prevent premature stopping on micro-movements
+        // this.upBtn.addEventListener('mouseleave', stopRepeating); 
+
+        this.downBtn.addEventListener('mousedown', (e) => onMouseDown(e, -1));
+        // this.downBtn.addEventListener('mouseleave', stopRepeating);
 
         // Slider Input
         this.slider.addEventListener('input', (e) => {
@@ -57,10 +132,8 @@ export class ParamGui {
         });
 
         // Number Input
-        this.numberInput.addEventListener('change', (e) => { // 'change' for commit, 'input' for rapid firing? usually change or blur for numbers
+        this.numberInput.addEventListener('change', (e) => {
             let val = parseFloat(e.target.value);
-            // optional: clamp?
-            // val = Math.max(this.min, Math.min(this.max, val));
             this.handleUserChange(val);
         });
 
@@ -72,7 +145,13 @@ export class ParamGui {
             }
         });
 
-        // Link Toggle
+        // 4. Link Button
+        this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors', {
+            title: 'Link Parameter'
+        });
+        // Link Icon (Chain)
+        this.linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+
         this.linkBtn.addEventListener('click', () => {
             this.toggleLink();
         });
@@ -80,7 +159,7 @@ export class ParamGui {
         // Assemble
         this.container.appendChild(this.labelEl);
         this.container.appendChild(this.slider);
-        this.container.appendChild(this.numberInput);
+        this.container.appendChild(this.inputWrapper);
         this.container.appendChild(this.linkBtn);
     }
 
