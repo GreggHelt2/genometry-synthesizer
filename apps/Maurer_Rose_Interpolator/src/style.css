@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 
+   Custom Scrollbar - Ultra Thick (24px) 
+   Requested: "3x wider"
+*/
+
+::-webkit-scrollbar {
+    width: 24px;
+    height: 24px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111827;
+    /* dark bg */
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    /* thumb color */
+    border-radius: 12px;
+    border: 4px solid #111827;
+    /* padding */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+}
