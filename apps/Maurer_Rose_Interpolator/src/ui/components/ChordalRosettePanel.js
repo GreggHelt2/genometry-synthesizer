@@ -230,13 +230,14 @@ export class ChordalRosettePanel extends Panel {
         cosetAccordion.append(this.cosetIndexControl.container);
 
         // Align labels for static accordions if they have sliders
-        // Note: static sliders like divsControl, opacityControl are spread across accordions.
-        // Ideally we call alignLabels on specific accordions.
-        setTimeout(() => {
-            this.alignLabels(this.maurerAccordion.content);
-            this.alignLabels(chordalVizAccordion.content);
-            this.alignLabels(cosetAccordion.content);
-        }, 0);
+        // Use requestAnimationFrame to ensure DOM is rendered and layout is calculated
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.alignLabels(this.maurerAccordion.content);
+                this.alignLabels(chordalVizAccordion.content);
+                this.alignLabels(cosetAccordion.content);
+            });
+        });
     }
 
     createCurveTypeSelector(parent) {
@@ -279,10 +280,12 @@ export class ChordalRosettePanel extends Panel {
         });
 
         // Align labels in this container
-        // We need to wait for DOM update? No, appendChild is synchronous, but layout might not be computed if not in DOM?
-        // They are appended to dynamicParamsContainer which is in coreAccordion which is in DOM.
-        // So getBoundingClientRect should work.
-        this.alignLabels(this.dynamicParamsContainer);
+        // Use double RAF to ensure layout is fully stable
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.alignLabels(this.dynamicParamsContainer);
+            });
+        });
     }
 
     createSequencerTypeSelector(containerAccordion) {
@@ -347,7 +350,11 @@ export class ChordalRosettePanel extends Panel {
             }
         });
 
-        this.alignLabels(this.sequencerParamsContainer);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.alignLabels(this.sequencerParamsContainer);
+            });
+        });
     }
 
     createCheckbox(key, label) {
