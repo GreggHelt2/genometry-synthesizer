@@ -228,6 +228,15 @@ export class ChordalRosettePanel extends Panel {
         // Coset Index (Start Offset)
         this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
         cosetAccordion.append(this.cosetIndexControl.container);
+
+        // Align labels for static accordions if they have sliders
+        // Note: static sliders like divsControl, opacityControl are spread across accordions.
+        // Ideally we call alignLabels on specific accordions.
+        setTimeout(() => {
+            this.alignLabels(this.maurerAccordion.content);
+            this.alignLabels(chordalVizAccordion.content);
+            this.alignLabels(cosetAccordion.content);
+        }, 0);
     }
 
     createCurveTypeSelector(parent) {
@@ -268,6 +277,12 @@ export class ChordalRosettePanel extends Panel {
             const val = params[item.key] ?? item.default;
             this.updateControl(control, val);
         });
+
+        // Align labels in this container
+        // We need to wait for DOM update? No, appendChild is synchronous, but layout might not be computed if not in DOM?
+        // They are appended to dynamicParamsContainer which is in coreAccordion which is in DOM.
+        // So getBoundingClientRect should work.
+        this.alignLabels(this.dynamicParamsContainer);
     }
 
     createSequencerTypeSelector(containerAccordion) {
@@ -331,6 +346,8 @@ export class ChordalRosettePanel extends Panel {
                 this.sequencerParamsContainer.appendChild(control.container);
             }
         });
+
+        this.alignLabels(this.sequencerParamsContainer);
     }
 
     createCheckbox(key, label) {
@@ -752,5 +769,27 @@ export class ChordalRosettePanel extends Panel {
             });
             // Control update will happen via updateUI subscription
         }
+    }
+
+    alignLabels(container) {
+        if (!container) return;
+
+        // Reset widths to auto to get natural width
+        const labels = container.querySelectorAll('.param-label');
+        if (labels.length === 0) return;
+
+        labels.forEach(el => el.style.width = 'auto');
+
+        // Find max width
+        let maxWidth = 0;
+        labels.forEach(el => {
+            const w = el.getBoundingClientRect().width;
+            if (w > maxWidth) maxWidth = w;
+        });
+
+        // Apply max width + padding/margin if needed (usually flex/grid handles, but we want fixed width on label)
+        // Since ParamGui uses css grid "auto 1fr auto auto", setting width on label might not be enough if grid column is auto.
+        // But auto column will respect the explicit width of the child.
+        labels.forEach(el => el.style.width = `${Math.ceil(maxWidth)}px`);
     }
 }

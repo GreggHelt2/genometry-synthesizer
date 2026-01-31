@@ -22,7 +22,7 @@ export class ParamGui {
         this.container = createElement('div', 'grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center mb-3');
 
         // 1. Label
-        this.labelEl = createElement('label', 'text-xs text-gray-400 w-16 truncate', {
+        this.labelEl = createElement('label', 'text-xs text-gray-400 whitespace-nowrap param-label min-w-[3rem]', {
             textContent: label,
             title: label
         });
@@ -146,7 +146,7 @@ export class ParamGui {
         });
 
         // 4. Link Button
-        this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors', {
+        this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
         // Link Icon (Chain)
@@ -185,11 +185,11 @@ export class ParamGui {
 
     updateLinkVisuals() {
         if (this.isLinked) {
-            this.linkBtn.classList.remove('text-gray-500');
-            this.linkBtn.classList.add('text-green-400', 'bg-gray-700');
+            this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         } else {
-            this.linkBtn.classList.add('text-gray-500');
-            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700');
+            this.linkBtn.classList.add('text-gray-500', 'border-transparent');
+            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
         }
     }
 
