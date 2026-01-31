@@ -18,6 +18,53 @@ export function interpolateLinear(pointsA, pointsB, t) {
         result.push({ x, y });
     }
     return result;
+    return result;
+}
+
+/**
+ * Resamples a polyline to have a specific number of segments by upsampling each existing segment.
+ * This ensures strict geometric fidelity (no corner cutting) when targetSegments is a multiple of current segments.
+ * 
+ * @param {Array<{x:number, y:number}>} points 
+ * @param {number} targetSegmentCount 
+ * @returns {Array<{x:number, y:number}>}
+ */
+export function resamplePolyline(points, targetSegmentCount) {
+    if (!points || points.length < 2) return points;
+
+    const currentSegments = points.length - 1;
+    if (currentSegments === 0) return points;
+
+    // Check if upsampling is needed
+    if (targetSegmentCount === currentSegments) return points;
+
+    // Calculate upsampling factor (must be integer for strict segment preservation)
+    // If not integer, this logic implies we are distributing vertices evenly? 
+    // The prompt implies "upsampled... to lcm", which implies integer multiple.
+    // We will assume integer factor for the prompt's specific requirement,
+    // but generic resampling might differ. Let's stick to the prompt's algorithm.
+    const factor = Math.round(targetSegmentCount / currentSegments);
+
+    const newPoints = [];
+
+    for (let i = 0; i < currentSegments; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        // Generate 'factor' segments for this span
+        // Vertices at t = 0/factor, 1/factor, ... (factor-1)/factor
+        for (let j = 0; j < factor; j++) {
+            const t = j / factor;
+            newPoints.push({
+                x: p1.x + (p2.x - p1.x) * t,
+                y: p1.y + (p2.y - p1.y) * t
+            });
+        }
+    }
+    // Add the final closing point
+    newPoints.push(points[points.length - 1]);
+
+    return newPoints;
 }
 
 /**

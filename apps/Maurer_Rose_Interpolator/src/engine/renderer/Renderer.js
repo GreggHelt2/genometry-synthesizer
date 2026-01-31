@@ -1,9 +1,10 @@
 import { PolylineLayer } from './layers/PolylineLayer.js';
 import { CurveRegistry } from '../math/curves/CurveRegistry.js';
 import { generateMaurerPolyline } from '../math/maurer.js';
-import { interpolateLinear } from '../math/interpolation.js';
+
+import { interpolateLinear, resamplePolyline } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
-import { gcd } from '../math/MathOps.js';
+import { gcd, lcm } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
 import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModuloNGenerator.js';
 
@@ -278,8 +279,26 @@ export class CanvasRenderer {
         this.ctx.globalCompositeOperation = interpBlend;
 
         const drawHybridPolyline = (ptsA, ptsB) => {
+            // Check segment counts
+            const segsA = ptsA.length > 0 ? ptsA.length - 1 : 0;
+            const segsB = ptsB.length > 0 ? ptsB.length - 1 : 0;
+
+            let finalPtsA = ptsA;
+            let finalPtsB = ptsB;
+
+            if (segsA > 0 && segsB > 0 && segsA !== segsB) {
+                // Determine LCM
+                const targetSegs = lcm(segsA, segsB);
+
+                // Upsample to LCM
+                if (targetSegs > 0) {
+                    finalPtsA = resamplePolyline(ptsA, targetSegs);
+                    finalPtsB = resamplePolyline(ptsB, targetSegs);
+                }
+            }
+
             const weight = state.hybrid.weight;
-            const pointsInterp = interpolateLinear(ptsA, ptsB, weight);
+            const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
 
             if (useSegments) {
                 let colors;
