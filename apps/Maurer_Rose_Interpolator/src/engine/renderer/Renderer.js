@@ -2,13 +2,14 @@ import { PolylineLayer } from './layers/PolylineLayer.js';
 import { CurveRegistry } from '../math/curves/CurveRegistry.js';
 import { generateMaurerPolyline } from '../math/maurer.js';
 
-import { interpolateLinear, resamplePolyline } from '../math/interpolation.js';
+import { interpolateLinear, resamplePolyline, resamplePolylineApprox } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
 import { gcd, lcm } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
 import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModuloNGenerator.js';
 
 export class CanvasRenderer {
+
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -290,8 +291,21 @@ export class CanvasRenderer {
                 // Determine LCM
                 const targetSegs = lcm(segsA, segsB);
 
-                // Upsample to LCM
-                if (targetSegs > 0) {
+                // --- Approximate Resampling Logic ---
+                const threshold = state.hybrid.approxResampleThreshold ?? 20000;
+
+                // Trigger if:
+                // 1. Threshold is 0 (Always On)
+                // 2. Threshold > 0 AND targetSegs exceeds it
+                const useApprox = (threshold === 0) || (targetSegs > threshold);
+
+                if (useApprox) {
+                    // Use Threshold as target count (or 20000 if 0/Always)
+                    const sampleCount = (threshold === 0) ? 20000 : threshold;
+                    finalPtsA = resamplePolylineApprox(ptsA, sampleCount);
+                    finalPtsB = resamplePolylineApprox(ptsB, sampleCount);
+                } else if (targetSegs > 0) {
+                    // Exact LCM Upsampling
                     finalPtsA = resamplePolyline(ptsA, targetSegs);
                     finalPtsB = resamplePolyline(ptsB, targetSegs);
                 }

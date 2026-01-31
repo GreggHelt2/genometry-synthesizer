@@ -122,6 +122,17 @@ export class InterpolationPanel extends Panel {
 
         container.appendChild(colorContainer);
 
+        // Resampling Fallback Section
+        const resampleContainer = createElement('div', 'flex flex-col mb-4 p-2 border border-gray-700 rounded bg-gray-900/50');
+        resampleContainer.appendChild(createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Resampling Fallback' }));
+
+        // Approx Resample Threshold
+        // 0 = Always On, >0 = LCM Threshold
+        this.resampleThresholdControl = this.createSlider('approxResampleThreshold', 0, 50000, 1000, 'Threshold (0=Always)');
+        resampleContainer.appendChild(this.resampleThresholdControl.container);
+
+        container.appendChild(resampleContainer);
+
         // Coset Visualization Accordion (Hybrid)
         this.cosetAccordion = new Accordion('Coset Visualization', false);
         this.cosetAccordion.element.style.marginTop = '1rem';
@@ -329,7 +340,13 @@ export class InterpolationPanel extends Panel {
             this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
         }
 
-        // Update Info
+        // Update Threshold Slider
+        if (this.resampleThresholdControl && document.activeElement !== this.resampleThresholdControl.input) {
+            this.resampleThresholdControl.input.updateDisplay(state.hybrid.approxResampleThreshold ?? 20000);
+        }
+
+        // Update Info Panel with Resampling Status
+        // We defer this to this.updateInfo which reconstructs the strings
         this.updateInfo(state, kA, kB);
         // --------------------------
 
@@ -411,9 +428,18 @@ export class InterpolationPanel extends Panel {
         let detail = '(No Upsampling)';
         let color = 'text-green-400';
 
-        if (segsA !== segsB) {
-            status = 'Resampled';
-            detail = `(Upsampled to ${lcmVal})`;
+        // Check Approx Threshold
+        const threshold = state.hybrid.approxResampleThreshold ?? 20000;
+        const useApprox = (threshold === 0) || (segsA > 0 && segsB > 0 && segsA !== segsB && lcmVal > threshold);
+
+        if (useApprox) {
+            status = 'Approximate';
+            const sampleCount = (threshold === 0) ? 20000 : threshold;
+            detail = `(Resampled to ${sampleCount})`;
+            color = 'text-yellow-400';
+        } else if (segsA !== segsB) {
+            status = 'Exact Resample';
+            detail = `(Upsampled to LCM ${lcmVal})`;
             color = 'text-blue-400';
         }
 

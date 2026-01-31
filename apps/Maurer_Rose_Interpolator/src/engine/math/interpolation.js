@@ -18,12 +18,12 @@ export function interpolateLinear(pointsA, pointsB, t) {
         result.push({ x, y });
     }
     return result;
-    return result;
 }
 
 /**
  * Resamples a polyline to have a specific number of segments by upsampling each existing segment.
  * This ensures strict geometric fidelity (no corner cutting) when targetSegments is a multiple of current segments.
+ * Use this for EXACT LCM matching.
  * 
  * @param {Array<{x:number, y:number}>} points 
  * @param {number} targetSegmentCount 
@@ -38,11 +38,7 @@ export function resamplePolyline(points, targetSegmentCount) {
     // Check if upsampling is needed
     if (targetSegmentCount === currentSegments) return points;
 
-    // Calculate upsampling factor (must be integer for strict segment preservation)
-    // If not integer, this logic implies we are distributing vertices evenly? 
-    // The prompt implies "upsampled... to lcm", which implies integer multiple.
-    // We will assume integer factor for the prompt's specific requirement,
-    // but generic resampling might differ. Let's stick to the prompt's algorithm.
+    // Expecting exact multiple for this function
     const factor = Math.round(targetSegmentCount / currentSegments);
 
     const newPoints = [];
@@ -51,8 +47,6 @@ export function resamplePolyline(points, targetSegmentCount) {
         const p1 = points[i];
         const p2 = points[i + 1];
 
-        // Generate 'factor' segments for this span
-        // Vertices at t = 0/factor, 1/factor, ... (factor-1)/factor
         for (let j = 0; j < factor; j++) {
             const t = j / factor;
             newPoints.push({
@@ -68,33 +62,53 @@ export function resamplePolyline(points, targetSegmentCount) {
 }
 
 /**
- * Generates points for LCM-based interpolation.
- * Since the two curves might have different vertex counts, we often need to 
- * upsample them to a common number of vertices (LCM of their line counts)
- * to ensure 1-to-1 vertex morphing.
+ * Resamples a polyline to an arbitrary number of segments using linear interpolation.
+ * This does NOT preserve corners exactly if steps don't align, but allows arbitrary matching.
+ * Use this for APPROXIMATE fallback.
  * 
- * @param {import('./curves/Curve').Curve} curveA
- * @param {import('./curves/Curve').Curve} curveB
- * @param {number} totalDivs - usually 360
- * @param {number} stepA
- * @param {number} stepB
- * @returns {{pointsA: Array, pointsB: Array}}
+ * @param {Array<{x:number, y:number}>} points 
+ * @param {number} targetSegmentCount 
+ * @returns {Array<{x:number, y:number}>}
  */
+export function resamplePolylineApprox(points, targetSegmentCount) {
+    if (!points || points.length < 2) return points;
+    const currentSegments = points.length - 1;
+    if (currentSegments === 0) return points;
+
+    const newPoints = [];
+
+    // We want targetSegmentCount segments, so targetSegmentCount + 1 points.
+    for (let i = 0; i <= targetSegmentCount; i++) {
+        // Normalized position along the entire polyline (0 to 1)
+        const tTotal = i / targetSegmentCount;
+
+        // Map to source segment index and local t
+        // Floating point index in source array
+        const sourceFloatIndex = tTotal * currentSegments;
+
+        let idx = Math.floor(sourceFloatIndex);
+        let tLocal = sourceFloatIndex - idx;
+
+        // Clamp (handle end case where tTotal=1 -> idx=count -> oob)
+        if (idx >= currentSegments) {
+            idx = currentSegments - 1;
+            tLocal = 1;
+        }
+
+        const p1 = points[idx];
+        const p2 = points[idx + 1]; // Safe because we clamped idx to count-1
+
+        newPoints.push({
+            x: p1.x + (p2.x - p1.x) * tLocal,
+            y: p1.y + (p2.y - p1.y) * tLocal
+        });
+    }
+
+    return newPoints;
+}
+
 export function generateLcmPoints(curveA, curveB, totalDivs, stepA, stepB) {
-    // This logic logic needs to be robust.
-    // In v17, we might simplify or enhance.
-    // For now, let's just use a naive high-res resample if LCM is too big,
-    // or exact LCM if reasonable.
-
-    // Placeholder for robust implementation.
-    // Reusing standard generation for now.
-
-    // This function acts as a factory for the two point sets that WILL be interpolated.
     const ptsA = generateMaurerPolyline(curveA, totalDivs, stepA);
     const ptsB = generateMaurerPolyline(curveB, totalDivs, stepB);
-
-    // If lengths differ, we need more sophisticated matching (LCM).
-    // Future expansion: Implement exact LCM upsampling.
-
     return { pointsA: ptsA, pointsB: ptsB };
 }
