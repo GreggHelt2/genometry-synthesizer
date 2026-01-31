@@ -276,53 +276,57 @@ export class InterpolationPanel extends Panel {
         const isMatching = (kA === kB && kA > 1);
         const isLCMMatching = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
-        // Always show if either has cosets, so user can toggle LCM
-        if (kA > 1 || kB > 1) {
-            this.cosetAccordion.element.style.display = 'block';
-            this.lcmMatchCheck.input.checked = useLCM;
+        // Always show the panel
+        this.cosetAccordion.element.style.display = 'block';
+        this.lcmMatchCheck.input.checked = useLCM;
 
-            let effectiveK = 1;
-            let matchType = '';
+        let effectiveK = 1;
 
-            if (isMatching) {
-                effectiveK = kA;
-                matchType = 'Exact';
-                this.cosetInfo.textContent = `Cosets Match (k): ${kA}`;
-            } else if (isLCMMatching) {
-                effectiveK = ringsLCM;
-                matchType = 'LCM';
-                this.cosetInfo.textContent = `Counts: A=${kA}, B=${kB} [LCM=${effectiveK}]`;
-            } else {
-                // Mismatch and NOT using LCM
-                this.cosetInfo.textContent = `Mismatch: A=${kA}, B=${kB} (Single Ring Mode)`;
-                // Disable controls or set max to 1
-                effectiveK = 1;
-            }
-
-            // Logic to enable/disable controls based on mode
-            const enableControls = (isMatching || isLCMMatching);
-            this.cosetCountControl.container.style.opacity = enableControls ? '1' : '0.5';
-            this.cosetCountControl.input.disabled = !enableControls;
-
-            this.distSelect.disabled = !enableControls;
-            this.distSelect.parentElement.style.opacity = enableControls ? '1' : '0.5';
-
-            this.cosetIndexControl.container.style.opacity = enableControls ? '1' : '0.5';
-            this.cosetIndexControl.input.disabled = !enableControls;
-
-            // Update Max
-            this.cosetCountControl.input.max = effectiveK;
-            this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, effectiveK));
-
-            this.cosetIndexControl.input.max = Math.max(1, effectiveK - 1);
-            this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % effectiveK);
-            if (this.distSelect.value !== state.hybrid.cosetDistribution) {
-                this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
-            }
-
+        if (isMatching) {
+            effectiveK = kA;
+            this.cosetInfo.textContent = `Cosets Match (k): ${kA}`;
+        } else if (isLCMMatching) {
+            effectiveK = ringsLCM;
+            this.cosetInfo.textContent = `Counts: A=${kA}, B=${kB} [LCM=${effectiveK}]`;
+        } else if (kA > 1 || kB > 1) {
+            // Mismatch and NOT using LCM
+            this.cosetInfo.textContent = `Mismatch: A=${kA}, B=${kB} (Single Ring Mode)`;
+            effectiveK = 1;
         } else {
-            // Hide if both are single coset
-            this.cosetAccordion.element.style.display = 'none';
+            // Both are single coset (kA=1, kB=1)
+            this.cosetInfo.textContent = `Cosets (k): 1`;
+            effectiveK = 1;
+        }
+
+        // --- Enable/Disable Controls ---
+
+        // Multi-view controls (Count, Dist) apply ONLY when we have a full hybrid set (Exact or LCM)
+        const enableMultiControls = (isMatching || isLCMMatching);
+
+        // Index control applies if we have choices on either side, even if mapped 1-to-1 fallback
+        // If kA > 1 or kB > 1, the user might want to rotate the "Single Ring" choice.
+        const enableIndexControl = (kA > 1 || kB > 1);
+
+        this.cosetCountControl.container.style.opacity = enableMultiControls ? '1' : '0.5';
+        this.cosetCountControl.input.disabled = !enableMultiControls;
+
+        this.distSelect.disabled = !enableMultiControls;
+        this.distSelect.parentElement.style.opacity = enableMultiControls ? '1' : '0.5';
+
+        this.cosetIndexControl.container.style.opacity = enableIndexControl ? '1' : '0.5';
+        this.cosetIndexControl.input.disabled = !enableIndexControl;
+
+        // Update Max Ranges
+        this.cosetCountControl.input.max = effectiveK;
+        this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, effectiveK));
+
+        // Index Max: ideally wrapping max(kA, kB)
+        const indexMax = (enableMultiControls) ? effectiveK : Math.max(kA, kB);
+        this.cosetIndexControl.input.max = Math.max(1, indexMax - 1);
+        this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % (indexMax || 1));
+
+        if (this.distSelect.value !== state.hybrid.cosetDistribution) {
+            this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
         }
 
         // Update Info
