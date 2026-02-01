@@ -25,7 +25,7 @@ export class WaveformSelector {
         });
 
         // Shape Dropdown (Sine, Quad, ...)
-        const shapes = ['Sine', 'Quad', 'Cubic', 'Quart', 'Quint', 'Expo', 'Circ', 'Back', 'Elastic', 'Bounce'];
+        const shapes = ['Sawtooth', 'Sine', 'Quad', 'Cubic', 'Quart', 'Quint', 'Expo', 'Circ', 'Back', 'Elastic', 'Bounce'];
         this.shapeSelect = this.createDropdown(shapes, this.shape, (val) => {
             this.shape = val;
             this.handleChange();

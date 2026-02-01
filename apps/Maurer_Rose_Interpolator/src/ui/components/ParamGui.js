@@ -41,8 +41,8 @@ export class ParamGui {
         this.container = createElement('div', 'flex flex-col mb-3');
 
         // Top Row: Grid Layout
-        // Label | Slider | Value Input | Link Button | Anim Button
-        const topRow = createElement('div', 'grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 items-center');
+        // Label | Slider | Value Input | Link Button | Play Button | Anim Button
+        const topRow = createElement('div', 'grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 items-center');
 
         // 1. Label
         this.labelEl = createElement('label', 'text-xs text-gray-400 whitespace-nowrap param-label min-w-[3rem]', {
@@ -179,8 +179,16 @@ export class ParamGui {
             this.toggleLink();
         });
 
+        // 5. Play/Pause Button (Moved to Main Row)
+        this.playBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
+            title: 'Play/Pause Animation'
+        });
+        // Initial Icon: Play
+        this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+        this.playBtn.onclick = () => this.togglePlayback();
+
         // Assemble
-        // 5. Animation Toggle Button
+        // 6. Animation Toggle Button
         this.animBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Animation Tools'
         });
@@ -196,6 +204,7 @@ export class ParamGui {
         topRow.appendChild(this.slider);
         topRow.appendChild(this.inputWrapper);
         topRow.appendChild(this.linkBtn);
+        topRow.appendChild(this.playBtn); // Insert Play Button
         topRow.appendChild(this.animBtn);
 
         this.container.appendChild(topRow);
@@ -203,13 +212,8 @@ export class ParamGui {
         // --- Animation Panel (Collapsible) ---
         this.animPanel = createElement('div', 'hidden flex-col gap-2 mt-2 p-2 bg-gray-800 rounded border border-gray-700');
 
-        // Row 1: Controls (Play, Min, Max, Speed)
+        // Row 1: Controls (Min, Max, Speed)
         const animControls = createElement('div', 'flex items-center gap-2');
-
-        // Play/Pause
-        this.playBtn = createElement('button', 'p-1 rounded bg-gray-700 hover:bg-gray-600 text-green-400');
-        this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
-        this.playBtn.onclick = () => this.togglePlayback();
 
         // Inputs helper
         const createNumInput = (val, callback) => {
@@ -236,7 +240,7 @@ export class ParamGui {
         // Labels
         const lblClass = 'text-[10px] text-gray-500 uppercase tracking-widest';
 
-        animControls.appendChild(this.playBtn);
+        // Removed playBtn append
 
         const wrap = (el, lbl) => {
             const d = createElement('div', 'flex flex-col gap-0.5');
@@ -387,14 +391,14 @@ export class ParamGui {
     togglePlayback() {
         if (this.animationController.isPlaying) {
             this.animationController.stop();
-            this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
-            this.playBtn.classList.remove('text-red-400');
-            this.playBtn.classList.add('text-green-400');
+            // Revert into inactive state (Gray)
+            this.playBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+            this.playBtn.classList.add('text-gray-500', 'border-transparent');
         } else {
             this.animationController.start();
-            this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
-            this.playBtn.classList.remove('text-green-400');
-            this.playBtn.classList.add('text-red-400');
+            // Active state (Green + Highlight)
+            this.playBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.playBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         }
     }
 
