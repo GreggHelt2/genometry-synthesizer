@@ -1,4 +1,7 @@
 import { createElement } from '../utils/dom.js';
+import { WaveformSelector } from './WaveformSelector.js';
+import { AnimationController } from '../../logic/AnimationController.js';
+
 
 export class ParamGui {
     constructor({ key, label, min, max, step, value, onChange, onLinkToggle }) {
@@ -13,13 +16,33 @@ export class ParamGui {
         this.lastValue = value;
         this.isLinked = false;
 
+        // Initialize Animation Controller BEFORE render
+        this.animationController = new AnimationController((val) => {
+            // Callback from animation loop
+            // Round if needed based on step?
+            // Heuristic rounded
+            const decimals = (this.step && this.step.toString().split('.')[1]?.length) || 0;
+            const rounded = parseFloat(val.toFixed(decimals));
+            this.handleUserChange(rounded);
+        });
+
+        // Sync configuration defaults immediately
+        this.animationController.setConfig({
+            min: this.min !== undefined ? this.min : 0,
+            max: this.max !== undefined ? this.max : 100,
+            period: 5 // Default period
+        });
+
         this.render({ label, min, max, step, value });
     }
 
     render({ label, min, max, step, value }) {
-        // Container: Grid Layout
-        // Label | Slider | Value Input | Link Button
-        this.container = createElement('div', 'grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center mb-3');
+        // Container: Main Grid + Animation Panel
+        this.container = createElement('div', 'flex flex-col mb-3');
+
+        // Top Row: Grid Layout
+        // Label | Slider | Value Input | Link Button | Anim Button
+        const topRow = createElement('div', 'grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 items-center');
 
         // 1. Label
         this.labelEl = createElement('label', 'text-xs text-gray-400 whitespace-nowrap param-label min-w-[3rem]', {
@@ -157,10 +180,101 @@ export class ParamGui {
         });
 
         // Assemble
-        this.container.appendChild(this.labelEl);
-        this.container.appendChild(this.slider);
-        this.container.appendChild(this.inputWrapper);
-        this.container.appendChild(this.linkBtn);
+        // 5. Animation Toggle Button
+        this.animBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
+            title: 'Animation Tools'
+        });
+        // Oscilloscope / Activity Icon
+        this.animBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+
+        this.animBtn.addEventListener('click', () => {
+            this.toggleAnimationPanel();
+        });
+
+        // Assemble Top Row
+        topRow.appendChild(this.labelEl);
+        topRow.appendChild(this.slider);
+        topRow.appendChild(this.inputWrapper);
+        topRow.appendChild(this.linkBtn);
+        topRow.appendChild(this.animBtn);
+
+        this.container.appendChild(topRow);
+
+        // --- Animation Panel (Collapsible) ---
+        this.animPanel = createElement('div', 'hidden flex-col gap-2 mt-2 p-2 bg-gray-800 rounded border border-gray-700');
+
+        // Row 1: Controls (Play, Min, Max, Speed)
+        const animControls = createElement('div', 'flex items-center gap-2');
+
+        // Play/Pause
+        this.playBtn = createElement('button', 'p-1 rounded bg-gray-700 hover:bg-gray-600 text-green-400');
+        this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+        this.playBtn.onclick = () => this.togglePlayback();
+
+        // Inputs helper
+        const createNumInput = (val, callback) => {
+            const inp = createElement('input', 'w-16 bg-gray-900 border border-gray-600 rounded px-1 text-xs text-blue-400 font-mono focus:border-blue-500 outline-none');
+            inp.type = 'number';
+            inp.value = val;
+            inp.step = 'any';
+            inp.addEventListener('change', (e) => callback(parseFloat(e.target.value)));
+            return inp;
+        };
+
+        const minInput = createNumInput(this.min, (v) => {
+            this.animationController.setConfig({ min: v });
+            if (this.min !== undefined && v < this.min) this.setMin(v);
+        });
+
+        const maxInput = createNumInput(this.max, (v) => {
+            this.animationController.setConfig({ max: v });
+            if (this.max !== undefined && v > this.max) this.setMax(v);
+        });
+
+        const speedInput = createNumInput(this.animationController.period, (v) => this.animationController.setConfig({ period: v }));
+
+        // Labels
+        const lblClass = 'text-[10px] text-gray-500 uppercase tracking-widest';
+
+        animControls.appendChild(this.playBtn);
+
+        const wrap = (el, lbl) => {
+            const d = createElement('div', 'flex flex-col gap-0.5');
+            const l = createElement('span', lblClass);
+            l.textContent = lbl;
+            d.appendChild(l);
+            d.appendChild(el);
+            return d;
+        }
+
+        animControls.appendChild(wrap(minInput, 'Min'));
+        animControls.appendChild(wrap(maxInput, 'Max'));
+        animControls.appendChild(wrap(speedInput, 'Period (s)'));
+
+        this.animPanel.appendChild(animControls);
+
+        // Row 2: Waveform Selector
+        this.waveformSelector = new WaveformSelector({
+            type: this.animationController.easingType,
+            shape: this.animationController.easingShape,
+            onChange: (type, shape) => {
+                this.animationController.setConfig({ type, shape });
+            }
+        });
+
+        this.animPanel.appendChild(this.waveformSelector.getElement());
+        this.container.appendChild(this.animPanel);
+
+        // Hook up animation loop to UI (phase indicator)
+        // Wraps the user callback to *also* update the UI
+        const originalLoop = this.animationController.onUpdate;
+        this.animationController.onUpdate = (val) => {
+            originalLoop(val); // Does the standardized valid update
+            // Update phase indicator
+            const phase = this.animationController.getPhase();
+            this.waveformSelector.setPhase(phase);
+        };
+
     }
 
     handleUserChange(val) {
@@ -195,6 +309,15 @@ export class ParamGui {
 
     updateInternalUI(val) {
         this.lastValue = val;
+
+        // Auto-expand range if value exceeds bounds (e.g. from animation)
+        if (this.max !== undefined && val > this.max) {
+            this.setMax(val);
+        }
+        if (this.min !== undefined && val < this.min) {
+            this.setMin(val);
+        }
+
         // Only update if not the active element to avoid fighting cursor
         if (document.activeElement !== this.slider) {
             this.slider.value = val;
@@ -245,6 +368,45 @@ export class ParamGui {
         if (this.isLinked !== isActive) {
             this.isLinked = isActive;
             this.updateLinkVisuals();
+        }
+    }
+
+    toggleAnimationPanel() {
+        const isHidden = this.animPanel.classList.contains('hidden');
+        if (isHidden) {
+            this.animPanel.classList.remove('hidden');
+            this.animBtn.classList.add('text-blue-400', 'bg-gray-700');
+            // Refresh canvas incase hidden broke layout
+            this.waveformSelector.drawWaveform();
+        } else {
+            this.animPanel.classList.add('hidden');
+            this.animBtn.classList.remove('text-blue-400', 'bg-gray-700');
+        }
+    }
+
+    togglePlayback() {
+        if (this.animationController.isPlaying) {
+            this.animationController.stop();
+            this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+            this.playBtn.classList.remove('text-red-400');
+            this.playBtn.classList.add('text-green-400');
+        } else {
+            this.animationController.start();
+            this.playBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+            this.playBtn.classList.remove('text-green-400');
+            this.playBtn.classList.add('text-red-400');
+        }
+    }
+
+    dispose() {
+        if (this.animationController) {
+            this.animationController.stop();
+        }
+        // Remove global event listeners if any (mouseup is temporary so safe)
+        // Remove internal timers
+        if (this.downBtn) {
+            // we have anonymous listeners so we can't remove them easily, but they are attached to DOM elements which will be GC'd.
+            // window mouseup is the only risk, but it removes itself.
         }
     }
 }

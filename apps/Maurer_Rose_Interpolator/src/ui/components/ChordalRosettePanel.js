@@ -264,6 +264,15 @@ export class ChordalRosettePanel extends Panel {
     }
 
     renderCoreParams(curveType, params) {
+        // Cleanup old controls
+        if (this.paramControls) {
+            Object.values(this.paramControls).forEach(wrapper => {
+                if (wrapper.instance && wrapper.instance.dispose) {
+                    wrapper.instance.dispose();
+                }
+            });
+        }
+
         this.dynamicParamsContainer.innerHTML = '';
         this.paramControls = {};
 
@@ -322,6 +331,13 @@ export class ChordalRosettePanel extends Panel {
 
     updateSequencerParams(state) {
         // Clear existing dynamic params
+        if (this.sequencerControls) {
+            Object.values(this.sequencerControls).forEach(wrapper => {
+                if (wrapper.instance && wrapper.instance.dispose) {
+                    wrapper.instance.dispose();
+                }
+            });
+        }
         this.sequencerParamsContainer.innerHTML = '';
         this.sequencerControls = {};
 
