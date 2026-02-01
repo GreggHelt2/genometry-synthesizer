@@ -2,14 +2,14 @@ import { createElement } from '../utils/dom.js';
 import { AnimationController } from '../../logic/AnimationController.js';
 
 export class WaveformSelector {
-    constructor({ type, shape, onChange, extraControls }) {
+    constructor({ type, shape, period, onChange, extraControls }) {
         this.type = type || 'InOut';
         this.shape = shape || 'Sine';
+        this.period = period || 10; // Default period
         this.onChange = onChange;
         this.extraControls = extraControls;
 
         // Visualization State
-        this.isScrollingMode = true; // Default to scrolling
         this.phase = 0;
 
         this.controller = new AnimationController(() => { }); // Dummy controller for drawing logic
@@ -56,19 +56,8 @@ export class WaveformSelector {
         dropdownsRow.appendChild(this.typeSelect);
         dropdownsRow.appendChild(this.shapeSelect);
 
-        // Toggle Button for Graph Mode
-        this.modeBtn = createElement('button', 'p-1 rounded bg-gray-800 border border-gray-600 hover:bg-gray-700 text-gray-400', {
-            title: 'Toggle Graph Mode (Scrolling / Moving)'
-        });
-        // initial icon: "Activity/Pulse" for scrolling
-        this.modeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
-
-        this.modeBtn.onclick = () => {
-            this.isScrollingMode = !this.isScrollingMode;
-            this.updateModeVisuals();
-            this.drawWaveform();
-        };
-        dropdownsRow.appendChild(this.modeBtn);
+        // Toggle Button Removed (User preference: Scrolling only)
+        // [Previously modeBtn code was here]
 
         leftPanel.appendChild(dropdownsRow);
 
@@ -129,13 +118,14 @@ export class WaveformSelector {
         ctx.clearRect(0, 0, width, height);
 
         // Configure Controller for plotting
-        // We use period=1 so input maps directly to phase
+        // We use period=1 so input maps directly to phase if we were normalized.
+        // BUT now we want Time-Based width.
         // Apply 10% margin to top and bottom (drawing area 10% to 90%)
         const margin = height * 0.10;
         this.controller.setConfig({
             min: margin,
             max: height - margin,
-            period: 1,
+            period: this.period,
             type: this.type,
             shape: this.shape
         });
@@ -145,22 +135,25 @@ export class WaveformSelector {
         ctx.strokeStyle = '#60A5FA'; // Blue-400
         ctx.lineWidth = 2;
 
-        for (let x = 0; x <= width; x++) {
-            let t_eff; // Effective parameter to compute value from
+        const TIME_WINDOW = 30.0; // Seconds visible in the window (15s past, 15s future)
 
-            if (this.isScrollingMode) {
-                // Scrolling Window Logic:
-                // Center (x = width/2) corresponds to current phase.
-                const local_t = x / width;
-                let p = this.phase + (local_t - 0.5);
-                p = p - Math.floor(p);
-                t_eff = p;
-            } else {
-                // Static Window Logic:
-                // x=0 -> t=0, x=width -> t=1
-                // Just map 0..1 linear loop
-                t_eff = x / width;
-            }
+        for (let x = 0; x <= width; x++) {
+            let t_eff; // Effective parameter (absolute time) to compute value from
+
+            // Scrolling Window Logic:
+            // Canvas width represents TIME_WINDOW seconds.
+            // Center (width/2) is 'current time'.
+
+            const x_pct = x / width; // 0..1
+
+            // Current time of the cycle = phase * period
+            const now = this.phase * this.period;
+
+            // Time relative to center (-window/2 ... +window/2)
+            const dt = (x_pct - 0.5) * TIME_WINDOW;
+
+            // Absolute time to sample
+            t_eff = now + dt;
 
             // Controller returns value 0..height
             // Canvas Y is inverted (0 is top)
@@ -173,30 +166,15 @@ export class WaveformSelector {
         ctx.stroke();
     }
 
-    updateModeVisuals() {
-        if (this.isScrollingMode) {
-            // Scrolling: Locked Center
-            this.playhead.style.left = '50%';
-            // Icon: Pulse
-            this.modeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
-        } else {
-            // Moving: Dynamic, will be set by update loop
-            // Icon: Static Line
-            this.modeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M5 12l4-4m-4 4l4 4"/></svg>`;
-            this.setPhase(this.phase); // Move head to current pos immediately
-        }
+    setPeriod(p) {
+        this.period = Math.max(0.1, p);
+        this.drawWaveform();
     }
 
     setPhase(t) {
         this.phase = t;
-        if (this.isScrollingMode) {
-            // Redraw every frame to scroll the graph
-            this.drawWaveform();
-        } else {
-            // Static mode: Just move the head
-            const pct = t * 100;
-            this.playhead.style.left = `${pct}%`;
-        }
+        // Redraw every frame to scroll the graph
+        this.drawWaveform();
     }
 
     getElement() {

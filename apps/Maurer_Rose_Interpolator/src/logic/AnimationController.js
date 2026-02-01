@@ -8,7 +8,7 @@ export class AnimationController {
         // Configuration
         this.min = 0;
         this.max = 1;
-        this.period = 2; // Seconds for a full cycle (min -> max -> min)
+        this.period = 10; // Seconds for a full cycle (min -> max -> min)
         this.easingType = 'InOut'; // In, Out, InOut
         this.easingShape = 'Sine'; // Sine, Quad, Cubic, Quart, Quint, Expo, Circ, Back, Elastic, Bounce
     }
@@ -69,7 +69,8 @@ export class AnimationController {
      */
     computeValue(totalTime) {
         // 1. Calculate normalized phase (0..1) within the period
-        const t = (totalTime % this.period) / this.period;
+        // Handle negative time correctly: ((a % n) + n) % n
+        const t = ((totalTime % this.period) + this.period) % this.period / this.period;
 
         // 2. Symmetric Logic:
         // The cycle goes Min -> Max -> Min.
@@ -95,7 +96,7 @@ export class AnimationController {
      */
     getPhase() {
         if (!this.accumulatedTime) return 0;
-        return (this.accumulatedTime % this.period) / this.period;
+        return ((this.accumulatedTime % this.period) + this.period) % this.period / this.period;
     }
 
     applyEasing(t) {

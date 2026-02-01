@@ -30,7 +30,7 @@ export class ParamGui {
         this.animationController.setConfig({
             min: this.min !== undefined ? this.min : 0,
             max: this.max !== undefined ? this.max : 100,
-            period: 5 // Default period
+            period: 10 // Default period
         });
 
         this.render({ label, min, max, step, value });
@@ -242,7 +242,11 @@ export class ParamGui {
             if (this.max !== undefined && v > this.max) this.setMax(v);
         });
 
-        const speedInput = createNumInput(this.animationController.period, (v) => this.animationController.setConfig({ period: v }));
+        const speedInput = createNumInput(this.animationController.period, (v) => {
+            this.animationController.setConfig({ period: v });
+            // Update visualization scale
+            this.waveformSelector.setPeriod(v);
+        });
 
         // Labels
         const lblClass = 'text-[10px] text-gray-500 uppercase tracking-widest';
@@ -269,6 +273,7 @@ export class ParamGui {
         this.waveformSelector = new WaveformSelector({
             type: this.animationController.easingType,
             shape: this.animationController.easingShape,
+            period: this.animationController.period, // Pass initial period
             extraControls: animControls, // Pass the controls to be injected
             onChange: (type, shape) => {
                 this.animationController.setConfig({ type, shape });

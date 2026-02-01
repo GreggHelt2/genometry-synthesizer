@@ -24,36 +24,25 @@ export class InterpolationPanel extends Panel {
 
         // Slider
         const container = createElement('div', 'p-4');
-        const label = createElement('label', 'block text-sm mb-2', { textContent: 'Morph Weight' });
-        this.slider = createElement('input', 'w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer', {
-            type: 'range', min: 0, max: 1, step: 0.001, value: 0
-        });
 
-        this.slider.addEventListener('input', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { weight: parseFloat(e.target.value) }
-            });
+        // Create "Animation" Accordion for Hybrid controls
+        this.animationAccordion = new Accordion('Animation', true, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.animationAccordion.content));
         });
+        container.appendChild(this.animationAccordion.element);
 
-        container.appendChild(label);
-        container.appendChild(this.slider);
+        // Morph Weight Slider
+        this.morphControl = this.createSlider('morphWeight', 0, 1, 0.001, 'Morph Weight'); // Step was 0.001 in original input
+        this.animationAccordion.append(this.morphControl.container);
 
-        container.appendChild(this.slider);
+        // Interpolation Opacity Slider
+        this.opacityControl = this.createSlider('interpolationOpacity', 0, 1, 0.01, 'Interpolation Opacity');
+        this.animationAccordion.append(this.opacityControl.container);
 
-        // Interpolation Opacity
-        const opLabel = createElement('label', 'block text-sm mb-2 mt-4', { textContent: 'Interpolation Opacity' });
-        this.interpOpacitySlider = createElement('input', 'w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer', {
-            type: 'range', min: 0, max: 1, step: 0.01, value: 1
+        // Align labels initially
+        requestAnimationFrame(() => {
+            this.alignLabels(this.animationAccordion.content);
         });
-        this.interpOpacitySlider.addEventListener('input', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { opacity: parseFloat(e.target.value) }
-            });
-        });
-        container.appendChild(opLabel);
-        container.appendChild(this.interpOpacitySlider);
 
         // Interpolation Color & Method
         const colorContainer = createElement('div', 'flex flex-col mb-4 mt-4 p-2 border border-gray-700 rounded bg-gray-900/50');
@@ -149,6 +138,10 @@ export class InterpolationPanel extends Panel {
         this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
         this.cosetAccordion.append(this.cosetCountControl.container);
 
+        // Coset Index
+        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
+        this.cosetAccordion.append(this.cosetIndexControl.container);
+
         // Distribution
         const distContainer = createElement('div', 'flex flex-col mb-2');
         const distLabel = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Distribution' });
@@ -170,10 +163,6 @@ export class InterpolationPanel extends Panel {
         distContainer.appendChild(distLabel);
         distContainer.appendChild(this.distSelect);
         this.cosetAccordion.append(distContainer);
-
-        // Coset Index
-        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
-        this.cosetAccordion.append(this.cosetIndexControl.container);
 
         // Append accordion to main container
         container.appendChild(this.cosetAccordion.element);
@@ -257,12 +246,12 @@ export class InterpolationPanel extends Panel {
     }
 
     updateUI(state) {
-        if (document.activeElement !== this.slider) {
-            this.slider.value = state.hybrid.weight;
+        if (this.morphControl && document.activeElement !== this.morphControl.input) {
+            this.morphControl.input.updateDisplay(state.hybrid.weight);
         }
 
-        if (document.activeElement !== this.interpOpacitySlider) {
-            this.interpOpacitySlider.value = state.hybrid.opacity ?? 1;
+        if (this.opacityControl && document.activeElement !== this.opacityControl.input) {
+            this.opacityControl.input.updateDisplay(state.hybrid.opacity ?? 1);
         }
 
         // --- Hybrid Coset Logic ---

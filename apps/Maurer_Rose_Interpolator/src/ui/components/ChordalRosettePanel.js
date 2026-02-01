@@ -64,7 +64,9 @@ export class ChordalRosettePanel extends Panel {
         this.coreAccordion.append(this.dynamicParamsContainer);
 
         // Maurer Accordion (Sequencer)
-        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true);
+        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.maurerAccordion.content));
+        });
         this.controlsContainer.appendChild(this.maurerAccordion.element);
 
         // Sequencer Type Selector
@@ -80,7 +82,11 @@ export class ChordalRosettePanel extends Panel {
 
         // --- Relatives Navigation ---
         const relativesAccordion = new Accordion('Relatives Navigation', true);
-        this.relativesTypeSelect = createElement('select', 'w-full bg-gray-700 text-white p-1 rounded mb-2');
+
+        const relTypeContainer = createElement('div', 'flex items-center justify-between mb-2');
+        const relLabel = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Relative Criterion' });
+
+        this.relativesTypeSelect = createElement('select', 'flex-1 bg-gray-700 text-white p-1 rounded');
 
         ['Prime', 'Twin Prime', 'Cousin Prime', 'Lines To Close Matches'].forEach(type => {
             let val = type.toLowerCase();
@@ -96,6 +102,9 @@ export class ChordalRosettePanel extends Panel {
         // Set Default
         this.relativesTypeSelect.value = 'ltc';
 
+        relTypeContainer.appendChild(relLabel);
+        relTypeContainer.appendChild(this.relativesTypeSelect);
+
         const relNavContainer = createElement('div', 'flex gap-2');
 
         ['Prev', 'Random', 'Next'].forEach(dir => {
@@ -104,12 +113,14 @@ export class ChordalRosettePanel extends Panel {
             relNavContainer.appendChild(btn);
         });
 
-        relativesAccordion.append(this.relativesTypeSelect);
+        relativesAccordion.append(relTypeContainer);
         relativesAccordion.append(relNavContainer);
         this.controlsContainer.appendChild(relativesAccordion.element);
 
         // Chordal Line Viz Accordion
-        const chordalVizAccordion = new Accordion('Chordal Line Viz', true);
+        const chordalVizAccordion = new Accordion('Chordal Line Viz', true, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(chordalVizAccordion.content));
+        });
         this.controlsContainer.appendChild(chordalVizAccordion.element);
 
         // Opacity Control
@@ -117,16 +128,10 @@ export class ChordalRosettePanel extends Panel {
 
         // Color Control
         const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
-        const colorLabel = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Rose Color & Method' });
-        const colorRow = createElement('div', 'flex gap-2');
 
-        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
-        this.colorInput.addEventListener('input', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { color: e.target.value }
-            });
-        });
+        // Row 1: Method
+        const methodRow = createElement('div', 'flex items-center justify-between mb-2');
+        const methodLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Rosette Coloring Method' });
 
         this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
         ['solid', 'length', 'angle', 'sequence'].forEach(m => {
@@ -140,14 +145,30 @@ export class ChordalRosettePanel extends Panel {
             });
         });
 
+        methodRow.appendChild(methodLabel);
+        methodRow.appendChild(this.methodSelect);
+        colorContainer.appendChild(methodRow);
+
+        // Row 2: Colors
+        const colorRow = createElement('div', 'flex items-center justify-between');
+        const colorLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Colors' });
+
+        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+        this.colorInput.addEventListener('input', (e) => {
+            store.dispatch({
+                type: this.actionType,
+                payload: { color: e.target.value }
+            });
+        });
+
+        colorRow.appendChild(colorLabel);
         colorRow.appendChild(this.colorInput);
-        colorRow.appendChild(this.methodSelect);
-        colorContainer.appendChild(colorLabel);
         colorContainer.appendChild(colorRow);
 
         // Blend Mode
-        const blendLabel = createElement('label', 'text-sm text-gray-300 mb-1 mt-2', { textContent: 'Blend Mode' });
-        this.blendSelect = createElement('select', 'w-full bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+        const blendContainer = createElement('div', 'flex items-center justify-between mt-2');
+        const blendLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Blend Mode' });
+        this.blendSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
         const blendModes = [
             { value: 'source-over', label: 'Normal' },
             { value: 'lighter', label: 'Lighter (Add)' },
@@ -177,8 +198,9 @@ export class ChordalRosettePanel extends Panel {
                 payload: { blendMode: e.target.value }
             });
         });
-        colorContainer.appendChild(blendLabel);
-        colorContainer.appendChild(this.blendSelect);
+        blendContainer.appendChild(blendLabel);
+        blendContainer.appendChild(this.blendSelect);
+        colorContainer.appendChild(blendContainer);
 
         chordalVizAccordion.append(colorContainer);
 
@@ -193,7 +215,9 @@ export class ChordalRosettePanel extends Panel {
         chordalVizAccordion.append(this.opacityControl.container);
 
         // Coset Visualization Accordion
-        const cosetAccordion = new Accordion('Coset Visualization', false); // Default closed? Or true?
+        const cosetAccordion = new Accordion('Coset Visualization', false, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(cosetAccordion.content));
+        }); // Default closed? Or true?
         this.controlsContainer.appendChild(cosetAccordion.element);
 
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets (k): 1' });
@@ -203,10 +227,14 @@ export class ChordalRosettePanel extends Panel {
         this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
         cosetAccordion.append(this.cosetCountControl.container);
 
+        // Coset Index (Start Offset)
+        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
+        cosetAccordion.append(this.cosetIndexControl.container);
+
         // Distribution Dropdown
-        const distContainer = createElement('div', 'flex flex-col mb-2');
-        const distLabel = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Distribution' });
-        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+        const distContainer = createElement('div', 'flex items-center justify-between mb-2');
+        const distLabel = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Distribution' });
+        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
 
         ['Sequential', 'Distributed', 'Two-Way'].forEach(m => {
             const val = m.toLowerCase();
@@ -225,10 +253,6 @@ export class ChordalRosettePanel extends Panel {
         distContainer.appendChild(this.distSelect);
         cosetAccordion.append(distContainer);
 
-        // Coset Index (Start Offset)
-        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
-        cosetAccordion.append(this.cosetIndexControl.container);
-
         // Align labels for static accordions if they have sliders
         // Use requestAnimationFrame to ensure DOM is rendered and layout is calculated
         requestAnimationFrame(() => {
@@ -241,9 +265,9 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createCurveTypeSelector(parent) {
-        const container = createElement('div', 'flex flex-col mb-3 p-2 border-b border-gray-700');
-        const label = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Curve Type' });
-        const select = createElement('select', 'bg-gray-700 text-white text-sm rounded border border-gray-600 px-2 py-1', {});
+        const container = createElement('div', 'flex items-center justify-between mb-3 p-2 border-b border-gray-700');
+        const label = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Curve Type' });
+        const select = createElement('select', 'bg-gray-700 text-white text-sm rounded border border-gray-600 px-2 py-1 flex-1', {});
 
         Object.keys(CurveRegistry).forEach(type => {
             const opt = createElement('option', '', { value: type, textContent: type });
@@ -298,10 +322,10 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createSequencerTypeSelector(containerAccordion) {
-        const container = createElement('div', 'flex flex-col mb-2 p-2 relative');
-        const label = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Sequence Generator' });
+        const container = createElement('div', 'flex items-center justify-between mb-2 p-2 relative');
+        const label = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Sequence Generator' });
 
-        const select = createElement('select', 'w-full bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 cursor-pointer');
+        const select = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 cursor-pointer flex-1');
 
         Object.keys(SequencerRegistry).forEach(key => {
             const opt = createElement('option', '', { value: key, textContent: key });
@@ -813,6 +837,8 @@ export class ChordalRosettePanel extends Panel {
         // Apply max width + padding/margin if needed (usually flex/grid handles, but we want fixed width on label)
         // Since ParamGui uses css grid "auto 1fr auto auto", setting width on label might not be enough if grid column is auto.
         // But auto column will respect the explicit width of the child.
-        labels.forEach(el => el.style.width = `${Math.ceil(maxWidth)}px`);
+        if (maxWidth > 0) {
+            labels.forEach(el => el.style.width = `${Math.ceil(maxWidth)}px`);
+        }
     }
 }
