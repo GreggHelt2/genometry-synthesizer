@@ -112,10 +112,10 @@ const Easings = {
     // Linear (fallback/base)
     easeLinear: t => t,
 
-    // Sawtooth (Linear)
-    easeInSawtooth: t => t,
-    easeOutSawtooth: t => t,
-    easeInOutSawtooth: t => t,
+    // Linear (Alias for Sawtooth behavior)
+    easeInLinear: t => t,
+    easeOutLinear: t => t,
+    easeInOutLinear: t => t,
 
     // Sine
     easeInSine: t => 1 - Math.cos((t * Math.PI) / 2),

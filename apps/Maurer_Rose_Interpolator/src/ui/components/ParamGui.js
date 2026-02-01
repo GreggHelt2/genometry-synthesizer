@@ -210,7 +210,14 @@ export class ParamGui {
         this.container.appendChild(topRow);
 
         // --- Animation Panel (Collapsible) ---
-        this.animPanel = createElement('div', 'hidden flex-col gap-2 mt-2 p-2 bg-gray-800 rounded border border-gray-700');
+        // Reduced margin (mt-1) and added relative positioning for the notch
+        // Brightened border to border-gray-500
+        this.animPanel = createElement('div', 'hidden flex-col gap-2 mt-1 p-2 bg-gray-800 rounded border border-gray-500 relative');
+
+        // Visual Notch/Arrow pointing to the Anim Button (Far right)
+        // Positioned absolute top-outside
+        const notch = createElement('div', 'absolute -top-[6px] right-[6px] w-3 h-3 bg-gray-800 border-l border-t border-gray-500 transform rotate-45');
+        this.animPanel.appendChild(notch);
 
         // Row 1: Controls (Min, Max, Speed)
         const animControls = createElement('div', 'flex items-center gap-2');
@@ -255,12 +262,14 @@ export class ParamGui {
         animControls.appendChild(wrap(maxInput, 'Max'));
         animControls.appendChild(wrap(speedInput, 'Period (s)'));
 
-        this.animPanel.appendChild(animControls);
+        // remove appendChild(animControls) - passed to selector instead
+        // this.animPanel.appendChild(animControls);
 
         // Row 2: Waveform Selector
         this.waveformSelector = new WaveformSelector({
             type: this.animationController.easingType,
             shape: this.animationController.easingShape,
+            extraControls: animControls, // Pass the controls to be injected
             onChange: (type, shape) => {
                 this.animationController.setConfig({ type, shape });
             }
@@ -379,12 +388,16 @@ export class ParamGui {
         const isHidden = this.animPanel.classList.contains('hidden');
         if (isHidden) {
             this.animPanel.classList.remove('hidden');
-            this.animBtn.classList.add('text-blue-400', 'bg-gray-700');
+            // Active: Green Text + Green Border + Gray Background
+            this.animBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.animBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
             // Refresh canvas incase hidden broke layout
             this.waveformSelector.drawWaveform();
         } else {
             this.animPanel.classList.add('hidden');
-            this.animBtn.classList.remove('text-blue-400', 'bg-gray-700');
+            // Inactive: Gray Text + Transparent Border
+            this.animBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+            this.animBtn.classList.add('text-gray-500', 'border-transparent');
         }
     }
 
