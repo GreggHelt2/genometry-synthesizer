@@ -7,6 +7,7 @@ import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistr
 import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
 import { generateMaurerPolyline } from '../../engine/math/maurer.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js'; // Needed if we generate points to count
+import { ParamGui } from './ParamGui.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -32,11 +33,11 @@ export class InterpolationPanel extends Panel {
         container.appendChild(this.animationAccordion.element);
 
         // Morph Weight Slider
-        this.morphControl = this.createSlider('morphWeight', 0, 1, 0.001, 'Morph Weight'); // Step was 0.001 in original input
+        this.morphControl = this.createSlider('weight', 0, 1, 0.001, 'Morph Weight'); // Step was 0.001 in original input
         this.animationAccordion.append(this.morphControl.container);
 
         // Interpolation Opacity Slider
-        this.opacityControl = this.createSlider('interpolationOpacity', 0, 1, 0.01, 'Interpolation Opacity');
+        this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Interpolation Opacity');
         this.animationAccordion.append(this.opacityControl.container);
 
         // Align labels initially
@@ -45,17 +46,12 @@ export class InterpolationPanel extends Panel {
         });
 
         // Interpolation Color & Method
-        const colorContainer = createElement('div', 'flex flex-col mb-4 mt-4 p-2 border border-gray-700 rounded bg-gray-900/50');
-        const colorLabel = createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Interpolation Color' });
-        const colorRow = createElement('div', 'flex gap-2');
+        // Interpolation Color & Method
+        const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
 
-        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
-        this.colorInput.addEventListener('input', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { color: e.target.value }
-            });
-        });
+        // Row 1: Method
+        const methodRow = createElement('div', 'flex items-center justify-between mb-2');
+        const methodLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Rosette Coloring Method' });
 
         this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
         ['solid', 'length', 'angle', 'sequence'].forEach(m => {
@@ -69,14 +65,30 @@ export class InterpolationPanel extends Panel {
             });
         });
 
+        methodRow.appendChild(methodLabel);
+        methodRow.appendChild(this.methodSelect);
+        colorContainer.appendChild(methodRow);
+
+        // Row 2: Color
+        const colorRow = createElement('div', 'flex items-center justify-between');
+        const colorLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Colors' });
+
+        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
+        this.colorInput.addEventListener('input', (e) => {
+            store.dispatch({
+                type: ACTIONS.UPDATE_HYBRID,
+                payload: { color: e.target.value }
+            });
+        });
+
+        colorRow.appendChild(colorLabel);
         colorRow.appendChild(this.colorInput);
-        colorRow.appendChild(this.methodSelect);
-        colorContainer.appendChild(colorLabel);
         colorContainer.appendChild(colorRow);
 
-        // Blend Mode
-        const blendLabel = createElement('label', 'text-sm text-gray-300 mb-1 mt-2', { textContent: 'Blend Mode' });
-        this.blendSelect = createElement('select', 'w-full bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+        // Row 3: Blend Mode
+        const blendContainer = createElement('div', 'flex items-center justify-between mt-2');
+        const blendLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Blend Mode' });
+        this.blendSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
         const blendModes = [
             { value: 'source-over', label: 'Normal' },
             { value: 'lighter', label: 'Lighter (Add)' },
@@ -106,8 +118,9 @@ export class InterpolationPanel extends Panel {
                 payload: { blendMode: e.target.value }
             });
         });
-        colorContainer.appendChild(blendLabel);
-        colorContainer.appendChild(this.blendSelect);
+        blendContainer.appendChild(blendLabel);
+        blendContainer.appendChild(this.blendSelect);
+        colorContainer.appendChild(blendContainer);
 
         container.appendChild(colorContainer);
 
@@ -167,19 +180,7 @@ export class InterpolationPanel extends Panel {
         // Append accordion to main container
         container.appendChild(this.cosetAccordion.element);
 
-        // Play/Pause Button
-        this.playBtn = createElement('button', 'mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 w-full transition-colors', {
-            textContent: 'Play Animation'
-        });
-        this.playBtn.addEventListener('click', () => {
-            // Toggle logic here
-            const isPlaying = !store.getState().app.isPlaying;
-            store.dispatch({
-                type: ACTIONS.SET_PLAYING,
-                payload: isPlaying
-            });
-        });
-        container.appendChild(this.playBtn);
+
 
         // Underlays Section
         const underlayContainer = createElement('div', 'mt-4 pt-4 border-t border-gray-700');
@@ -194,18 +195,8 @@ export class InterpolationPanel extends Panel {
         underlayContainer.appendChild(toggleRow);
 
         // Opacity
-        const opacityLabel = createElement('label', 'block text-xs text-gray-400 mb-1', { textContent: 'Underlay Opacity' });
-        this.opacitySlider = createElement('input', 'w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer', {
-            type: 'range', min: 0, max: 1, step: 0.01
-        });
-        this.opacitySlider.addEventListener('input', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { underlayOpacity: parseFloat(e.target.value) }
-            });
-        });
-        underlayContainer.appendChild(opacityLabel);
-        underlayContainer.appendChild(this.opacitySlider);
+        this.underlayOpacityControl = this.createSlider('underlayOpacity', 0, 1, 0.01, 'Underlay Opacity');
+        underlayContainer.appendChild(this.underlayOpacityControl.container);
 
         container.appendChild(underlayContainer);
 
@@ -246,12 +237,12 @@ export class InterpolationPanel extends Panel {
     }
 
     updateUI(state) {
-        if (this.morphControl && document.activeElement !== this.morphControl.input) {
-            this.morphControl.input.updateDisplay(state.hybrid.weight);
+        if (this.morphControl) {
+            this.morphControl.instance.setValue(state.hybrid.weight);
         }
 
-        if (this.opacityControl && document.activeElement !== this.opacityControl.input) {
-            this.opacityControl.input.updateDisplay(state.hybrid.opacity ?? 1);
+        if (this.opacityControl) {
+            this.opacityControl.instance.setValue(state.hybrid.opacity ?? 1);
         }
 
         // --- Hybrid Coset Logic ---
@@ -317,21 +308,25 @@ export class InterpolationPanel extends Panel {
         this.cosetIndexControl.input.disabled = !enableIndexControl;
 
         // Update Max Ranges
-        this.cosetCountControl.input.max = effectiveK;
-        this.cosetCountControl.input.updateDisplay(Math.min(state.hybrid.cosetCount || 1, effectiveK));
+        if (this.cosetCountControl) {
+            this.cosetCountControl.instance.setMax(effectiveK);
+            this.cosetCountControl.instance.setValue(Math.min(state.hybrid.cosetCount || 1, effectiveK));
+        }
 
         // Index Max: ideally wrapping max(kA, kB)
         const indexMax = (enableMultiControls) ? effectiveK : Math.max(kA, kB);
-        this.cosetIndexControl.input.max = Math.max(1, indexMax - 1);
-        this.cosetIndexControl.input.updateDisplay((state.hybrid.cosetIndex || 0) % (indexMax || 1));
+        if (this.cosetIndexControl) {
+            this.cosetIndexControl.instance.setMax(Math.max(1, indexMax - 1));
+            this.cosetIndexControl.instance.setValue((state.hybrid.cosetIndex || 0) % (indexMax || 1));
+        }
 
         if (this.distSelect.value !== state.hybrid.cosetDistribution) {
             this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
         }
 
         // Update Threshold Slider
-        if (this.resampleThresholdControl && document.activeElement !== this.resampleThresholdControl.input) {
-            this.resampleThresholdControl.input.updateDisplay(state.hybrid.approxResampleThreshold ?? 20000);
+        if (this.resampleThresholdControl) {
+            this.resampleThresholdControl.instance.setValue(state.hybrid.approxResampleThreshold ?? 20000);
         }
 
         // Update Info Panel with Resampling Status
@@ -352,20 +347,11 @@ export class InterpolationPanel extends Panel {
         // Update Underlays
         this.showACheck.input.checked = state.hybrid.showRoseA;
         this.showBCheck.input.checked = state.hybrid.showRoseB;
-        if (document.activeElement !== this.opacitySlider) {
-            this.opacitySlider.value = state.hybrid.underlayOpacity;
+        if (this.underlayOpacityControl) {
+            this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
         }
 
-        const isPlaying = state.app.isPlaying;
-        this.playBtn.textContent = isPlaying ? 'Pause Animation' : 'Play Animation';
 
-        if (isPlaying) {
-            this.playBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
-            this.playBtn.classList.add('bg-red-600', 'hover:bg-red-500');
-        } else {
-            this.playBtn.classList.remove('bg-red-600', 'hover:bg-red-500');
-            this.playBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
-        }
 
         const isRecording = state.app.isRecording;
         this.recordBtn.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
@@ -442,9 +428,9 @@ export class InterpolationPanel extends Panel {
     }
 
     createCheckbox(key, label) {
-        const container = createElement('div', 'flex items-center');
+        const container = createElement('div', 'flex items-center mb-2'); // Added mb-2
         const input = createElement('input', 'mr-2', { type: 'checkbox' });
-        const labelEl = createElement('label', 'text-xs text-gray-300', { textContent: label });
+        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label }); // Changed text-xs to text-sm
 
         input.addEventListener('change', (e) => {
             store.dispatch({
@@ -459,37 +445,29 @@ export class InterpolationPanel extends Panel {
     }
 
     createSlider(key, min, max, step, label) {
-        const container = createElement('div', 'flex flex-col mb-1');
-        const topRow = createElement('div', 'flex justify-between items-end mb-1');
-        const labelEl = createElement('label', 'text-xs text-gray-400', { textContent: label });
-        const textVal = createElement('span', 'text-xs text-blue-400 font-mono', { textContent: min });
-
-        topRow.appendChild(labelEl);
-        topRow.appendChild(textVal);
-
-        const input = createElement('input', 'w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer', {
-            type: 'range', min, max, step, value: min
+        // Use ParamGui
+        const paramGui = new ParamGui({
+            key,
+            label,
+            min,
+            max,
+            step,
+            value: 0, // Default, will be updated by updateUI
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { [key]: val }
+                });
+            }
         });
 
-        // Update text on input
-        input.addEventListener('input', (e) => {
-            textVal.textContent = parseFloat(e.target.value);
-            // Dispatch
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { [key]: parseFloat(e.target.value) }
-            });
-        });
-
-        // External update helper
-        input.updateDisplay = (val) => {
-            textVal.textContent = val;
-            input.value = val;
+        // Adapter to match old structure expecting { container, input }
+        // We attach the full instance so updateUI can use .setValue
+        return {
+            container: paramGui.getElement(),
+            instance: paramGui,
+            // Legacy support if needed, though we should use instance.setValue
+            input: paramGui.slider
         };
-
-        container.appendChild(topRow);
-        container.appendChild(input);
-
-        return { container, input };
     }
 }

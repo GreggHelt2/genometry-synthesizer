@@ -18,4 +18,26 @@ export class Panel {
             parent.appendChild(this.element);
         }
     }
+
+    alignLabels(container) {
+        if (!container) return;
+
+        // Reset widths to auto to get natural width
+        const labels = container.querySelectorAll('.param-label');
+        if (labels.length === 0) return;
+
+        labels.forEach(el => el.style.width = 'auto');
+
+        // Find max width
+        let maxWidth = 0;
+        labels.forEach(el => {
+            const w = el.getBoundingClientRect().width;
+            if (w > maxWidth) maxWidth = w;
+        });
+
+        // Apply max width
+        if (maxWidth > 0) {
+            labels.forEach(el => el.style.width = `${Math.ceil(maxWidth)}px`);
+        }
+    }
 }

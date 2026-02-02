@@ -16,7 +16,6 @@ export class ParamGui {
         this.lastValue = value;
         this.isLinked = false;
 
-        // Initialize Animation Controller BEFORE render
         this.animationController = new AnimationController((val) => {
             // Callback from animation loop
             // Round if needed based on step?
@@ -407,12 +406,14 @@ export class ParamGui {
     }
 
     togglePlayback() {
+        console.log('Toggle Playback clicked. Current state:', this.animationController.isPlaying);
         if (this.animationController.isPlaying) {
             this.animationController.stop();
             // Revert into inactive state (Gray)
             this.playBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
             this.playBtn.classList.add('text-gray-500', 'border-transparent');
         } else {
+            console.log('Starting animation controller...');
             this.animationController.start();
             // Active state (Green + Highlight)
             this.playBtn.classList.remove('text-gray-500', 'border-transparent');

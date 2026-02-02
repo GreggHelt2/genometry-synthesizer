@@ -818,27 +818,5 @@ export class ChordalRosettePanel extends Panel {
         }
     }
 
-    alignLabels(container) {
-        if (!container) return;
 
-        // Reset widths to auto to get natural width
-        const labels = container.querySelectorAll('.param-label');
-        if (labels.length === 0) return;
-
-        labels.forEach(el => el.style.width = 'auto');
-
-        // Find max width
-        let maxWidth = 0;
-        labels.forEach(el => {
-            const w = el.getBoundingClientRect().width;
-            if (w > maxWidth) maxWidth = w;
-        });
-
-        // Apply max width + padding/margin if needed (usually flex/grid handles, but we want fixed width on label)
-        // Since ParamGui uses css grid "auto 1fr auto auto", setting width on label might not be enough if grid column is auto.
-        // But auto column will respect the explicit width of the child.
-        if (maxWidth > 0) {
-            labels.forEach(el => el.style.width = `${Math.ceil(maxWidth)}px`);
-        }
-    }
 }

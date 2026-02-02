@@ -113,27 +113,8 @@ class App {
     loop() {
         const state = store.getState();
 
-        if (state.app.isPlaying) {
-            // Update weight
-            // Simple ping-pong logic
-            let speed = 0.01 * state.app.animationSpeed;
-            let dir = this.animDir || 1;
-            let newWeight = state.hybrid.weight + (speed * dir);
-
-            if (newWeight >= 1) {
-                newWeight = 1;
-                this.animDir = -1;
-            } else if (newWeight <= 0) {
-                newWeight = 0;
-                this.animDir = 1;
-            }
-            // Use this.animDir for next frame
-
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { weight: newWeight }
-            });
-        }
+        // Legacy global animation loop removed in favor of ParamGui animation
+        // if (state.app.isPlaying) ...
 
         // Recorder State Monitor
         if (this.recorder) {
