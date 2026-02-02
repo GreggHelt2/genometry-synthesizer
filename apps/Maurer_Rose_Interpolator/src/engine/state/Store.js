@@ -50,11 +50,6 @@ class Store {
                     ...state,
                     settings: { ...state.settings, ...action.payload }
                 };
-            case ACTIONS.SET_PLAYING:
-                return {
-                    ...state,
-                    app: { ...state.app, isPlaying: action.payload }
-                };
             case ACTIONS.SET_RECORDING:
                 return {
                     ...state,

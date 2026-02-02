@@ -67,8 +67,6 @@ export const DEFAULTS = {
         renderStyle: 'straight', // straight, arc, etc.
     },
     app: {
-        isPlaying: false,
         isRecording: false,
-        animationSpeed: 1, // multiplier
     }
 };

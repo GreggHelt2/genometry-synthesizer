@@ -113,9 +113,6 @@ class App {
     loop() {
         const state = store.getState();
 
-        // Legacy global animation loop removed in favor of ParamGui animation
-        // if (state.app.isPlaying) ...
-
         // Recorder State Monitor
         if (this.recorder) {
             if (state.app.isRecording && !this.recorder.isRecording) {
@@ -131,8 +128,8 @@ class App {
     renderAll(force = false) {
         const state = store.getState();
 
-        // Optimization: Only render if playing or dirty, unless forced
-        if (!force && !state.app.isPlaying && !store.isDirty) {
+        // Optimization: Only render if dirty, unless forced
+        if (!force && !store.isDirty) {
             return;
         }
 
