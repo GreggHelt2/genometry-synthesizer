@@ -25,6 +25,12 @@ export const DEFAULTS = {
         antiAlias: true,
         cosetCount: 1,
         cosetDistribution: 'sequential', // 'sequential', 'distributed', 'two-way'
+        // Base Curve Rendering
+        showBaseCurve: false,
+        baseCurveLineWidth: 2,
+        baseCurveColor: '#666666',
+        baseCurveOpacity: 1,
+        baseCurveBlendMode: 'source-over',
     },
     rosetteB: {
         curveType: 'Rhodonea',
@@ -46,6 +52,12 @@ export const DEFAULTS = {
         blendMode: 'lighter',
         lineWidth: 2,
         antiAlias: true,
+        // Base Curve Rendering
+        showBaseCurve: false,
+        baseCurveLineWidth: 2,
+        baseCurveColor: '#666666',
+        baseCurveOpacity: 1,
+        baseCurveBlendMode: 'source-over',
     },
     hybrid: {
         weight: 0.0, // 0 to 1
@@ -57,6 +69,18 @@ export const DEFAULTS = {
         color: '#a855f7',
         colorMethod: 'solid',
         blendMode: 'lighter',
+        // Base Curve Rendering (A)
+        showBaseCurveA: false,
+        baseCurveLineWidthA: 2,
+        baseCurveColorA: '#666666',
+        baseCurveOpacityA: 1,
+        baseCurveBlendModeA: 'source-over',
+        // Base Curve Rendering (B)
+        showBaseCurveB: false,
+        baseCurveLineWidthB: 2,
+        baseCurveColorB: '#666666',
+        baseCurveOpacityB: 1,
+        baseCurveBlendModeB: 'source-over',
     },
     settings: {
         theme: 'dark',

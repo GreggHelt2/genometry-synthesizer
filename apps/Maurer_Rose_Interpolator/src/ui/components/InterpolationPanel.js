@@ -253,6 +253,128 @@ export class InterpolationPanel extends Panel {
         // Add to Viz Accordion instead of loose
         this.vizAccordion.append(underlayContainer);
 
+        // Base Curve Viz Accordion (Hybrid)
+        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
+        });
+        this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
+
+        // --- Base Curve A Controls ---
+        const groupA = createElement('div', 'flex flex-col mb-4 p-2 border border-gray-700 rounded bg-gray-900/50');
+        groupA.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source A Curve' }));
+
+        // Toggle A
+        this.showBaseCurveControlA = this.createCheckbox('showBaseCurveA', 'Show Base Curve');
+        groupA.appendChild(this.showBaseCurveControlA.container);
+
+        // Width A
+        this.baseCurveWidthControlA = this.createSlider('baseCurveLineWidthA', 0.1, 10, 0.1, 'Line Width');
+        groupA.appendChild(this.baseCurveWidthControlA.container);
+
+        // Color A
+        this.baseCurveColorControlA = new ParamColor({
+            key: 'baseCurveColorA',
+            label: 'Color',
+            value: '#666666',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { baseCurveColorA: val }
+                });
+            }
+        });
+        groupA.appendChild(this.baseCurveColorControlA.getElement());
+
+        // Opacity A
+        this.baseCurveOpacityControlA = this.createSlider('baseCurveOpacityA', 0, 1, 0.01, 'Opacity');
+        groupA.appendChild(this.baseCurveOpacityControlA.container);
+
+        // Blend Mode A
+        // Reusing options is fine if defined, but local options safe
+        const baseCurveBlendModes = [
+            { value: 'source-over', label: 'Normal' },
+            { value: 'lighter', label: 'Lighter (Add)' },
+            { value: 'multiply', label: 'Multiply' },
+            { value: 'screen', label: 'Screen' },
+            { value: 'overlay', label: 'Overlay' },
+            { value: 'darken', label: 'Darken' },
+            { value: 'lighten', label: 'Lighten' },
+            { value: 'color-dodge', label: 'Color Dodge' },
+            { value: 'color-burn', label: 'Color Burn' },
+            { value: 'hard-light', label: 'Hard Light' },
+            { value: 'soft-light', label: 'Soft Light' },
+            { value: 'difference', label: 'Difference' },
+            { value: 'exclusion', label: 'Exclusion' },
+            { value: 'hue', label: 'Hue' },
+            { value: 'saturation', label: 'Saturation' },
+            { value: 'color', label: 'Color' },
+            { value: 'luminosity', label: 'Luminosity' }
+        ];
+        this.baseCurveBlendSelectA = new ParamSelect({
+            key: 'baseCurveBlendModeA',
+            label: 'Blend Mode',
+            options: baseCurveBlendModes,
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { baseCurveBlendModeA: val }
+                });
+            }
+        });
+        groupA.appendChild(this.baseCurveBlendSelectA.getElement());
+
+        this.baseCurveVizAccordion.append(groupA);
+
+
+        // --- Base Curve B Controls ---
+        const groupB = createElement('div', 'flex flex-col mb-2 p-2 border border-gray-700 rounded bg-gray-900/50');
+        groupB.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source B Curve' }));
+
+        // Toggle B
+        this.showBaseCurveControlB = this.createCheckbox('showBaseCurveB', 'Show Base Curve');
+        groupB.appendChild(this.showBaseCurveControlB.container);
+
+        // Width B
+        this.baseCurveWidthControlB = this.createSlider('baseCurveLineWidthB', 0.1, 10, 0.1, 'Line Width');
+        groupB.appendChild(this.baseCurveWidthControlB.container);
+
+        // Color B
+        this.baseCurveColorControlB = new ParamColor({
+            key: 'baseCurveColorB',
+            label: 'Color',
+            value: '#666666',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { baseCurveColorB: val }
+                });
+            }
+        });
+        groupB.appendChild(this.baseCurveColorControlB.getElement());
+
+        // Opacity B
+        this.baseCurveOpacityControlB = this.createSlider('baseCurveOpacityB', 0, 1, 0.01, 'Opacity');
+        groupB.appendChild(this.baseCurveOpacityControlB.container);
+
+        // Blend Mode B
+        this.baseCurveBlendSelectB = new ParamSelect({
+            key: 'baseCurveBlendModeB',
+            label: 'Blend Mode',
+            options: baseCurveBlendModes, // Reusing local variable which now has full list
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { baseCurveBlendModeB: val }
+                });
+            }
+        });
+        groupB.appendChild(this.baseCurveBlendSelectB.getElement());
+
+        this.baseCurveVizAccordion.append(groupB);
+
+
         // Recording Controls Section
         // Use an Accordion for Recording? Or append to controlsContainer
         // Rosette panels don't have recording.
@@ -404,6 +526,23 @@ export class InterpolationPanel extends Panel {
         if (this.underlayOpacityControl) {
             this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
         }
+        if (this.underlayOpacityControl) {
+            this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
+        }
+
+        // Base Curve Viz Updates (A)
+        this.showBaseCurveControlA.input.checked = state.hybrid.showBaseCurveA;
+        if (this.baseCurveWidthControlA) this.baseCurveWidthControlA.instance.setValue(state.hybrid.baseCurveLineWidthA ?? 2);
+        if (this.baseCurveColorControlA) this.baseCurveColorControlA.setValue(state.hybrid.baseCurveColorA || '#666666');
+        if (this.baseCurveOpacityControlA) this.baseCurveOpacityControlA.instance.setValue(state.hybrid.baseCurveOpacityA ?? 1);
+        if (this.baseCurveBlendSelectA) this.baseCurveBlendSelectA.setValue(state.hybrid.baseCurveBlendModeA || 'source-over');
+
+        // Base Curve Viz Updates (B)
+        this.showBaseCurveControlB.input.checked = state.hybrid.showBaseCurveB;
+        if (this.baseCurveWidthControlB) this.baseCurveWidthControlB.instance.setValue(state.hybrid.baseCurveLineWidthB ?? 2);
+        if (this.baseCurveColorControlB) this.baseCurveColorControlB.setValue(state.hybrid.baseCurveColorB || '#666666');
+        if (this.baseCurveOpacityControlB) this.baseCurveOpacityControlB.instance.setValue(state.hybrid.baseCurveOpacityB ?? 1);
+        if (this.baseCurveBlendSelectB) this.baseCurveBlendSelectB.setValue(state.hybrid.baseCurveBlendModeB || 'source-over');
 
 
 

@@ -55,6 +55,17 @@ export class CanvasRenderer {
         const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
         this.ctx.scale(scale, scale);
 
+        // --- Render Base Curve Underlay ---
+        if (roseParams.showBaseCurve) {
+            this.renderBaseCurve(roseParams, {
+                color: roseParams.baseCurveColor,
+                width: roseParams.baseCurveLineWidth,
+                opacity: roseParams.baseCurveOpacity,
+                blendMode: roseParams.baseCurveBlendMode
+            });
+        }
+        // ----------------------------------
+
         const curve = this.createCurve(roseParams);
         const sequencer = this.getSequencer(roseParams.sequencerType);
 
@@ -165,6 +176,64 @@ export class CanvasRenderer {
         this.ctx.restore();
     }
 
+    renderBaseCurve(params, options = {}) {
+        // High-resolution sampling for smooth base curve
+        const curve = this.createCurve(params);
+        if (!curve) return;
+
+        // Calculate resolution based on domain
+        // Standard circle = 360 degrees = ~6.28 rad
+        // We want maybe 10 samples per degree equivalent for smoothness? Or just fixed high number.
+        // But some curves have huge domains (e.g. n=1, d=100 -> 100 loops).
+        // Let's adapt based on radiansToClosure.
+        const totalRad = curve.getRadiansToClosure();
+
+        // Approximate samples: 10 per radian -> 60ish per circle. Too low.
+        // 100 per radian -> 600 per circle. Good. 
+        // Max cap to avoid performance cliff on huge d.
+        const samplesPerRad = 100;
+        const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
+        const step = totalRad / sampleCount;
+
+        const points = [];
+        for (let i = 0; i <= sampleCount; i++) {
+            points.push(curve.getPoint(i * step));
+        }
+
+        // Apply visual options
+        const color = options.color || '#666666';
+        const width = options.width || 1;
+        const opacity = options.opacity ?? 1;
+        const blendMode = options.blendMode || 'source-over';
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = blendMode;
+
+        // Use segmented drawing if we need self-blending (opacity < 1 or blend mode active)
+        if (opacity < 1 || blendMode !== 'source-over') {
+            // Create single color array for all segments
+            // drawColoredSegments expects an array of colors matching segments, or falls back to [0].
+            // If we pass a single element array, it acts as a uniform color for all segments in our implementation?
+            // Checking PolylineLayer.drawColoredSegments: "const color = colors[i] || colors[0];" 
+            // Yes, passing [color] works for uniform color across all segments.
+            const colors = [color];
+            this.polylineLayer.drawColoredSegments(points, colors, {
+                width: width,
+                opacity: opacity
+            });
+        } else {
+            // Optimized single path for solid opaque lines
+            this.polylineLayer.draw(points, {
+                color: color,
+                width: width,
+                opacity: opacity
+            });
+        }
+
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.restore();
+    }
+
     renderInterpolation(state) {
         this.clear();
         this.clear();
@@ -190,6 +259,24 @@ export class CanvasRenderer {
             const b = parseInt(hex.slice(5, 7), 16);
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
+
+        // Draw Base Curves (Hybrid)
+        if (state.hybrid.showBaseCurveA) {
+            this.renderBaseCurve(state.rosetteA, {
+                color: state.hybrid.baseCurveColorA,
+                width: state.hybrid.baseCurveLineWidthA,
+                opacity: state.hybrid.baseCurveOpacityA,
+                blendMode: state.hybrid.baseCurveBlendModeA
+            });
+        }
+        if (state.hybrid.showBaseCurveB) {
+            this.renderBaseCurve(state.rosetteB, {
+                color: state.hybrid.baseCurveColorB,
+                width: state.hybrid.baseCurveLineWidthB,
+                opacity: state.hybrid.baseCurveOpacityB,
+                blendMode: state.hybrid.baseCurveBlendModeB
+            });
+        }
 
         // Draw Underlays if enabled
         if (state.hybrid.showRoseA) {

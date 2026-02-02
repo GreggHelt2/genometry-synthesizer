@@ -54,8 +54,8 @@ class App {
         const centerControls = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden');
 
         this.interpPanel = new InterpolationPanel('interp', 'Controls');
-        // Fit container, ensure flex growth
-        this.interpPanel.element.className = 'flex-1 flex flex-col w-full';
+        // Fit container, ensure flex growth, constrain overflow to force internal scroll
+        this.interpPanel.element.className = 'flex-1 flex flex-col w-full min-h-0 overflow-hidden';
 
         centerControls.appendChild(this.interpPanel.element);
         this.centerArea.appendChild(centerControls);

@@ -55,8 +55,78 @@ export class ChordalRosettePanel extends Panel {
         this.controlsContainer.appendChild(statsAccordion.element);
 
         // Core Parameters Accordion
-        this.coreAccordion = new Accordion('Base Curve', true);
+        this.coreAccordion = new Accordion('Base Curve Generator', true);
         this.controlsContainer.appendChild(this.coreAccordion.element);
+
+        // --- Base Curve Viz Accordion (NEW) ---
+        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
+        });
+        this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
+
+        // 1. Toggle
+        this.showBaseCurveControl = this.createCheckbox('showBaseCurve', 'Show Base Curve');
+        this.baseCurveVizAccordion.append(this.showBaseCurveControl.container);
+
+        // 2. Line Width
+        this.baseCurveWidthControl = this.createSlider('baseCurveLineWidth', 0.1, 10, 0.1, 'Line Width');
+        this.baseCurveVizAccordion.append(this.baseCurveWidthControl.container);
+
+        // 3. Color
+        // Note: Using ParamColor for UI, mapped to defaults.js hex string
+        this.baseCurveColorControl = new ParamColor({
+            key: 'baseCurveColor',
+            label: 'Color',
+            value: '#666666',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { baseCurveColor: val }
+                });
+            }
+        });
+        this.baseCurveVizAccordion.append(this.baseCurveColorControl.getElement());
+
+        // 4. Opacity
+        this.baseCurveOpacityControl = this.createSlider('baseCurveOpacity', 0, 1, 0.01, 'Opacity');
+        this.baseCurveVizAccordion.append(this.baseCurveOpacityControl.container);
+
+        // 5. Blend Mode
+        // Reuse logic or create new ParamSelect
+        const baseCurveBlendModes = [
+            { value: 'source-over', label: 'Normal' },
+            { value: 'lighter', label: 'Lighter (Add)' },
+            { value: 'multiply', label: 'Multiply' },
+            { value: 'screen', label: 'Screen' },
+            { value: 'overlay', label: 'Overlay' },
+            { value: 'darken', label: 'Darken' },
+            { value: 'lighten', label: 'Lighten' },
+            { value: 'color-dodge', label: 'Color Dodge' },
+            { value: 'color-burn', label: 'Color Burn' },
+            { value: 'hard-light', label: 'Hard Light' },
+            { value: 'soft-light', label: 'Soft Light' },
+            { value: 'difference', label: 'Difference' },
+            { value: 'exclusion', label: 'Exclusion' },
+            { value: 'hue', label: 'Hue' },
+            { value: 'saturation', label: 'Saturation' },
+            { value: 'color', label: 'Color' },
+            { value: 'luminosity', label: 'Luminosity' }
+        ];
+        this.baseCurveBlendSelect = new ParamSelect({
+            key: 'baseCurveBlendMode',
+            label: 'Blend Mode',
+            options: baseCurveBlendModes,
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { baseCurveBlendMode: val }
+                });
+            }
+        });
+        this.baseCurveVizAccordion.append(this.baseCurveBlendSelect.getElement());
+
+        // --------------------------------------
 
         // Curve Type Selector
         this.createCurveTypeSelector(this.coreAccordion);
@@ -578,6 +648,23 @@ export class ChordalRosettePanel extends Panel {
         }
         if (this.blendSelect) {
             this.blendSelect.setValue(params.blendMode || 'source-over');
+        }
+
+        // Base Curve Viz Updates
+        if (this.showBaseCurveControl) {
+            this.showBaseCurveControl.input.checked = params.showBaseCurve;
+        }
+        if (this.baseCurveWidthControl && document.activeElement !== this.baseCurveWidthControl.input) {
+            this.updateControl(this.baseCurveWidthControl, params.baseCurveLineWidth ?? 2);
+        }
+        if (this.baseCurveColorControl) {
+            this.baseCurveColorControl.setValue(params.baseCurveColor || '#666666');
+        }
+        if (this.baseCurveOpacityControl && document.activeElement !== this.baseCurveOpacityControl.input) {
+            this.updateControl(this.baseCurveOpacityControl, params.baseCurveOpacity ?? 1);
+        }
+        if (this.baseCurveBlendSelect) {
+            this.baseCurveBlendSelect.setValue(params.baseCurveBlendMode || 'source-over');
         }
 
         // Coset Logic
