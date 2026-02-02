@@ -370,6 +370,16 @@ export class ParamGui {
         this.numberInput.step = val;
     }
 
+    setDisabled(isDisabled) {
+        this.slider.disabled = isDisabled;
+        this.numberInput.disabled = isDisabled;
+        if (isDisabled) {
+            this.container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            this.container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
+
     /**
      * Updates the value from an external source (Store)
      * @param {number} val 

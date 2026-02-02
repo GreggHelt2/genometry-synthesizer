@@ -400,7 +400,8 @@ export class CanvasRenderer {
         return new CurveClass(params);
     }
     getDrawIndices(k, params) {
-        const count = Math.min(params.cosetCount || 1, k);
+        // If "Show All" toggle is active, override count to k
+        const count = params.showAllCosets ? k : Math.min(params.cosetCount || 1, k);
         const dist = params.cosetDistribution || 'sequential';
         const startOffset = params.cosetIndex || 0;
 

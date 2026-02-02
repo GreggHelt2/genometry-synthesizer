@@ -223,8 +223,15 @@ export class ChordalRosettePanel extends Panel {
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets (k): 1' });
         cosetAccordion.append(this.cosetInfo);
 
+        // Show All Cosets Toggle
+        this.showAllCosetsControl = this.createCheckbox('showAllCosets', 'Show All Cosets');
+        cosetAccordion.append(this.showAllCosetsControl.container);
+
         // Coset Count Slider
         this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
+
+        // Disable slider if showAllCosets is on
+        // We'll handle visual disabling in updateUI, but initial set here/updateUI call
         cosetAccordion.append(this.cosetCountControl.container);
 
         // Coset Index (Start Offset)
@@ -608,10 +615,15 @@ export class ChordalRosettePanel extends Panel {
             k = gcd(params.step, params.totalDivs);
         }
 
-        this.cosetInfo.textContent = `Total Cosets (k): ${k}`;
-
-        // Update Coset Count Slider Range
+        // Update Coset Count Slider Range and disable if showAllCosets is true
         if (this.cosetCountControl) {
+            const showAllCosets = params.showAllCosets;
+            this.cosetCountControl.instance.setDisabled(showAllCosets);
+
+            // Stats Update
+            const count = showAllCosets ? k : Math.min(params.cosetCount || 1, k);
+            this.cosetInfo.textContent = `Cosets (k): ${k} | Shown: ${count}`;
+
             // this.cosetCountControl.input.max = k; // OLD
             this.cosetCountControl.instance.setMax(k); // NEW
             this.updateControl(this.cosetCountControl, Math.min(params.cosetCount || 1, k));
