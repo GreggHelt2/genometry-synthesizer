@@ -11,7 +11,8 @@ export class Accordion {
     toggle() {
         this.isOpen = !this.isOpen;
         this.content.style.display = this.isOpen ? 'block' : 'none';
-        this.icon.style.transform = this.isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        // Open: Down (0deg), Closed: Right (-90deg)
+        this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
         if (this.onToggle) this.onToggle(this.isOpen);
     }
 
@@ -30,8 +31,14 @@ export class Accordion {
         header.addEventListener('click', () => this.toggle());
 
         this.titleEl = createElement('span', 'font-bold text-sm', { textContent: this.title });
-        this.icon = createElement('span', 'transition-transform duration-200 text-xs', { textContent: '▼' }); // simple arrow
-        if (this.isOpen) this.icon.style.transform = 'rotate(180deg)';
+        // User requested: Larger triangle, Right (Closed) -> Down (Open)
+        // Using '▼' (Down) as base.
+        // Open: rotate(0deg) = Down
+        // Closed: rotate(-90deg) = Right
+        this.icon = createElement('span', 'transition-transform duration-200 text-lg leading-none', { textContent: '▼' });
+
+        // Initial State
+        this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
 
         header.appendChild(this.titleEl);
         header.appendChild(this.icon);

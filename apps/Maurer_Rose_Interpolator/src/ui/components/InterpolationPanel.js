@@ -17,20 +17,21 @@ export class InterpolationPanel extends Panel {
     }
 
     renderContent() {
+        // Scrollable Controls Container (Matches ChordalRosettePanel)
+        this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
+        this.element.appendChild(this.controlsContainer);
+
         // Info Accordion
         this.infoAccordion = new Accordion('Hybrid Info', false);
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
-        this.element.appendChild(this.infoAccordion.element);
-
-        // Slider
-        const container = createElement('div', 'p-4');
+        this.controlsContainer.appendChild(this.infoAccordion.element);
 
         // Create "Animation" Accordion for Hybrid controls
         this.animationAccordion = new Accordion('Animation', true, (isOpen) => {
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.animationAccordion.content));
         });
-        container.appendChild(this.animationAccordion.element);
+        this.controlsContainer.appendChild(this.animationAccordion.element);
 
         // Morph Weight Slider
         this.morphControl = this.createSlider('weight', 0, 1, 0.001, 'Morph Weight'); // Step was 0.001 in original input
@@ -122,9 +123,19 @@ export class InterpolationPanel extends Panel {
         blendContainer.appendChild(this.blendSelect);
         colorContainer.appendChild(blendContainer);
 
-        container.appendChild(colorContainer);
+        // We need a place for this colorContainer. 
+        // Previously it was in `container`. Let's create an accordion for it or append to animationAccordion? 
+        // RosettePanel puts it in "Chordal Line Viz".
+        // InterpolationPanel had it loose in `container`.
+        // Let's create a "Visualization" Accordion to better organize it.
+        this.vizAccordion = new Accordion('Visualization', true);
+        this.vizAccordion.append(colorContainer);
+        this.controlsContainer.appendChild(this.vizAccordion.element);
+
 
         // Resampling Fallback Section
+        // Previously loose. Move to Viz or its own? 
+        // Let's put it in Visualization for now.
         const resampleContainer = createElement('div', 'flex flex-col mb-4 p-2 border border-gray-700 rounded bg-gray-900/50');
         resampleContainer.appendChild(createElement('label', 'text-sm text-gray-300 mb-1', { textContent: 'Resampling Fallback' }));
 
@@ -133,11 +144,13 @@ export class InterpolationPanel extends Panel {
         this.resampleThresholdControl = this.createSlider('approxResampleThreshold', 0, 50000, 1000, 'Threshold (0=Always)');
         resampleContainer.appendChild(this.resampleThresholdControl.container);
 
-        container.appendChild(resampleContainer);
+        this.vizAccordion.append(resampleContainer);
+
 
         // Coset Visualization Accordion (Hybrid)
         this.cosetAccordion = new Accordion('Coset Visualization', false);
-        this.cosetAccordion.element.style.marginTop = '1rem';
+        // Removed manual margin-top
+        // this.cosetAccordion.element.style.marginTop = '1rem'; 
 
         // Info text
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets Match (k): -' });
@@ -178,7 +191,7 @@ export class InterpolationPanel extends Panel {
         this.cosetAccordion.append(distContainer);
 
         // Append accordion to main container
-        container.appendChild(this.cosetAccordion.element);
+        this.controlsContainer.appendChild(this.cosetAccordion.element);
 
 
 
@@ -198,11 +211,15 @@ export class InterpolationPanel extends Panel {
         this.underlayOpacityControl = this.createSlider('underlayOpacity', 0, 1, 0.01, 'Underlay Opacity');
         underlayContainer.appendChild(this.underlayOpacityControl.container);
 
-        container.appendChild(underlayContainer);
+        // Add to Viz Accordion instead of loose
+        this.vizAccordion.append(underlayContainer);
 
         // Recording Controls Section
-        const recContainer = createElement('div', 'mt-6 pt-4 border-t border-gray-700');
-        recContainer.appendChild(createElement('h3', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Recording' }));
+        // Use an Accordion for Recording? Or append to controlsContainer
+        // Rosette panels don't have recording.
+        // Let's make a Recording Accordion for consistency.
+        this.recordingAccordion = new Accordion('Recording', false);
+        this.controlsContainer.appendChild(this.recordingAccordion.element);
 
         // Format Selector
         const formatWrapper = createElement('div', 'mb-3');
@@ -215,7 +232,7 @@ export class InterpolationPanel extends Panel {
         });
         formatWrapper.appendChild(formatLabel);
         formatWrapper.appendChild(this.formatSelect);
-        recContainer.appendChild(formatWrapper);
+        this.recordingAccordion.append(formatWrapper);
 
         // Record Button
         this.recordBtn = createElement('button', 'w-full px-4 py-2 bg-green-700 rounded hover:bg-green-600 transition-colors flex items-center justify-center gap-2', {
@@ -230,10 +247,8 @@ export class InterpolationPanel extends Panel {
             });
         });
 
-        recContainer.appendChild(this.recordBtn);
-        container.appendChild(recContainer);
-
-        this.element.appendChild(container);
+        this.recordingAccordion.append(this.recordBtn);
+        // this.element.appendChild(container); // Remove old container append
     }
 
     updateUI(state) {

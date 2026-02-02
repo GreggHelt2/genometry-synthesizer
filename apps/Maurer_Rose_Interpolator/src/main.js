@@ -47,10 +47,15 @@ class App {
         this.centerArea.appendChild(this.canvasContainer);
 
         // Controls Layer (Scrollable area below canvas)
-        const centerControls = createElement('div', 'flex-1 overflow-y-auto p-2 bg-gray-800');
+        // 2. Middle Column: Hybrid Canvas + Controls
+        // Controls Container (Bottom Half)
+        // Removed p-2 to match Rosette panels (flush accordions)
+        // Removed overflow-y-auto here because InterpolationPanel now handles its own scrolling internally
+        const centerControls = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden');
+
         this.interpPanel = new InterpolationPanel('interp', 'Controls');
-        // Reset interp panel styling to fit container
-        this.interpPanel.element.className = 'w-full space-y-2';
+        // Fit container, ensure flex growth
+        this.interpPanel.element.className = 'flex-1 flex flex-col w-full';
 
         centerControls.appendChild(this.interpPanel.element);
         this.centerArea.appendChild(centerControls);
