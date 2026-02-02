@@ -68,11 +68,7 @@ export class ChordalRosettePanel extends Panel {
         this.showBaseCurveControl = this.createCheckbox('showBaseCurve', 'Show Base Curve');
         this.baseCurveVizAccordion.append(this.showBaseCurveControl.container);
 
-        // 2. Line Width
-        this.baseCurveWidthControl = this.createSlider('baseCurveLineWidth', 0.1, 10, 0.1, 'Line Width');
-        this.baseCurveVizAccordion.append(this.baseCurveWidthControl.container);
-
-        // 3. Color
+        // 2. Color
         // Note: Using ParamColor for UI, mapped to defaults.js hex string
         this.baseCurveColorControl = new ParamColor({
             key: 'baseCurveColor',
@@ -86,6 +82,10 @@ export class ChordalRosettePanel extends Panel {
             }
         });
         this.baseCurveVizAccordion.append(this.baseCurveColorControl.getElement());
+
+        // 3. Line Width
+        this.baseCurveWidthControl = this.createSlider('baseCurveLineWidth', 0.1, 10, 0.1, 'Line Width');
+        this.baseCurveVizAccordion.append(this.baseCurveWidthControl.container);
 
         // 4. Opacity
         this.baseCurveOpacityControl = this.createSlider('baseCurveOpacity', 0, 1, 0.01, 'Opacity');
