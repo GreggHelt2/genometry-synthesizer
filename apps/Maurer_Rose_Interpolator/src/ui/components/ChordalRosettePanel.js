@@ -281,6 +281,53 @@ export class ChordalRosettePanel extends Panel {
 
         chordalVizAccordion.append(this.opacityControl.container);
 
+        // Vertex Rendering Accordion
+        const vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(vertexAccordion.content));
+        });
+        this.controlsContainer.appendChild(vertexAccordion.element);
+
+        // 1. Toggle
+        this.showVerticesControl = this.createCheckbox('showVertices', 'Show Vertices');
+        vertexAccordion.append(this.showVerticesControl.container);
+
+        // 2. Radius
+        this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
+        vertexAccordion.append(this.vertexRadiusControl.container);
+
+        // 3. Color
+        this.vertexColorControl = new ParamColor({
+            key: 'vertexColor',
+            label: 'Color',
+            value: '#ffffff',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { vertexColor: val }
+                });
+            }
+        });
+        vertexAccordion.append(this.vertexColorControl.getElement());
+
+        // 4. Opacity
+        this.vertexOpacityControl = this.createSlider('vertexOpacity', 0, 1, 0.01, 'Opacity');
+        vertexAccordion.append(this.vertexOpacityControl.container);
+
+        // 5. Blend Mode
+        this.vertexBlendSelect = new ParamSelect({
+            key: 'vertexBlendMode',
+            label: 'Blend Mode',
+            options: blendModes, // Reuse existing blendModes array
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { vertexBlendMode: val }
+                });
+            }
+        });
+        vertexAccordion.append(this.vertexBlendSelect.getElement());
+
         // Coset Visualization Accordion
         const cosetAccordion = new Accordion('Coset Visualization', false, (isOpen) => {
             if (isOpen) requestAnimationFrame(() => this.alignLabels(cosetAccordion.content));
@@ -333,6 +380,7 @@ export class ChordalRosettePanel extends Panel {
             requestAnimationFrame(() => {
                 this.alignLabels(this.maurerAccordion.content);
                 this.alignLabels(chordalVizAccordion.content);
+                this.alignLabels(vertexAccordion.content);
                 this.alignLabels(cosetAccordion.content);
             });
         });
@@ -667,6 +715,23 @@ export class ChordalRosettePanel extends Panel {
             this.baseCurveBlendSelect.setValue(params.baseCurveBlendMode || 'source-over');
         }
 
+        // Vertex Rendering Updates
+        if (this.showVerticesControl) {
+            this.showVerticesControl.input.checked = params.showVertices;
+        }
+        if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
+            this.updateControl(this.vertexRadiusControl, params.vertexRadius ?? 2);
+        }
+        if (this.vertexColorControl) {
+            this.vertexColorControl.setValue(params.vertexColor || '#ffffff');
+        }
+        if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
+            this.updateControl(this.vertexOpacityControl, params.vertexOpacity ?? 1);
+        }
+        if (this.vertexBlendSelect) {
+            this.vertexBlendSelect.setValue(params.vertexBlendMode || 'source-over');
+        }
+
         // Coset Logic
         // Determine k based on Sequencer
         let k;
@@ -849,29 +914,59 @@ export class ChordalRosettePanel extends Panel {
 
         // Helper to check and update a control
         const checkControl = (control, paramKey) => {
-            if (!control || !control.instance) return;
+            if (!control) return;
+            // Handle both wrapped controls (from createSlider) and direct instances (ParamColor/Select)
+            const instance = control.instance || control;
+
+            // Ensure it's a valid Param component with linking support
+            if (!instance.setLinkActive) return;
 
             const myKey = `${this.roseId}.${paramKey}`;
             const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
             const otherKey = `${otherRoseId}.${paramKey}`;
 
             const isLinked = this.linkManager.areLinked(myKey, otherKey);
-            control.instance.setLinkActive(isLinked);
+            instance.setLinkActive(isLinked);
         };
 
-        // 1. Param Controls
+        // 1. Param Controls (Dynamic)
         if (this.paramControls) {
             Object.entries(this.paramControls).forEach(([key, control]) => {
                 checkControl(control, key);
             });
         }
 
-        // 2. Sequencer Controls
+        // 2. Sequencer Controls (Dynamic)
         if (this.sequencerControls) {
             Object.entries(this.sequencerControls).forEach(([key, control]) => {
                 checkControl(control, key);
             });
         }
+
+        // 3. Standalone Controls
+        // Base Curve
+        checkControl(this.baseCurveColorControl, 'baseCurveColor');
+        checkControl(this.baseCurveWidthControl, 'baseCurveLineWidth');
+        checkControl(this.baseCurveOpacityControl, 'baseCurveOpacity');
+        checkControl(this.baseCurveBlendSelect, 'baseCurveBlendMode');
+
+        // Sequencer / Modulo
+        checkControl(this.divsControl, 'totalDivs');
+        checkControl(this.cosetCountControl, 'cosetCount');
+        checkControl(this.cosetIndexControl, 'cosetIndex');
+
+        // Chordal Line Viz
+        checkControl(this.opacityControl, 'opacity');
+        checkControl(this.methodSelect, 'colorMethod');
+        checkControl(this.colorInput, 'color');
+        checkControl(this.blendSelect, 'blendMode');
+        checkControl(this.lineWidthControl, 'lineWidth');
+
+        // Vertex Rendering
+        checkControl(this.vertexRadiusControl, 'vertexRadius');
+        checkControl(this.vertexColorControl, 'vertexColor');
+        checkControl(this.vertexOpacityControl, 'vertexOpacity');
+        checkControl(this.vertexBlendSelect, 'vertexBlendMode');
     }
 
     updateControl(control, value) {

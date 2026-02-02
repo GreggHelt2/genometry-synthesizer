@@ -31,6 +31,12 @@ export const DEFAULTS = {
         baseCurveColor: '#666666',
         baseCurveOpacity: 1,
         baseCurveBlendMode: 'source-over',
+        // Vertex Rendering
+        showVertices: false,
+        vertexRadius: 2,
+        vertexColor: '#ffffff',
+        vertexOpacity: 1,
+        vertexBlendMode: 'source-over',
     },
     rosetteB: {
         curveType: 'Rhodonea',
@@ -58,6 +64,12 @@ export const DEFAULTS = {
         baseCurveColor: '#666666',
         baseCurveOpacity: 1,
         baseCurveBlendMode: 'source-over',
+        // Vertex Rendering
+        showVertices: false,
+        vertexRadius: 2,
+        vertexColor: '#ffffff',
+        vertexOpacity: 1,
+        vertexBlendMode: 'source-over',
     },
     hybrid: {
         weight: 0.0, // 0 to 1
@@ -81,6 +93,15 @@ export const DEFAULTS = {
         baseCurveColorB: '#666666',
         baseCurveOpacityB: 1,
         baseCurveBlendModeB: 'source-over',
+        // Vertex Rendering (Hybrid - specific to A/B not usually needed unless overriding, 
+        // but let's see. Plan said "Update renderInterpolation to call polylineLayer.drawVertices".
+        // Usually Hybrid inherits from Rosette A/B or has its own overrides?
+        // Let's add them to hybrid for consistency if we want to override in hybrid view.)
+        showVertices: false,
+        vertexRadius: 2,
+        vertexColor: '#ffffff',
+        vertexOpacity: 1,
+        vertexBlendMode: 'source-over',
     },
     settings: {
         theme: 'dark',

@@ -173,6 +173,25 @@ export class CanvasRenderer {
         // Reset Blend Mode
         this.ctx.globalCompositeOperation = 'source-over';
 
+        if (roseParams.showVertices) {
+            this.ctx.globalCompositeOperation = roseParams.vertexBlendMode || 'source-over';
+            indicesToDraw.forEach(idx => {
+                let seed;
+                if (disjointCosets) {
+                    seed = disjointCosets[idx % disjointCosets.length];
+                } else {
+                    seed = idx;
+                }
+                const points = generateMaurerPolyline(curve, sequencer, roseParams.totalDivs, seed, roseParams);
+                this.polylineLayer.drawVertices(points, {
+                    color: roseParams.vertexColor,
+                    radius: roseParams.vertexRadius,
+                    opacity: roseParams.vertexOpacity
+                });
+            });
+            this.ctx.globalCompositeOperation = 'source-over';
+        }
+
         this.ctx.restore();
     }
 
@@ -458,6 +477,60 @@ export class CanvasRenderer {
 
         // Reset Blend Mode
         this.ctx.globalCompositeOperation = 'source-over';
+
+        if (state.hybrid.showVertices) {
+            this.ctx.globalCompositeOperation = state.hybrid.vertexBlendMode || 'source-over';
+
+            const drawHybridVertices = (ptsA, ptsB) => {
+                const segsA = ptsA.length > 0 ? ptsA.length - 1 : 0;
+                const segsB = ptsB.length > 0 ? ptsB.length - 1 : 0;
+                let finalPtsA = ptsA;
+                let finalPtsB = ptsB;
+
+                if (segsA > 0 && segsB > 0 && segsA !== segsB) {
+                    const targetSegs = lcm(segsA, segsB);
+                    const threshold = state.hybrid.approxResampleThreshold ?? 20000;
+                    const useApprox = (threshold === 0) || (targetSegs > threshold);
+
+                    if (useApprox) {
+                        const sampleCount = (threshold === 0) ? 20000 : threshold;
+                        finalPtsA = resamplePolylineApprox(ptsA, sampleCount);
+                        finalPtsB = resamplePolylineApprox(ptsB, sampleCount);
+                    } else if (targetSegs > 0) {
+                        finalPtsA = resamplePolyline(ptsA, targetSegs);
+                        finalPtsB = resamplePolyline(ptsB, targetSegs);
+                    }
+                }
+
+                const weight = state.hybrid.weight;
+                const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
+
+                this.polylineLayer.drawVertices(pointsInterp, {
+                    color: state.hybrid.vertexColor,
+                    radius: state.hybrid.vertexRadius,
+                    opacity: state.hybrid.vertexOpacity
+                });
+            };
+
+            if (isExactMatch || isLCMMatch) {
+                const targetK = isExactMatch ? kA : ringsLCM;
+                const indices = this.getDrawIndices(targetK, state.hybrid);
+                indices.forEach(idx => {
+                    const subA = (cosetsA) ? cosetsA[idx % kA] : idx % kA;
+                    const subB = (cosetsB) ? cosetsB[idx % kB] : idx % kB;
+                    const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+                    const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+                    drawHybridVertices(pointsA, pointsB);
+                });
+            } else {
+                const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
+                const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
+                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+                drawHybridVertices(pointsA, pointsB);
+            }
+            this.ctx.globalCompositeOperation = 'source-over';
+        }
 
         this.ctx.restore();
     }

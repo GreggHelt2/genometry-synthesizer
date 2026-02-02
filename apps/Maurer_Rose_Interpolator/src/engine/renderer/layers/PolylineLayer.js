@@ -44,4 +44,21 @@ export class PolylineLayer {
 
         this.ctx.globalAlpha = 1; // Reset
     }
+
+    drawVertices(points, style) {
+        if (!points || points.length === 0) return;
+
+        this.ctx.fillStyle = style.color || 'white';
+        this.ctx.globalAlpha = style.opacity ?? 1;
+
+        const radius = style.radius || 2;
+
+        this.ctx.beginPath();
+        for (let i = 0; i < points.length; i++) {
+            this.ctx.moveTo(points[i].x + radius, points[i].y);
+            this.ctx.arc(points[i].x, points[i].y, radius, 0, Math.PI * 2);
+        }
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1; // Reset
+    }
 }

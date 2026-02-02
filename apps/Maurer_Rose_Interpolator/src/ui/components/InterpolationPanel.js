@@ -150,6 +150,55 @@ export class InterpolationPanel extends Panel {
         this.vizAccordion.append(resampleContainer);
 
 
+        // Vertex Rendering Accordion
+        this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen) => {
+            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.vertexAccordion.content));
+        });
+        this.controlsContainer.appendChild(this.vertexAccordion.element);
+
+        // 1. Toggle
+        this.showVerticesControl = this.createCheckbox('showVertices', 'Show Vertices');
+        this.vertexAccordion.append(this.showVerticesControl.container);
+
+        // 2. Radius
+        this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
+        this.vertexAccordion.append(this.vertexRadiusControl.container);
+
+        // 3. Color
+        this.vertexColorControl = new ParamColor({
+            key: 'vertexColor',
+            label: 'Color',
+            value: '#ffffff',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { vertexColor: val }
+                });
+            }
+        });
+        this.vertexAccordion.append(this.vertexColorControl.getElement());
+
+        // 4. Opacity
+        this.vertexOpacityControl = this.createSlider('vertexOpacity', 0, 1, 0.01, 'Opacity');
+        this.vertexAccordion.append(this.vertexOpacityControl.container);
+
+        // 5. Blend Mode
+        // Reuse blendModes array if available or recreate
+        this.vertexBlendSelect = new ParamSelect({
+            key: 'vertexBlendMode',
+            label: 'Blend Mode',
+            options: blendModes, // Reusing the blendModes array defined earlier
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { vertexBlendMode: val }
+                });
+            }
+        });
+        this.vertexAccordion.append(this.vertexBlendSelect.getElement());
+
+
         // Coset Visualization Accordion (Hybrid)
         this.cosetAccordion = new Accordion('Coset Visualization', false);
         // Removed manual margin-top
@@ -413,12 +462,14 @@ export class InterpolationPanel extends Panel {
     }
 
     updateUI(state) {
+        const hybridParams = state.hybrid;
+
         if (this.morphControl) {
-            this.morphControl.instance.setValue(state.hybrid.weight);
+            this.morphControl.instance.setValue(hybridParams.weight);
         }
 
         if (this.opacityControl) {
-            this.opacityControl.instance.setValue(state.hybrid.opacity ?? 1);
+            this.opacityControl.instance.setValue(hybridParams.opacity ?? 1);
         }
 
         // --- Hybrid Coset Logic ---
@@ -438,7 +489,7 @@ export class InterpolationPanel extends Panel {
 
         const kA = getK(state.rosetteA);
         const kB = getK(state.rosetteB);
-        const useLCM = state.hybrid.matchCosetsByLCM;
+        const useLCM = hybridParams.matchCosetsByLCM;
         const ringsLCM = lcm(kA, kB);
         const isMatching = (kA === kB && kA > 1);
         const isLCMMatching = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
@@ -486,23 +537,23 @@ export class InterpolationPanel extends Panel {
         // Update Max Ranges
         if (this.cosetCountControl) {
             this.cosetCountControl.instance.setMax(effectiveK);
-            this.cosetCountControl.instance.setValue(Math.min(state.hybrid.cosetCount || 1, effectiveK));
+            this.cosetCountControl.instance.setValue(Math.min(hybridParams.cosetCount || 1, effectiveK));
         }
 
         // Index Max: ideally wrapping max(kA, kB)
         const indexMax = (enableMultiControls) ? effectiveK : Math.max(kA, kB);
         if (this.cosetIndexControl) {
             this.cosetIndexControl.instance.setMax(Math.max(1, indexMax - 1));
-            this.cosetIndexControl.instance.setValue((state.hybrid.cosetIndex || 0) % (indexMax || 1));
+            this.cosetIndexControl.instance.setValue((hybridParams.cosetIndex || 0) % (indexMax || 1));
         }
 
         if (this.distSelect) {
-            this.distSelect.setValue(state.hybrid.cosetDistribution || 'sequential');
+            this.distSelect.setValue(hybridParams.cosetDistribution || 'sequential');
         }
 
         // Update Threshold Slider
         if (this.resampleThresholdControl) {
-            this.resampleThresholdControl.instance.setValue(state.hybrid.approxResampleThreshold ?? 20000);
+            this.resampleThresholdControl.instance.setValue(hybridParams.approxResampleThreshold ?? 20000);
         }
 
         // Update Info Panel with Resampling Status
@@ -511,40 +562,57 @@ export class InterpolationPanel extends Panel {
         // --------------------------
 
         if (this.colorInput) {
-            this.colorInput.setValue(state.hybrid.color || '#ffffff');
+            this.colorInput.setValue(hybridParams.color || '#ffffff');
         }
         if (this.methodSelect) {
-            this.methodSelect.setValue(state.hybrid.colorMethod || 'solid');
+            this.methodSelect.setValue(hybridParams.colorMethod || 'solid');
         }
         if (this.blendSelect) {
-            this.blendSelect.setValue(state.hybrid.blendMode || 'source-over');
+            this.blendSelect.setValue(hybridParams.blendMode || 'source-over');
         }
 
         // Update Underlays
-        this.showACheck.setValue(state.hybrid.showRoseA);
-        this.showBCheck.setValue(state.hybrid.showRoseB);
+        this.showACheck.setValue(hybridParams.showRoseA);
+        this.showBCheck.setValue(hybridParams.showRoseB);
         if (this.underlayOpacityControl) {
-            this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
+            this.underlayOpacityControl.instance.setValue(hybridParams.underlayOpacity);
         }
         if (this.underlayOpacityControl) {
-            this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
+            this.underlayOpacityControl.instance.setValue(hybridParams.underlayOpacity);
         }
 
         // Base Curve Viz Updates (A)
-        this.showBaseCurveControlA.input.checked = state.hybrid.showBaseCurveA;
-        if (this.baseCurveWidthControlA) this.baseCurveWidthControlA.instance.setValue(state.hybrid.baseCurveLineWidthA ?? 2);
-        if (this.baseCurveColorControlA) this.baseCurveColorControlA.setValue(state.hybrid.baseCurveColorA || '#666666');
-        if (this.baseCurveOpacityControlA) this.baseCurveOpacityControlA.instance.setValue(state.hybrid.baseCurveOpacityA ?? 1);
-        if (this.baseCurveBlendSelectA) this.baseCurveBlendSelectA.setValue(state.hybrid.baseCurveBlendModeA || 'source-over');
+        this.showBaseCurveControlA.input.checked = hybridParams.showBaseCurveA;
+        if (this.baseCurveWidthControlA) this.baseCurveWidthControlA.instance.setValue(hybridParams.baseCurveLineWidthA ?? 2);
+        if (this.baseCurveColorControlA) this.baseCurveColorControlA.setValue(hybridParams.baseCurveColorA || '#666666');
+        if (this.baseCurveOpacityControlA) this.baseCurveOpacityControlA.instance.setValue(hybridParams.baseCurveOpacityA ?? 1);
+        if (this.baseCurveBlendSelectA) this.baseCurveBlendSelectA.setValue(hybridParams.baseCurveBlendModeA || 'source-over');
 
         // Base Curve Viz Updates (B)
-        this.showBaseCurveControlB.input.checked = state.hybrid.showBaseCurveB;
-        if (this.baseCurveWidthControlB) this.baseCurveWidthControlB.instance.setValue(state.hybrid.baseCurveLineWidthB ?? 2);
-        if (this.baseCurveColorControlB) this.baseCurveColorControlB.setValue(state.hybrid.baseCurveColorB || '#666666');
-        if (this.baseCurveOpacityControlB) this.baseCurveOpacityControlB.instance.setValue(state.hybrid.baseCurveOpacityB ?? 1);
-        if (this.baseCurveBlendSelectB) this.baseCurveBlendSelectB.setValue(state.hybrid.baseCurveBlendModeB || 'source-over');
+        this.showBaseCurveControlB.input.checked = hybridParams.showBaseCurveB;
+        if (this.baseCurveWidthControlB) this.baseCurveWidthControlB.instance.setValue(hybridParams.baseCurveLineWidthB ?? 2);
+        if (this.baseCurveColorControlB) this.baseCurveColorControlB.setValue(hybridParams.baseCurveColorB || '#666666');
+        if (this.baseCurveOpacityControlB) this.baseCurveOpacityControlB.instance.setValue(hybridParams.baseCurveOpacityB ?? 1);
+        if (this.baseCurveBlendSelectB) {
+            this.baseCurveBlendSelectB.setValue(hybridParams.baseCurveBlendModeB || 'source-over');
+        }
 
-
+        // Vertex Rendering Updates
+        if (this.showVerticesControl) {
+            this.showVerticesControl.input.checked = hybridParams.showVertices;
+        }
+        if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
+            this.vertexRadiusControl.instance.setValue(hybridParams.vertexRadius ?? 2);
+        }
+        if (this.vertexColorControl) {
+            this.vertexColorControl.setValue(hybridParams.vertexColor || '#ffffff');
+        }
+        if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
+            this.vertexOpacityControl.instance.setValue(hybridParams.vertexOpacity ?? 1);
+        }
+        if (this.vertexBlendSelect) {
+            this.vertexBlendSelect.setValue(hybridParams.vertexBlendMode || 'source-over');
+        }
 
         const isRecording = state.app.isRecording;
         this.recordBtn.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
