@@ -3,7 +3,7 @@ import { WaveformSelector } from './WaveformSelector.js';
 import { AnimationController } from '../../logic/AnimationController.js';
 
 
-export class ParamGui {
+export class ParamNumber {
     constructor({ key, label, min, max, step, value, onChange, onLinkToggle }) {
         this.key = key;
         this.onChange = onChange;

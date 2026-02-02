@@ -7,7 +7,7 @@ import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistr
 import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
-import { ParamGui } from './ParamGui.js';
+import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 
@@ -428,8 +428,8 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createSlider(key, min, max, step, label) {
-        // Use ParamGui
-        const paramGui = new ParamGui({
+        // Use ParamNumber
+        const paramGui = new ParamNumber({
             key,
             label,
             min,
@@ -455,9 +455,9 @@ export class ChordalRosettePanel extends Panel {
                 // But for now, click = toggle
                 import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
                     const linked = linkManager.toggleLink(myKey, otherKey);
-                    // Update visual state to match reality (handled by ParamGui internal state? no, should be driven by props)
-                    // But ParamGui tracks its own isLinked.
-                    // Ideally we sync ParamGui.isLinked with LinkManager status.
+                    // Update visual state to match reality (handled by ParamNumber internal state? no, should be driven by props)
+                    // But ParamNumber tracks its own isLinked.
+                    // Ideally we sync ParamNumber.isLinked with LinkManager status.
                     if (linked !== isActive) {
                         // Visual mismatch corrected
                         paramGui.setLinkActive(linked);
@@ -789,7 +789,7 @@ export class ChordalRosettePanel extends Panel {
 
     updateControl(control, value) {
         if (control.instance) {
-            // New ParamGui Path
+            // New ParamNumber Path
             control.instance.setValue(value);
         } else {
             // Legacy Path (if any remaining)

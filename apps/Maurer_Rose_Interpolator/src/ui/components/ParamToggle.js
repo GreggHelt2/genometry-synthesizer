@@ -122,4 +122,11 @@ export class ParamToggle {
             this.updateLinkVisuals();
         }
     }
+    setDisabled(isDisabled) {
+        if (isDisabled) {
+            this.container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            this.container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
 }

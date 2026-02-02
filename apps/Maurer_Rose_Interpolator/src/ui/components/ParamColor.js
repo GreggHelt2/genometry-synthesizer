@@ -131,4 +131,13 @@ export class ParamColor {
             this.updateLinkVisuals();
         }
     }
+    setDisabled(isDisabled) {
+        this.colorInput.disabled = isDisabled;
+        this.textInput.disabled = isDisabled;
+        if (isDisabled) {
+            this.container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            this.container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
 }

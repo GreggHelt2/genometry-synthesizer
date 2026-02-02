@@ -7,7 +7,7 @@ import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistr
 import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
 import { generateMaurerPolyline } from '../../engine/math/maurer.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js'; // Needed if we generate points to count
-import { ParamGui } from './ParamGui.js';
+import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
@@ -499,8 +499,8 @@ export class InterpolationPanel extends Panel {
     }
 
     createSlider(key, min, max, step, label) {
-        // Use ParamGui
-        const paramGui = new ParamGui({
+        // Use ParamNumber
+        const paramGui = new ParamNumber({
             key,
             label,
             min,

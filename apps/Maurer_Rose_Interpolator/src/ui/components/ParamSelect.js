@@ -13,11 +13,11 @@ export class ParamSelect {
     }
 
     render({ label, value }) {
-        // Container matching ParamGui vertical rhythm
+        // Container matching ParamNumber vertical rhythm
         this.container = createElement('div', 'flex flex-col mb-3');
 
         // Grid Layout: Label | Select | Link (Optional)
-        // Using same grid structure as ParamGui but simplistic
+        // Using same grid structure as ParamNumber but simplistic
         const row = createElement('div', 'grid grid-cols-[auto_1fr_auto] gap-2 items-center');
 
         // 1. Label
@@ -125,6 +125,14 @@ export class ParamSelect {
         if (this.isLinked !== isActive) {
             this.isLinked = isActive;
             this.updateLinkVisuals();
+        }
+    }
+    setDisabled(isDisabled) {
+        this.selectEl.disabled = isDisabled;
+        if (isDisabled) {
+            this.container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            this.container.classList.remove('opacity-50', 'pointer-events-none');
         }
     }
 }
