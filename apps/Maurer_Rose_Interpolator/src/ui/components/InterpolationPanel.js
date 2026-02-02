@@ -8,6 +8,9 @@ import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
 import { generateMaurerPolyline } from '../../engine/math/maurer.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js'; // Needed if we generate points to count
 import { ParamGui } from './ParamGui.js';
+import { ParamSelect } from './ParamSelect.js';
+import { ParamColor } from './ParamColor.js';
+import { ParamToggle } from './ParamToggle.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -50,46 +53,45 @@ export class InterpolationPanel extends Panel {
         // Interpolation Color & Method
         const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
 
-        // Row 1: Method
-        const methodRow = createElement('div', 'flex items-center justify-between mb-2');
-        const methodLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Rosette Coloring Method' });
+        // Interpolation Color & Method
 
-        this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
-        ['solid', 'length', 'angle', 'sequence'].forEach(m => {
-            const opt = createElement('option', '', { value: m, textContent: m.charAt(0).toUpperCase() + m.slice(1) });
-            this.methodSelect.appendChild(opt);
+        // 1. Method
+        const methodOptions = [
+            { value: 'solid', label: 'Solid' },
+            { value: 'length', label: 'Length' },
+            { value: 'angle', label: 'Angle' },
+            { value: 'sequence', label: 'Sequence' }
+        ];
+
+        this.methodSelect = new ParamSelect({
+            key: 'colorMethod',
+            label: 'Color Method',
+            options: methodOptions,
+            value: 'solid',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { colorMethod: val }
+                });
+            }
         });
-        this.methodSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { colorMethod: e.target.value }
-            });
+        colorContainer.append(this.methodSelect.getElement());
+
+        // 2. Color
+        this.colorInput = new ParamColor({
+            key: 'color',
+            label: 'Color',
+            value: '#ffffff',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { color: val }
+                });
+            }
         });
+        colorContainer.append(this.colorInput.getElement());
 
-        methodRow.appendChild(methodLabel);
-        methodRow.appendChild(this.methodSelect);
-        colorContainer.appendChild(methodRow);
-
-        // Row 2: Color
-        const colorRow = createElement('div', 'flex items-center justify-between');
-        const colorLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Colors' });
-
-        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
-        this.colorInput.addEventListener('input', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { color: e.target.value }
-            });
-        });
-
-        colorRow.appendChild(colorLabel);
-        colorRow.appendChild(this.colorInput);
-        colorContainer.appendChild(colorRow);
-
-        // Row 3: Blend Mode
-        const blendContainer = createElement('div', 'flex items-center justify-between mt-2');
-        const blendLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Blend Mode' });
-        this.blendSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
+        // 3. Blend Mode
         const blendModes = [
             { value: 'source-over', label: 'Normal' },
             { value: 'lighter', label: 'Lighter (Add)' },
@@ -109,19 +111,20 @@ export class InterpolationPanel extends Panel {
             { value: 'color', label: 'Color' },
             { value: 'luminosity', label: 'Luminosity' }
         ];
-        blendModes.forEach(m => {
-            const opt = createElement('option', '', { value: m.value, textContent: m.label });
-            this.blendSelect.appendChild(opt);
+
+        this.blendSelect = new ParamSelect({
+            key: 'blendMode',
+            label: 'Blend Mode',
+            options: blendModes,
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { blendMode: val }
+                });
+            }
         });
-        this.blendSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { blendMode: e.target.value }
-            });
-        });
-        blendContainer.appendChild(blendLabel);
-        blendContainer.appendChild(this.blendSelect);
-        colorContainer.appendChild(blendContainer);
+        colorContainer.append(this.blendSelect.getElement());
 
         // We need a place for this colorContainer. 
         // Previously it was in `container`. Let's create an accordion for it or append to animationAccordion? 
@@ -157,8 +160,18 @@ export class InterpolationPanel extends Panel {
         this.cosetAccordion.append(this.cosetInfo);
 
         // LCM Match Toggle
-        this.lcmMatchCheck = this.createCheckbox('matchCosetsByLCM', 'Match Cosets by LCM');
-        this.cosetAccordion.append(this.lcmMatchCheck.container);
+        this.lcmMatchCheck = new ParamToggle({
+            key: 'matchCosetsByLCM',
+            label: 'Match Cosets by LCM',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { matchCosetsByLCM: val }
+                });
+            }
+        });
+        this.cosetAccordion.append(this.lcmMatchCheck.getElement());
 
         // Coset Count
         this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
@@ -169,26 +182,25 @@ export class InterpolationPanel extends Panel {
         this.cosetAccordion.append(this.cosetIndexControl.container);
 
         // Distribution
-        const distContainer = createElement('div', 'flex flex-col mb-2');
-        const distLabel = createElement('label', 'text-xs text-gray-400 mb-1', { textContent: 'Distribution' });
-        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1');
+        const distOptions = [
+            { value: 'sequential', label: 'Sequential' },
+            { value: 'distributed', label: 'Distributed' },
+            { value: 'two-way', label: 'Two-Way' }
+        ];
 
-        ['Sequential', 'Distributed', 'Two-Way'].forEach(m => {
-            const val = m.toLowerCase();
-            const opt = createElement('option', '', { value: val, textContent: m });
-            this.distSelect.appendChild(opt);
+        this.distSelect = new ParamSelect({
+            key: 'cosetDistribution',
+            label: 'Distribution',
+            options: distOptions,
+            value: 'sequential',
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { cosetDistribution: val }
+                });
+            }
         });
-
-        this.distSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { cosetDistribution: e.target.value }
-            });
-        });
-
-        distContainer.appendChild(distLabel);
-        distContainer.appendChild(this.distSelect);
-        this.cosetAccordion.append(distContainer);
+        this.cosetAccordion.append(this.distSelect.getElement());
 
         // Append accordion to main container
         this.controlsContainer.appendChild(this.cosetAccordion.element);
@@ -200,12 +212,39 @@ export class InterpolationPanel extends Panel {
         underlayContainer.appendChild(createElement('h3', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Underlays' }));
 
         // Toggles
-        const toggleRow = createElement('div', 'flex gap-4 mb-2');
-        this.showACheck = this.createCheckbox('showRoseA', 'Show A');
-        this.showBCheck = this.createCheckbox('showRoseB', 'Show B');
-        toggleRow.appendChild(this.showACheck.container);
-        toggleRow.appendChild(this.showBCheck.container);
-        underlayContainer.appendChild(toggleRow);
+        // Toggles
+        // const toggleRow = createElement('div', 'flex gap-4 mb-2');
+
+        // Use individual rows for toggle consistency since they are block-level styled now? 
+        // Actually ParamToggle is flex row.
+        // Let's just stack them.
+
+        this.showACheck = new ParamToggle({
+            key: 'showRoseA',
+            label: 'Show Source A',
+            value: true,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { showRoseA: val }
+                });
+            }
+        });
+
+        this.showBCheck = new ParamToggle({
+            key: 'showRoseB',
+            label: 'Show Source B',
+            value: true,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { showRoseB: val }
+                });
+            }
+        });
+
+        underlayContainer.appendChild(this.showACheck.getElement());
+        underlayContainer.appendChild(this.showBCheck.getElement());
 
         // Opacity
         this.underlayOpacityControl = this.createSlider('underlayOpacity', 0, 1, 0.01, 'Underlay Opacity');
@@ -284,7 +323,7 @@ export class InterpolationPanel extends Panel {
 
         // Always show the panel
         this.cosetAccordion.element.style.display = 'block';
-        this.lcmMatchCheck.input.checked = useLCM;
+        this.lcmMatchCheck.setValue(useLCM);
 
         let effectiveK = 1;
 
@@ -316,8 +355,8 @@ export class InterpolationPanel extends Panel {
         this.cosetCountControl.container.style.opacity = enableMultiControls ? '1' : '0.5';
         this.cosetCountControl.input.disabled = !enableMultiControls;
 
-        this.distSelect.disabled = !enableMultiControls;
-        this.distSelect.parentElement.style.opacity = enableMultiControls ? '1' : '0.5';
+        this.distSelect.setDisabled(!enableMultiControls);
+        this.distSelect.getElement().style.opacity = enableMultiControls ? '1' : '0.5';
 
         this.cosetIndexControl.container.style.opacity = enableIndexControl ? '1' : '0.5';
         this.cosetIndexControl.input.disabled = !enableIndexControl;
@@ -335,8 +374,8 @@ export class InterpolationPanel extends Panel {
             this.cosetIndexControl.instance.setValue((state.hybrid.cosetIndex || 0) % (indexMax || 1));
         }
 
-        if (this.distSelect.value !== state.hybrid.cosetDistribution) {
-            this.distSelect.value = state.hybrid.cosetDistribution || 'sequential';
+        if (this.distSelect) {
+            this.distSelect.setValue(state.hybrid.cosetDistribution || 'sequential');
         }
 
         // Update Threshold Slider
@@ -349,19 +388,19 @@ export class InterpolationPanel extends Panel {
         this.updateInfo(state, kA, kB);
         // --------------------------
 
-        if (this.colorInput.value !== state.hybrid.color) {
-            this.colorInput.value = state.hybrid.color || '#ffffff';
+        if (this.colorInput) {
+            this.colorInput.setValue(state.hybrid.color || '#ffffff');
         }
-        if (this.methodSelect.value !== state.hybrid.colorMethod) {
-            this.methodSelect.value = state.hybrid.colorMethod || 'solid';
+        if (this.methodSelect) {
+            this.methodSelect.setValue(state.hybrid.colorMethod || 'solid');
         }
-        if (this.blendSelect.value !== state.hybrid.blendMode) {
-            this.blendSelect.value = state.hybrid.blendMode || 'source-over';
+        if (this.blendSelect) {
+            this.blendSelect.setValue(state.hybrid.blendMode || 'source-over');
         }
 
         // Update Underlays
-        this.showACheck.input.checked = state.hybrid.showRoseA;
-        this.showBCheck.input.checked = state.hybrid.showRoseB;
+        this.showACheck.setValue(state.hybrid.showRoseA);
+        this.showBCheck.setValue(state.hybrid.showRoseB);
         if (this.underlayOpacityControl) {
             this.underlayOpacityControl.instance.setValue(state.hybrid.underlayOpacity);
         }

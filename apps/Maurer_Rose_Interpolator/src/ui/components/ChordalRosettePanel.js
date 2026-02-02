@@ -8,6 +8,8 @@ import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
 import { ParamGui } from './ParamGui.js';
+import { ParamSelect } from './ParamSelect.js';
+import { ParamColor } from './ParamColor.js';
 
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
@@ -127,48 +129,44 @@ export class ChordalRosettePanel extends Panel {
         this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Opacity');
 
         // Color Control
-        const colorContainer = createElement('div', 'flex flex-col mb-2 p-2');
 
-        // Row 1: Method
-        const methodRow = createElement('div', 'flex items-center justify-between mb-2');
-        const methodLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Rosette Coloring Method' });
+        // 1. Method
+        const methodOptions = [
+            { value: 'solid', label: 'Solid' },
+            { value: 'length', label: 'Length' },
+            { value: 'angle', label: 'Angle' },
+            { value: 'sequence', label: 'Sequence' }
+        ];
 
-        this.methodSelect = createElement('select', 'flex-1 bg-gray-700 text-white text-xs rounded border border-gray-600 px-1');
-        ['solid', 'length', 'angle', 'sequence'].forEach(m => {
-            const opt = createElement('option', '', { value: m, textContent: m.charAt(0).toUpperCase() + m.slice(1) });
-            this.methodSelect.appendChild(opt);
+        this.methodSelect = new ParamSelect({
+            key: 'colorMethod',
+            label: 'Color Method',
+            options: methodOptions,
+            value: 'solid',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { colorMethod: val }
+                });
+            }
         });
-        this.methodSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { colorMethod: e.target.value }
-            });
+        chordalVizAccordion.append(this.methodSelect.getElement());
+
+        // 2. Color
+        this.colorInput = new ParamColor({
+            key: 'color',
+            label: 'Color',
+            value: '#ffffff',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { color: val }
+                });
+            }
         });
+        chordalVizAccordion.append(this.colorInput.getElement());
 
-        methodRow.appendChild(methodLabel);
-        methodRow.appendChild(this.methodSelect);
-        colorContainer.appendChild(methodRow);
-
-        // Row 2: Colors
-        const colorRow = createElement('div', 'flex items-center justify-between');
-        const colorLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Colors' });
-
-        this.colorInput = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
-        this.colorInput.addEventListener('input', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { color: e.target.value }
-            });
-        });
-
-        colorRow.appendChild(colorLabel);
-        colorRow.appendChild(this.colorInput);
-        colorContainer.appendChild(colorRow);
-
-        // Blend Mode
-        const blendContainer = createElement('div', 'flex items-center justify-between mt-2');
-        const blendLabel = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Blend Mode' });
-        this.blendSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
+        // 3. Blend Mode
         const blendModes = [
             { value: 'source-over', label: 'Normal' },
             { value: 'lighter', label: 'Lighter (Add)' },
@@ -188,21 +186,20 @@ export class ChordalRosettePanel extends Panel {
             { value: 'color', label: 'Color' },
             { value: 'luminosity', label: 'Luminosity' }
         ];
-        blendModes.forEach(m => {
-            const opt = createElement('option', '', { value: m.value, textContent: m.label });
-            this.blendSelect.appendChild(opt);
-        });
-        this.blendSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { blendMode: e.target.value }
-            });
-        });
-        blendContainer.appendChild(blendLabel);
-        blendContainer.appendChild(this.blendSelect);
-        colorContainer.appendChild(blendContainer);
 
-        chordalVizAccordion.append(colorContainer);
+        this.blendSelect = new ParamSelect({
+            key: 'blendMode',
+            label: 'Blend Mode',
+            options: blendModes,
+            value: 'source-over',
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { blendMode: val }
+                });
+            }
+        });
+        chordalVizAccordion.append(this.blendSelect.getElement());
 
         // Line Width
         this.lineWidthControl = this.createSlider('lineWidth', 0.1, 10, 0.1, 'Line Width');
@@ -272,26 +269,24 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createCurveTypeSelector(parent) {
-        const container = createElement('div', 'flex items-center justify-between mb-3 p-2 border-b border-gray-700');
-        const label = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Curve Type' });
-        const select = createElement('select', 'bg-gray-700 text-white text-sm rounded border border-gray-600 px-2 py-1 flex-1', {});
+        const options = Object.keys(CurveRegistry);
 
-        Object.keys(CurveRegistry).forEach(type => {
-            const opt = createElement('option', '', { value: type, textContent: type });
-            select.appendChild(opt);
+        this.curveTypeSelect = new ParamSelect({
+            key: 'curveType',
+            label: 'Curve Type',
+            options: options,
+            value: 'Rhodonea', // Default
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { curveType: val }
+                });
+            }
         });
 
-        select.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { curveType: e.target.value }
-            });
-        });
-
-        this.curveTypeSelect = select;
-        container.appendChild(label);
-        container.appendChild(select);
-        parent.append(container);
+        // Insert at top? parent is Core Accordion
+        // Accordion append adds to content
+        parent.append(this.curveTypeSelect.getElement());
     }
 
     renderCoreParams(curveType, params) {
@@ -329,28 +324,22 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createSequencerTypeSelector(containerAccordion) {
-        const container = createElement('div', 'flex items-center justify-between mb-2 p-2 relative');
-        const label = createElement('label', 'text-sm text-gray-300 mr-2', { textContent: 'Sequence Generator' });
+        const options = Object.keys(SequencerRegistry);
 
-        const select = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 cursor-pointer flex-1');
-
-        Object.keys(SequencerRegistry).forEach(key => {
-            const opt = createElement('option', '', { value: key, textContent: key });
-            select.appendChild(opt);
+        this.sequencerSelector = new ParamSelect({
+            key: 'sequencerType',
+            label: 'Sequence Generator',
+            options: options,
+            value: 'Cyclic Additive Group Modulo N', // Default
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { sequencerType: val }
+                });
+            }
         });
 
-        select.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { sequencerType: e.target.value }
-            });
-            // Re-render params immediately might be handled by updateUI, but let's ensure cleanup
-        });
-
-        this.sequencerSelector = select;
-
-        container.appendChild(label);
-        container.appendChild(select);
+        const container = this.sequencerSelector.getElement();
 
         // Insert at top of accordion
         if (containerAccordion.content.firstChild) {
@@ -497,8 +486,8 @@ export class ChordalRosettePanel extends Panel {
         this.updateLinkVisuals();
 
         // Update Curve Type Selector
-        if (this.curveTypeSelect && this.curveTypeSelect.value !== params.curveType) {
-            this.curveTypeSelect.value = params.curveType || 'Rhodonea';
+        if (this.curveTypeSelect) {
+            this.curveTypeSelect.setValue(params.curveType || 'Rhodonea');
         }
 
         // Update Accordion Title
@@ -529,8 +518,8 @@ export class ChordalRosettePanel extends Panel {
         // Sequencer Type
         // Sequencer Type
         // Ensure selector matches state
-        if (this.sequencerSelector.value !== (params.sequencerType || 'Cyclic Additive Group Modulo N')) {
-            this.sequencerSelector.value = params.sequencerType || 'Cyclic Additive Group Modulo N';
+        if (this.sequencerSelector) {
+            this.sequencerSelector.setValue(params.sequencerType || 'Cyclic Additive Group Modulo N');
         }
 
         // Check if we need to rebuild params
@@ -581,14 +570,14 @@ export class ChordalRosettePanel extends Panel {
         if (this.antiAliasControl) {
             this.antiAliasControl.input.checked = params.antiAlias !== false; // Default true
         }
-        if (this.colorInput.value !== params.color) {
-            this.colorInput.value = params.color;
+        if (this.colorInput) {
+            this.colorInput.setValue(params.color || '#ffffff');
         }
-        if (this.methodSelect.value !== params.colorMethod) {
-            this.methodSelect.value = params.colorMethod || 'solid';
+        if (this.methodSelect) {
+            this.methodSelect.setValue(params.colorMethod || 'solid');
         }
-        if (this.blendSelect.value !== params.blendMode) {
-            this.blendSelect.value = params.blendMode || 'source-over';
+        if (this.blendSelect) {
+            this.blendSelect.setValue(params.blendMode || 'source-over');
         }
 
         // Coset Logic
