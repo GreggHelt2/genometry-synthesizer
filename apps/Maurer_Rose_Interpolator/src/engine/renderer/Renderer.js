@@ -162,9 +162,10 @@ export class CanvasRenderer {
         });
 
 
-        // --- 2. Camera Phase ---
         const maxExtent = this.getMaxExtent(renderables);
+        console.log('[Renderer] maxExtent:', maxExtent);
         const activeScale = this.setupCamera(maxExtent, roseParams.autoScale);
+        console.log('[Renderer] activeScale:', activeScale, 'autoScale:', roseParams.autoScale);
 
         // Calculate Line Width Scale Factor
         const lineWidthScale = (roseParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
