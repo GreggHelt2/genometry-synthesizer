@@ -82,7 +82,13 @@ export class CanvasRenderer {
             scale = Math.min(this.width, this.height) / 500;
         }
 
-        this.ctx.scale(scale, scale);
+        // commented out extra scaling 
+        // THIS was the bug that caused the rosettes to be rendered too small
+        // when autoScale is true, because this exact scaling was already 
+        // triggered once in the autoScale conditional just above, 
+        // so basically this meant the ss being applied twice
+        // this.ctx.scale(scale, scale);
+
         return scale;
     }
 
