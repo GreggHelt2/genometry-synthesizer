@@ -173,7 +173,39 @@ export class InterpolationPanel extends Panel {
         });
         this.vertexAccordion.append(this.showVerticesControl.getElement());
 
-        // 2. Radius
+        // General Rendering Settings Accordion (New)
+        this.generalAccordion = new Accordion('General Rendering Settings', false);
+        this.controlsContainer.appendChild(this.generalAccordion.element);
+
+        // 1. Auto Scale
+        this.autoScaleControl = new ParamToggle({
+            key: 'autoScale',
+            label: 'Auto Scale',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { autoScale: val }
+                });
+            }
+        });
+        this.generalAccordion.append(this.autoScaleControl.getElement());
+
+        // 2. Scale Line Width
+        this.scaleLineWidthControl = new ParamToggle({
+            key: 'scaleLineWidth',
+            label: 'Scale Line Width',
+            value: true,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { scaleLineWidth: val }
+                });
+            }
+        });
+        this.generalAccordion.append(this.scaleLineWidthControl.getElement());
+
+        // 3. Radius
         this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
         this.vertexAccordion.append(this.vertexRadiusControl.container);
 
@@ -642,6 +674,13 @@ export class InterpolationPanel extends Panel {
         }
         if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
             this.vertexOpacityControl.instance.setValue(hybridParams.vertexOpacity ?? 1);
+        }
+        // General Rendering Updates
+        if (this.autoScaleControl) {
+            this.autoScaleControl.setValue(hybridParams.autoScale || false);
+        }
+        if (this.scaleLineWidthControl) {
+            this.scaleLineWidthControl.setValue(hybridParams.scaleLineWidth !== false); // Default true
         }
         if (this.vertexBlendSelect) {
             this.vertexBlendSelect.setValue(hybridParams.vertexBlendMode || 'source-over');

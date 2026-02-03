@@ -287,12 +287,43 @@ export class ChordalRosettePanel extends Panel {
             if (isOpen) requestAnimationFrame(() => this.alignLabels(vertexAccordion.content));
         });
         this.controlsContainer.appendChild(vertexAccordion.element);
-
         // 1. Toggle
         this.showVerticesControl = this.createCheckbox('showVertices', 'Show Vertices');
         vertexAccordion.append(this.showVerticesControl.container);
 
-        // 2. Radius
+        // General Rendering Settings Accordion (New)
+        this.generalAccordion = new Accordion('General Rendering Settings', false);
+        this.controlsContainer.appendChild(this.generalAccordion.element);
+
+        // 1. Auto Scale
+        this.autoScaleControl = new ParamToggle({
+            key: 'autoScale',
+            label: 'Auto Scale',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { autoScale: val }
+                });
+            }
+        });
+        this.generalAccordion.append(this.autoScaleControl.getElement());
+
+        // 2. Scale Line Width
+        this.scaleLineWidthControl = new ParamToggle({
+            key: 'scaleLineWidth',
+            label: 'Scale Line Width',
+            value: true,
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { scaleLineWidth: val }
+                });
+            }
+        });
+        this.generalAccordion.append(this.scaleLineWidthControl.getElement());
+
+        // 3. Radius
         this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
         vertexAccordion.append(this.vertexRadiusControl.container);
 
@@ -739,6 +770,13 @@ export class ChordalRosettePanel extends Panel {
         }
         if (this.vertexColorControl) {
             this.vertexColorControl.setValue(params.vertexColor || '#ffffff');
+        }
+        // General Rendering Updates
+        if (this.autoScaleControl) {
+            this.autoScaleControl.setValue(params.autoScale || false);
+        }
+        if (this.scaleLineWidthControl) {
+            this.scaleLineWidthControl.setValue(params.scaleLineWidth !== false); // Default true
         }
         if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
             this.updateControl(this.vertexOpacityControl, params.vertexOpacity ?? 1);

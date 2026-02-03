@@ -40,9 +40,54 @@ export class CanvasRenderer {
         return new SequencerClass();
     }
 
-    renderPreview(roseParams, color = 'white') {
-        this.clear();
-        this.clear();
+    // Helper to calculate max extent (distance from origin) of multiple point arrays
+    getMaxExtent(renderables) {
+        let maxExtent = 0;
+        let hasPoints = false;
+
+        renderables.forEach(item => {
+            if (!item.points) return;
+            item.points.forEach(p => {
+                const x = Math.abs(p.x !== undefined ? p.x : p[0]);
+                const y = Math.abs(p.y !== undefined ? p.y : p[1]);
+                if (x > maxExtent) maxExtent = x;
+                if (y > maxExtent) maxExtent = y;
+                hasPoints = true;
+            });
+        });
+
+        if (!hasPoints) return null;
+        return maxExtent;
+    }
+
+    setupCamera(maxExtent, autoScale) {
+        // Reset transform to identity first (clears DPR scaling)
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        // Always center the origin using device pixels
+        this.ctx.translate(Math.floor(this.width / 2), Math.floor(this.height / 2));
+
+        let scale;
+        if (autoScale && maxExtent !== null && maxExtent > 0) {
+            // Calculate scale to fit 10% padding (using device pixels)
+            const canvasRadius = Math.min(this.width, this.height) / 2;
+            const targetRadius = canvasRadius * 0.9; // 10% padding
+            scale = targetRadius / maxExtent;
+
+            this.ctx.scale(scale, scale);
+        } else {
+            // Standard fixed scale (legacy behavior)
+            // Previously: min(logical) / 500, with DPR scale applied.
+            // Now: min(physical) / 500 is equivalent.
+            scale = Math.min(this.width, this.height) / 500;
+        }
+
+        this.ctx.scale(scale, scale);
+        return scale;
+    }
+
+    renderPreview(roseParams, defaultColor = 'white') {
+        this.clear(); // Clears logic with identity
         this.ctx.save();
 
         // Anti-aliasing
@@ -50,51 +95,55 @@ export class CanvasRenderer {
         this.ctx.imageSmoothingEnabled = aa;
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
 
-        this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
+        // --- 1. Collection Phase ---
+        const renderables = [];
 
-        const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
-        this.ctx.scale(scale, scale);
-
-        // --- Render Base Curve Underlay ---
+        // Base Curve
         if (roseParams.showBaseCurve) {
-            this.renderBaseCurve(roseParams, {
-                color: roseParams.baseCurveColor,
-                width: roseParams.baseCurveLineWidth,
-                opacity: roseParams.baseCurveOpacity,
-                blendMode: roseParams.baseCurveBlendMode
-            });
+            const curve = this.createCurve(roseParams);
+            if (curve) {
+                const totalRad = curve.getRadiansToClosure();
+                const samplesPerRad = 100;
+                const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
+                const step = totalRad / sampleCount;
+                const points = [];
+                for (let i = 0; i <= sampleCount; i++) {
+                    points.push(curve.getPoint(i * step));
+                }
+                renderables.push({
+                    type: 'baseCurve',
+                    points: points,
+                    options: {
+                        color: roseParams.baseCurveColor,
+                        width: roseParams.baseCurveLineWidth,
+                        opacity: roseParams.baseCurveOpacity,
+                        blendMode: roseParams.baseCurveBlendMode
+                    }
+                });
+            }
         }
-        // ----------------------------------
 
+        // Rosette
         const curve = this.createCurve(roseParams);
         const sequencer = this.getSequencer(roseParams.sequencerType);
 
-        // k calculation remains for width/legacy behavior check, 
-        // but real sequence logic is inside sequencer.generate() via generateMaurerPolyline
-        // Determine cosets/cycles
-        // Additive uses GCD. Multiplicative uses NumberTheory cycles.
-        // We check if sequencer can provide cosets.
         let disjointCosets = null;
         if (sequencer.getCosets) {
             disjointCosets = sequencer.getCosets(roseParams.totalDivs, roseParams);
         }
-
-        // If no specific cosets returned, fallback to Additive GCD logic
-        // But for Multiplicative, getCosets returns the list.
         const k = (disjointCosets) ? disjointCosets.length : gcd(roseParams.step, roseParams.totalDivs);
+        const indicesToDraw = this.getDrawIndices(k, roseParams);
 
-        const drawRose = (params, startValue) => {
-            // Note: We pass startValue as the 'offset' argument to generateMaurerPolyline -> sequencer.generate
-            const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, startValue, params);
+        indicesToDraw.forEach(idx => {
+            let seed;
+            if (disjointCosets) {
+                seed = disjointCosets[idx % disjointCosets.length];
+            } else {
+                seed = idx;
+            }
+            const points = generateMaurerPolyline(curve, sequencer, roseParams.totalDivs, seed, roseParams);
 
-            // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
-            const baseOpacity = params.opacity ?? 1;
-            const blendMode = params.blendMode || 'source-over';
-            const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1 || blendMode !== 'source-over';
-
-            // Check for degeneracy (all points identical) using .x/.y or [0]/[1]
-            // We do this BEFORE segment logic to ensure single points (singularities) are always visible as dots
-            // regardless of opacity or blend mode settings.
+            // Degeneracy Check
             const isDegenerate = points.length > 0 && points.every(p => {
                 const x = p.x !== undefined ? p.x : p[0];
                 const y = p.y !== undefined ? p.y : p[1];
@@ -103,87 +152,51 @@ export class CanvasRenderer {
                 return Math.abs(x - x0) < 0.001 && Math.abs(y - y0) < 0.001;
             });
 
-            if (isDegenerate) {
-                // Draw a marker for fixed points / singularities
-                const p0 = points[0];
-                const x0 = p0.x !== undefined ? p0.x : p0[0];
-                const y0 = p0.y !== undefined ? p0.y : p0[1];
-
-                this.ctx.fillStyle = params.color || color;
-                this.ctx.globalAlpha = (params.showAllCosets && k > 1) ? 0.8 : 1;
-                this.ctx.beginPath();
-                this.ctx.arc(x0, y0, 3, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.globalAlpha = 1;
-                return;
-            }
-
-            // Apply Blend Mode
-            this.ctx.globalCompositeOperation = blendMode;
-
-            if (useSegments) {
-                let colors;
-                // If method is not solid, generate colors. If it IS solid (but opacity < 1), use single color array.
-                if (params.colorMethod && params.colorMethod !== 'solid') {
-                    colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || color);
-                } else {
-                    colors = [params.color || color]; // Fallback in drawColoredSegments uses [0] for all
-                }
-
-                if (colors.length === 1 && blendMode === 'source-over') {
-                    // Optimization: Use single path drawing if only one color (handles Opacity/Blend Mode correctly)
-                    this.polylineLayer.draw(points, {
-                        color: colors[0],
-                        width: params.lineWidth || 2,
-                        opacity: baseOpacity
-                    });
-                } else {
-                    this.polylineLayer.drawColoredSegments(points, colors, {
-                        width: params.lineWidth || 2,
-                        opacity: baseOpacity
-                    });
-                }
-            } else {
-                // High performance single polyline for opaque solid colors
-                this.polylineLayer.draw(points, {
-                    color: params.color || color,
-                    width: params.lineWidth || 2,
-                    opacity: baseOpacity
-                });
-            }
-        };
-
-
-        // Advanced Coset Rendering Logic
-        const indicesToDraw = this.getDrawIndices(k, roseParams);
-
-        indicesToDraw.forEach(idx => {
-            let seed;
-            if (disjointCosets) {
-                // If we have explicit disjoint cosets (Multiplicative), map index to seed
-                // Wrapping index safely
-                seed = disjointCosets[idx % disjointCosets.length];
-            } else {
-                // Additive/GCD: index is the offset
-                seed = idx;
-            }
-            drawRose(roseParams, seed);
+            renderables.push({
+                type: isDegenerate ? 'point' : 'rose',
+                points: points,
+                params: roseParams, // Pass full params for coloring logic
+                seed: seed, // Keep track of seed for coloring if needed
+                isDegenerate: isDegenerate
+            });
         });
 
-        // Reset Blend Mode
-        this.ctx.globalCompositeOperation = 'source-over';
 
+        // --- 2. Camera Phase ---
+        const maxExtent = this.getMaxExtent(renderables);
+        const activeScale = this.setupCamera(maxExtent, roseParams.autoScale);
+
+        // Calculate Line Width Scale Factor
+        const lineWidthScale = (roseParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
+
+
+        // --- 3. Draw Phase ---
+        renderables.forEach(item => {
+            if (item.type === 'baseCurve') {
+                this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
+            } else if (item.type === 'point') {
+                // Draw degenerate point
+                const p0 = item.points[0];
+                const x0 = p0.x !== undefined ? p0.x : p0[0];
+                const y0 = p0.y !== undefined ? p0.y : p0[1];
+                this.ctx.fillStyle = item.params.color || defaultColor;
+                // Alpha handling for stacked points?
+                this.ctx.globalAlpha = (item.params.showAllCosets && k > 1) ? 0.8 : 1;
+                this.ctx.beginPath();
+                this.ctx.arc(x0, y0, 3 * lineWidthScale, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.globalAlpha = 1;
+            } else {
+                // Draw Rose Polyline
+                this.drawRenderableRose(item.points, item.params, defaultColor, lineWidthScale);
+            }
+        });
+
+        // Vertex Rendering Overlay
         if (roseParams.showVertices) {
             this.ctx.globalCompositeOperation = roseParams.vertexBlendMode || 'source-over';
-            indicesToDraw.forEach(idx => {
-                let seed;
-                if (disjointCosets) {
-                    seed = disjointCosets[idx % disjointCosets.length];
-                } else {
-                    seed = idx;
-                }
-                const points = generateMaurerPolyline(curve, sequencer, roseParams.totalDivs, seed, roseParams);
-                this.polylineLayer.drawVertices(points, {
+            renderables.filter(r => r.type === 'rose').forEach(item => {
+                this.polylineLayer.drawVertices(item.points, {
                     color: roseParams.vertexColor,
                     radius: roseParams.vertexRadius,
                     opacity: roseParams.vertexOpacity
@@ -195,82 +208,90 @@ export class CanvasRenderer {
         this.ctx.restore();
     }
 
-    renderBaseCurve(params, options = {}) {
-        // High-resolution sampling for smooth base curve
-        const curve = this.createCurve(params);
-        if (!curve) return;
+    drawRenderableBaseCurve(points, options, lineWidthScale = 1) {
+        if (!points || points.length === 0) return;
 
-        // Calculate resolution based on domain
-        // Standard circle = 360 degrees = ~6.28 rad
-        // We want maybe 10 samples per degree equivalent for smoothness? Or just fixed high number.
-        // But some curves have huge domains (e.g. n=1, d=100 -> 100 loops).
-        // Let's adapt based on radiansToClosure.
-        const totalRad = curve.getRadiansToClosure();
+        const { color = '#666666', width = 1, opacity = 1, blendMode = 'source-over' } = options;
 
-        // Approximate samples: 10 per radian -> 60ish per circle. Too low.
-        // 100 per radian -> 600 per circle. Good. 
-        // Max cap to avoid performance cliff on huge d.
-        const samplesPerRad = 100;
-        const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
-        const step = totalRad / sampleCount;
-
-        const points = [];
-        for (let i = 0; i <= sampleCount; i++) {
-            points.push(curve.getPoint(i * step));
-        }
-
-        // Apply visual options
-        const color = options.color || '#666666';
-        const width = options.width || 1;
-        const opacity = options.opacity ?? 1;
-        const blendMode = options.blendMode || 'source-over';
-
-        this.ctx.save();
         this.ctx.globalCompositeOperation = blendMode;
+
+        // Apply scaling adjustment
+        const effectiveWidth = width * lineWidthScale;
 
         // Use segmented drawing if we need self-blending (opacity < 1 or blend mode active)
         if (opacity < 1 || blendMode !== 'source-over') {
-            // Create single color array for all segments
-            // drawColoredSegments expects an array of colors matching segments, or falls back to [0].
-            // If we pass a single element array, it acts as a uniform color for all segments in our implementation?
-            // Checking PolylineLayer.drawColoredSegments: "const color = colors[i] || colors[0];" 
-            // Yes, passing [color] works for uniform color across all segments.
             const colors = [color];
             this.polylineLayer.drawColoredSegments(points, colors, {
-                width: width,
+                width: effectiveWidth,
                 opacity: opacity
             });
         } else {
             // Optimized single path for solid opaque lines
             this.polylineLayer.draw(points, {
                 color: color,
-                width: width,
+                width: effectiveWidth,
                 opacity: opacity
             });
         }
+    }
 
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.restore();
+    drawRenderableRose(points, params, defaultColor, lineWidthScale = 1) {
+        if (!points || points.length === 0) return;
+
+        // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
+        const baseOpacity = params.opacity ?? 1;
+        const blendMode = params.blendMode || 'source-over';
+        // Note: 'colorMethod' check assumes it exists in params. If undefined, treat as solid.
+        const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1 || blendMode !== 'source-over';
+
+        // Apply Blend Mode
+        this.ctx.globalCompositeOperation = blendMode;
+
+        const effectiveWidth = (params.lineWidth || 2) * lineWidthScale;
+
+        if (useSegments) {
+            let colors;
+            if (params.colorMethod && params.colorMethod !== 'solid') {
+                colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || defaultColor);
+            } else {
+                colors = [params.color || defaultColor];
+            }
+
+            if (colors.length === 1 && blendMode === 'source-over') {
+                // Optimization: Use single path drawing if only one color (handles Opacity/Blend Mode correctly)
+                // Actually if baseOpacity < 1, drawColoredSegments is better for self-overlap?
+                // If opacity < 1, drawing a single path means NO self-overlap accumulation within the path.
+                // If we want self-overlap (rosette petals darkening each other), we MUST use segments.
+                // My previous logic: `if (opacity < 1 || blendMode !== 'source-over')` -> useSegments.
+                // So we are rightfully in this block.
+                this.polylineLayer.drawColoredSegments(points, colors, {
+                    width: effectiveWidth,
+                    opacity: baseOpacity
+                });
+            } else {
+                this.polylineLayer.drawColoredSegments(points, colors, {
+                    width: effectiveWidth,
+                    opacity: baseOpacity
+                });
+            }
+        } else {
+            // High performance single polyline for opaque solid colors (no self-overlap)
+            this.polylineLayer.draw(points, {
+                color: params.color || defaultColor,
+                width: effectiveWidth,
+                opacity: baseOpacity
+            });
+        }
     }
 
     renderInterpolation(state) {
         this.clear();
-        this.clear();
         this.ctx.save();
 
-        // Anti-aliasing (check either rosette or hybrid config - defaulting to A's preference for now or adding to hybrid)
-        // Let's use Rosette A's setting as the driver for simplicity, or hardcode/detect. 
-        // Or better, check if ANY have it disabled? Let's check state.rosetteA.antiAlias
         const aa = state.rosetteA.antiAlias !== false;
         this.ctx.imageSmoothingEnabled = aa;
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
 
-        this.ctx.translate(Math.floor(this.logicalWidth / 2), Math.floor(this.logicalHeight / 2));
-
-        const scale = Math.min(this.logicalWidth, this.logicalHeight) / 500;
-        this.ctx.scale(scale, scale);
-
-        // Helper to convert hex to rgba
         const hexToRgba = (hex, alpha) => {
             if (!hex) return `rgba(255, 255, 255, ${alpha})`;
             const r = parseInt(hex.slice(1, 3), 16);
@@ -279,86 +300,72 @@ export class CanvasRenderer {
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
 
-        // Draw Base Curves (Hybrid)
-        if (state.hybrid.showBaseCurveA) {
-            this.renderBaseCurve(state.rosetteA, {
-                color: state.hybrid.baseCurveColorA,
-                width: state.hybrid.baseCurveLineWidthA,
-                opacity: state.hybrid.baseCurveOpacityA,
-                blendMode: state.hybrid.baseCurveBlendModeA
-            });
-        }
-        if (state.hybrid.showBaseCurveB) {
-            this.renderBaseCurve(state.rosetteB, {
-                color: state.hybrid.baseCurveColorB,
-                width: state.hybrid.baseCurveLineWidthB,
-                opacity: state.hybrid.baseCurveOpacityB,
-                blendMode: state.hybrid.baseCurveBlendModeB
-            });
-        }
+        // --- 1. Collection Phase ---
+        const renderables = [];
 
-        // Draw Underlays if enabled
-        if (state.hybrid.showRoseA) {
-            const curveA = this.createCurve(state.rosetteA);
-            const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
+        // Helper to generate base curve points for collection
+        const collectBaseCurve = (params, hybridConfig, suffix) => {
+            const curve = this.createCurve(params);
+            if (!curve) return;
+            const totalRad = curve.getRadiansToClosure();
+            const sampleCount = Math.min(50000, Math.ceil(totalRad * 100));
+            const step = totalRad / sampleCount;
+            const points = [];
+            for (let i = 0; i <= sampleCount; i++) points.push(curve.getPoint(i * step));
 
-            // Unified k calculation
-            let kA;
-            if (sequencerA.getCosets) {
-                const cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
-                kA = cosetsA ? cosetsA.length : gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            renderables.push({
+                type: 'baseCurve',
+                points: points,
+                options: {
+                    color: hybridConfig[`baseCurveColor${suffix}`],
+                    width: hybridConfig[`baseCurveLineWidth${suffix}`],
+                    opacity: hybridConfig[`baseCurveOpacity${suffix}`],
+                    blendMode: hybridConfig[`baseCurveBlendMode${suffix}`]
+                }
+            });
+        };
+
+        if (state.hybrid.showBaseCurveA) collectBaseCurve(state.rosetteA, state.hybrid, 'A');
+        if (state.hybrid.showBaseCurveB) collectBaseCurve(state.rosetteB, state.hybrid, 'B');
+
+        // Underlays
+        const collectUnderlay = (params, color) => {
+            const curve = this.createCurve(params);
+            const sequencer = this.getSequencer(params.sequencerType);
+            let k;
+            if (sequencer.getCosets) {
+                const cosets = sequencer.getCosets(params.totalDivs, params);
+                k = cosets ? cosets.length : gcd(params.step, params.totalDivs);
             } else {
-                kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+                k = gcd(params.step, params.totalDivs);
             }
-
-            const indicesA = this.getDrawIndices(kA, state.rosetteA);
-            indicesA.forEach(idx => {
-                const subA = (sequencerA.getCosets && kA > 1)
-                    ? sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA)[idx % kA]
+            const indices = this.getDrawIndices(k, params);
+            indices.forEach(idx => {
+                const sub = (sequencer.getCosets && k > 1)
+                    ? sequencer.getCosets(params.totalDivs, params)[idx % k]
                     : idx;
-
-                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-                this.polylineLayer.draw(pointsA, {
-                    color: hexToRgba(state.rosetteA.color, state.hybrid.underlayOpacity),
-                    width: 1
+                const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, sub, params);
+                renderables.push({
+                    type: 'underlay',
+                    points: points,
+                    options: {
+                        color: hexToRgba(color, state.hybrid.underlayOpacity),
+                        width: 1
+                    }
                 });
             });
-        }
+        };
 
-        if (state.hybrid.showRoseB) {
-            const curveB = this.createCurve(state.rosetteB);
-            const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
+        if (state.hybrid.showRoseA) collectUnderlay(state.rosetteA, state.rosetteA.color);
+        if (state.hybrid.showRoseB) collectUnderlay(state.rosetteB, state.rosetteB.color);
 
-            // Unified k calculation
-            let kB;
-            if (sequencerB.getCosets) {
-                const cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
-                kB = cosetsB ? cosetsB.length : gcd(state.rosetteB.step, state.rosetteB.totalDivs);
-            } else {
-                kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
-            }
 
-            const indicesB = this.getDrawIndices(kB, state.rosetteB);
-            indicesB.forEach(idx => {
-                const subB = (sequencerB.getCosets && kB > 1)
-                    ? sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB)[idx % kB]
-                    : idx;
-
-                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-                this.polylineLayer.draw(pointsB, {
-                    color: hexToRgba(state.rosetteB.color, state.hybrid.underlayOpacity),
-                    width: 1
-                });
-            });
-        }
-
-        // Draw Interpolated Curve
+        // Interpolated Curve
         const curveA = this.createCurve(state.rosetteA);
         const curveB = this.createCurve(state.rosetteB);
         const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
         const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
 
-        // Unified k calculation for Interpolation
         let kA, cosetsA = null;
         if (sequencerA.getCosets) {
             cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
@@ -366,7 +373,6 @@ export class CanvasRenderer {
         } else {
             kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
         }
-
         let kB, cosetsB = null;
         if (sequencerB.getCosets) {
             cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
@@ -375,160 +381,91 @@ export class CanvasRenderer {
             kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
         }
 
-        // Interpolation Coloring & Opacity Logic
-        const interpColor = state.hybrid.color || 'white';
-        const interpMethod = state.hybrid.colorMethod || 'solid';
-        const interpOpacity = state.hybrid.opacity ?? 1;
-        const interpBlend = state.hybrid.blendMode || 'source-over';
-        const useSegments = (interpMethod !== 'solid') || interpOpacity < 1 || interpBlend !== 'source-over';
+        const useLCM = state.hybrid.matchCosetsByLCM;
+        const ringsLCM = lcm(kA, kB);
+        const isExactMatch = (kA === kB && kA > 1);
+        const isLCMMatch = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
-        // Apply Blend Mode
-        this.ctx.globalCompositeOperation = interpBlend;
+        const collectHybrid = (subA, subB) => {
+            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
-        const drawHybridPolyline = (ptsA, ptsB) => {
-            // Check segment counts
-            const segsA = ptsA.length > 0 ? ptsA.length - 1 : 0;
-            const segsB = ptsB.length > 0 ? ptsB.length - 1 : 0;
-
-            let finalPtsA = ptsA;
-            let finalPtsB = ptsB;
+            // Interpolation Logic
+            const segsA = pointsA.length > 0 ? pointsA.length - 1 : 0;
+            const segsB = pointsB.length > 0 ? pointsB.length - 1 : 0;
+            let finalPtsA = pointsA, finalPtsB = pointsB;
 
             if (segsA > 0 && segsB > 0 && segsA !== segsB) {
-                // Determine LCM
                 const targetSegs = lcm(segsA, segsB);
-
-                // --- Approximate Resampling Logic ---
                 const threshold = state.hybrid.approxResampleThreshold ?? 20000;
-
-                // Trigger if:
-                // 1. Threshold is 0 (Always On)
-                // 2. Threshold > 0 AND targetSegs exceeds it
                 const useApprox = (threshold === 0) || (targetSegs > threshold);
-
                 if (useApprox) {
-                    // Use Threshold as target count (or 20000 if 0/Always)
-                    const sampleCount = (threshold === 0) ? 20000 : threshold;
-                    finalPtsA = resamplePolylineApprox(ptsA, sampleCount);
-                    finalPtsB = resamplePolylineApprox(ptsB, sampleCount);
+                    const cnt = (threshold === 0) ? 20000 : threshold;
+                    finalPtsA = resamplePolylineApprox(pointsA, cnt);
+                    finalPtsB = resamplePolylineApprox(pointsB, cnt);
                 } else if (targetSegs > 0) {
-                    // Exact LCM Upsampling
-                    finalPtsA = resamplePolyline(ptsA, targetSegs);
-                    finalPtsB = resamplePolyline(ptsB, targetSegs);
+                    finalPtsA = resamplePolyline(pointsA, targetSegs);
+                    finalPtsB = resamplePolyline(pointsB, targetSegs);
                 }
             }
 
             const weight = state.hybrid.weight;
             const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
 
-            if (useSegments) {
-                let colors;
-                if (interpMethod !== 'solid') {
-                    colors = Colorizer.generateSegmentColors(pointsInterp, interpMethod, interpColor);
-                } else {
-                    colors = [interpColor];
-                }
-                this.polylineLayer.drawColoredSegments(pointsInterp, colors, {
-                    width: 2,
-                    opacity: interpOpacity
-                });
-            } else {
-                this.polylineLayer.draw(pointsInterp, {
-                    color: interpColor,
-                    width: 2,
-                    opacity: interpOpacity
-                });
-            }
+            renderables.push({
+                type: 'hybrid',
+                points: pointsInterp
+            });
         };
-
-        // Multi-Coset Matching Logic
-        const useLCM = state.hybrid.matchCosetsByLCM;
-        const ringsLCM = lcm(kA, kB);
-        const isExactMatch = (kA === kB && kA > 1);
-        const isLCMMatch = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
         if (isExactMatch || isLCMMatch) {
             const targetK = isExactMatch ? kA : ringsLCM;
-
-            // Apply Hybrid Coset Visualization Settings
             const indices = this.getDrawIndices(targetK, state.hybrid);
-
             indices.forEach(idx => {
-                // Modulo mapping allows 1-to-1 or Many-to-Many via LCM
-                // If Exact: idx % kA is just idx
-                // If LCM: idx % kA wraps around source rings to duplicate them
                 const subA = (cosetsA) ? cosetsA[idx % kA] : idx % kA;
                 const subB = (cosetsB) ? cosetsB[idx % kB] : idx % kB;
-
-                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-
-                drawHybridPolyline(pointsA, pointsB);
+                collectHybrid(subA, subB);
             });
         } else {
-            // Fallback: Single Selected Coset (User's specific selection for mismatch or single)
             const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
             const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
-
-            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-
-            drawHybridPolyline(pointsA, pointsB);
+            collectHybrid(subA, subB);
         }
 
-        // Reset Blend Mode
-        this.ctx.globalCompositeOperation = 'source-over';
+        // --- 2. Camera Phase ---
+        const maxExtent = this.getMaxExtent(renderables);
+        const activeScale = this.setupCamera(maxExtent, state.hybrid.autoScale);
 
+        // Calculate Line Width Scale Factor
+        const lineWidthScale = (state.hybrid.scaleLineWidth !== false) ? 1 : (1 / activeScale);
+
+        // --- 3. Draw Phase ---
+        renderables.forEach(item => {
+            if (item.type === 'baseCurve') {
+                this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
+            } else if (item.type === 'underlay') {
+                // Simple single color draw, pass scale? 
+                // Underlay is strictly 1px usually?
+                // Plan said "width: 1". 
+                // If we want underlays to stay 1px, we should scale them too.
+                const opts = { ...item.options, width: (item.options.width || 1) * lineWidthScale };
+                this.polylineLayer.draw(item.points, opts);
+            } else if (item.type === 'hybrid') {
+                // Hybrid styling
+                this.drawRenderableRose(item.points, state.hybrid, state.hybrid.color || 'white', lineWidthScale);
+            }
+        });
+
+        // Hybrid Vertices
         if (state.hybrid.showVertices) {
             this.ctx.globalCompositeOperation = state.hybrid.vertexBlendMode || 'source-over';
-
-            const drawHybridVertices = (ptsA, ptsB) => {
-                const segsA = ptsA.length > 0 ? ptsA.length - 1 : 0;
-                const segsB = ptsB.length > 0 ? ptsB.length - 1 : 0;
-                let finalPtsA = ptsA;
-                let finalPtsB = ptsB;
-
-                if (segsA > 0 && segsB > 0 && segsA !== segsB) {
-                    const targetSegs = lcm(segsA, segsB);
-                    const threshold = state.hybrid.approxResampleThreshold ?? 20000;
-                    const useApprox = (threshold === 0) || (targetSegs > threshold);
-
-                    if (useApprox) {
-                        const sampleCount = (threshold === 0) ? 20000 : threshold;
-                        finalPtsA = resamplePolylineApprox(ptsA, sampleCount);
-                        finalPtsB = resamplePolylineApprox(ptsB, sampleCount);
-                    } else if (targetSegs > 0) {
-                        finalPtsA = resamplePolyline(ptsA, targetSegs);
-                        finalPtsB = resamplePolyline(ptsB, targetSegs);
-                    }
-                }
-
-                const weight = state.hybrid.weight;
-                const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
-
-                this.polylineLayer.drawVertices(pointsInterp, {
+            renderables.filter(r => r.type === 'hybrid').forEach(item => {
+                this.polylineLayer.drawVertices(item.points, {
                     color: state.hybrid.vertexColor,
                     radius: state.hybrid.vertexRadius,
                     opacity: state.hybrid.vertexOpacity
                 });
-            };
-
-            if (isExactMatch || isLCMMatch) {
-                const targetK = isExactMatch ? kA : ringsLCM;
-                const indices = this.getDrawIndices(targetK, state.hybrid);
-                indices.forEach(idx => {
-                    const subA = (cosetsA) ? cosetsA[idx % kA] : idx % kA;
-                    const subB = (cosetsB) ? cosetsB[idx % kB] : idx % kB;
-                    const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-                    const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-                    drawHybridVertices(pointsA, pointsB);
-                });
-            } else {
-                const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
-                const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
-                const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-                const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
-                drawHybridVertices(pointsA, pointsB);
-            }
+            });
             this.ctx.globalCompositeOperation = 'source-over';
         }
 

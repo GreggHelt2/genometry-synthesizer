@@ -37,6 +37,11 @@ export const DEFAULTS = {
         vertexColor: '#ffffff',
         vertexOpacity: 1,
         vertexBlendMode: 'source-over',
+        // General Rendering
+        backgroundColor: '#000000',
+        backgroundOpacity: 0,
+        autoScale: false,
+        scaleLineWidth: true,
     },
     rosetteB: {
         curveType: 'Rhodonea',
@@ -70,6 +75,11 @@ export const DEFAULTS = {
         vertexColor: '#ffffff',
         vertexOpacity: 1,
         vertexBlendMode: 'source-over',
+        // General Rendering
+        backgroundColor: '#000000',
+        backgroundOpacity: 0,
+        autoScale: false,
+        scaleLineWidth: true,
     },
     hybrid: {
         weight: 0.0, // 0 to 1
@@ -102,6 +112,11 @@ export const DEFAULTS = {
         vertexColor: '#ffffff',
         vertexOpacity: 1,
         vertexBlendMode: 'source-over',
+        // General Rendering
+        backgroundColor: '#000000',
+        backgroundOpacity: 0,
+        autoScale: false,
+        scaleLineWidth: true,
     },
     settings: {
         theme: 'dark',
