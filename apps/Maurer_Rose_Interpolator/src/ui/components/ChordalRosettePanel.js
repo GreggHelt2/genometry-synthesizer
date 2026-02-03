@@ -203,7 +203,7 @@ export class ChordalRosettePanel extends Panel {
 
         // 1. Method
         const methodOptions = [
-            { value: 'solid', label: 'Solid' },
+            { value: 'solid', label: 'Single Color' },
             { value: 'length', label: 'Length' },
             { value: 'angle', label: 'Angle' },
             { value: 'sequence', label: 'Sequence' }
