@@ -175,6 +175,10 @@ export class LinkManager {
         const parts = key.split('.');
         return [parts[0], parts.slice(1).join('.')];
     }
+    isLinked(key) {
+        return this.links.has(key) && this.links.get(key).size > 0;
+    }
+
     // --- Persistence Methods ---
 
     /**

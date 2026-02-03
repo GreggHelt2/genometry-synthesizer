@@ -568,6 +568,14 @@ export class ChordalRosettePanel extends Panel {
             }
         });
 
+        // Initialize Link State
+        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = `${this.roseId}.${key}`;
+            if (linkManager.isLinked(myKey)) {
+                paramToggle.setLinkActive(true);
+            }
+        });
+
         return {
             container: paramToggle.getElement(),
             instance: paramToggle
@@ -607,38 +615,36 @@ export class ChordalRosettePanel extends Panel {
                 });
             },
             onLinkToggle: (isActive) => {
-                // Determine counterpart key (assumes A <-> B mirroring for now)
-                // My key: this.roseId + '.' + key
-                // Other key: (this.roseId=A?B:A) + '.' + key
                 const myKey = `${this.roseId}.${key}`;
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = `${otherRoseId}.${key}`;
 
                 // Toggle link in manager
-                // We barely trust the 'isActive' from UI state since LinkManager is source of truth for links
-                // But for now, click = toggle
                 import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
                     const linked = linkManager.toggleLink(myKey, otherKey);
-                    // Update visual state to match reality (handled by ParamNumber internal state? no, should be driven by props)
-                    // But ParamNumber tracks its own isLinked.
-                    // Ideally we sync ParamNumber.isLinked with LinkManager status.
                     if (linked !== isActive) {
-                        // Visual mismatch corrected
                         paramGui.setLinkActive(linked);
                     }
                 });
             }
         });
 
-        // Adapter to match old structure expecting { container, input, valueDisplay }
-        // We attach the full instance so updateUI can use .setValue
+        // Initialize Link State
+        // We need to check if this param is ALREADY linked (e.g. from persistence)
+        // Since LinkManager might not be loaded yet if we rely on the constructor import,
+        // we'll do a quick import here or rely on the fact that by the time this runs, 
+        // main.js has likely initialized things. 
+        // Ideally, we import linkManager statically at the top of this file to avoid this async mess.
+        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = `${this.roseId}.${key}`;
+            if (linkManager.isLinked(myKey)) {
+                paramGui.setLinkActive(true);
+            }
+        });
+
         return {
             container: paramGui.getElement(),
             instance: paramGui,
-            // creating fake input/valueDisplay props to avoid breaking immediate legacy access if any remains?
-            // Actually, I should update the usages of these return values.
-            // The usages are:
-            // 1. this.divsControl = this.createSlider(...)
             input: paramGui.slider
         };
     }
