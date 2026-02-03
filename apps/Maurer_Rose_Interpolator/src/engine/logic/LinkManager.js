@@ -6,6 +6,14 @@ export class LinkManager {
         this.links = new Map(); // key -> Set<key> (adjacency list)
         this.isProcessing = false;
 
+        // Initialize state snapshot immediately
+        try {
+            this.lastKnownState = JSON.parse(JSON.stringify(store.getState()));
+        } catch (e) {
+            console.error('[LinkManager] Failed to initialize state:', e);
+            this.lastKnownState = {};
+        }
+
         // Listen to store changes to propagate updates
         store.subscribe(this.handleStoreUpdate.bind(this));
     }
@@ -35,14 +43,14 @@ export class LinkManager {
 
         this.links.get(keyA).add(keyB);
         this.links.get(keyB).add(keyA);
-        console.log(`[LinkManager] Linked ${keyA} <-> ${keyB}`);
+        // console.log(`[LinkManager] Linked ${keyA} <-> ${keyB}`);
         this.notifyListeners();
     }
 
     removeLink(keyA, keyB) {
         if (this.links.has(keyA)) this.links.get(keyA).delete(keyB);
         if (this.links.has(keyB)) this.links.get(keyB).delete(keyA);
-        console.log(`[LinkManager] Unlinked ${keyA} <-> ${keyB}`);
+        // console.log(`[LinkManager] Unlinked ${keyA} <-> ${keyB}`);
         this.notifyListeners();
     }
 
@@ -77,7 +85,7 @@ export class LinkManager {
         const targetVal = state[targetRoseId][targetParam];
 
         if (sourceVal !== targetVal) {
-            console.log(`[LinkManager] Syncing ${sourceKey} (${sourceVal}) -> ${targetKey}`);
+            // console.log(`[LinkManager] Syncing ${sourceKey} (${sourceVal}) -> ${targetKey}`);
             store.dispatch({
                 type: targetRoseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B,
                 payload: { [targetParam]: sourceVal }
@@ -86,52 +94,11 @@ export class LinkManager {
     }
 
     handleStoreUpdate(state) {
-        if (this.isProcessing) return; // Recursion guard
-
-        // This is tricky: Store doesn't tell us *what* changed, just the new state.
-        // We need diffing or we just check all active links?
-        // Checking all active links is safer for "enforcement" but heavy?
-        // Let's rely on basic diffing or just check consistency of all links.
-
-        this.isProcessing = true;
-        try {
-            // Check consistency of all links
-            // To avoid double dispatching, iterate unique pairs or used visited set
-            const visited = new Set();
-
-            for (const [keyA, targets] of this.links.entries()) {
-                for (const keyB of targets) {
-                    const linkId = [keyA, keyB].sort().join('<->');
-                    if (visited.has(linkId)) continue;
-                    visited.add(linkId);
-
-                    // Verify consistency
-                    // How do we know which one is the "Source of Truth" (changed recently)?
-                    // Without action history, we assume consistency is desired. 
-                    // But if A=3 and B=4, which one wins?
-                    // Ideally the one that changed changed *most recently*.
-                    // The Store doesn't give us Diff.
-                    // For now, we might need to store `lastState` in this Manager to diff.
-                }
-            }
-
-            // Wait - relying on global store subscription is hard without diffs.
-            // Better approach: User Input triggers the sync via LinkManager explicitly?
-            // "The parameter linking should tie changes in another ParamGui to changes in this ParamGui"
-
-            // If ParamGui A changes, it dispatches UPDATE_A.
-            // We want B to update.
-            // If we are in `handleStoreUpdate`, we see A=new, B=old.
-            // But we might also see B=new, A=old if B was changed!
-            // We need to know *what changed*.
-
-            // IMPLEMENTATION DECISION:
-            // Store `lastKnownState` locally.
-            this.checkDiffAndPropagate(state);
-
-        } finally {
-            this.isProcessing = false;
-        }
+        // We do NOT use a recursion guard (isProcessing) here.
+        // We rely on 'pendingUpdates' to prevent infinite loops when we dispatch our own updates.
+        // If we blocked recursion, we would miss the immediate echo of our dispatch, 
+        // leading to stale pendingUpdates and state desync.
+        this.checkDiffAndPropagate(state);
     }
 
     checkDiffAndPropagate(newState) {
@@ -155,16 +122,17 @@ export class LinkManager {
                 if (newVal !== oldR[param]) {
                     // Check for echo of our own update
                     const key = `${roseId}.${param}`;
+
                     if (this.pendingUpdates.has(key)) {
                         const expectedVal = this.pendingUpdates.get(key);
                         // Tolerant equality check
-                        if (Math.abs(newVal - expectedVal) < 0.000001) {
+                        if (Math.abs(Number(newVal) - Number(expectedVal)) < 0.000001) {
                             // This is our echo. Ignore.
-                            // console.log(`[LinkManager] Ignoring echo for ${key}`);
                             this.pendingUpdates.delete(key);
                             return;
                         } else {
                             // Value mismatch (user override/race?). Treat as new change.
+                            // console.warn(`[LinkManager] Value mismatch for pending ${key}: got ${newVal}, expected ${expectedVal}`);
                             this.pendingUpdates.delete(key);
                         }
                     }
@@ -172,9 +140,6 @@ export class LinkManager {
                 }
             });
         });
-
-        // Update local cache
-        this.lastKnownState = JSON.parse(JSON.stringify(newState));
 
         // Propagate changes unique links
         changes.forEach(change => {
@@ -198,6 +163,9 @@ export class LinkManager {
                 });
             }
         });
+
+        // Update local cache to the LATEST store state
+        this.lastKnownState = JSON.parse(JSON.stringify(store.getState()));
     }
 
     /**

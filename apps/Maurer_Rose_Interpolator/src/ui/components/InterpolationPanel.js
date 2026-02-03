@@ -157,8 +157,18 @@ export class InterpolationPanel extends Panel {
         this.controlsContainer.appendChild(this.vertexAccordion.element);
 
         // 1. Toggle
-        this.showVerticesControl = this.createCheckbox('showVertices', 'Show Vertices');
-        this.vertexAccordion.append(this.showVerticesControl.container);
+        this.showVerticesControl = new ParamToggle({
+            key: 'showVertices',
+            label: 'Show Vertices',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { showVertices: val }
+                });
+            }
+        });
+        this.vertexAccordion.append(this.showVerticesControl.getElement());
 
         // 2. Radius
         this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
@@ -313,8 +323,18 @@ export class InterpolationPanel extends Panel {
         groupA.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source A Curve' }));
 
         // Toggle A
-        this.showBaseCurveControlA = this.createCheckbox('showBaseCurveA', 'Show Base Curve');
-        groupA.appendChild(this.showBaseCurveControlA.container);
+        this.showBaseCurveControlA = new ParamToggle({
+            key: 'showBaseCurveA',
+            label: 'Show Base Curve',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { showBaseCurveA: val }
+                });
+            }
+        });
+        groupA.appendChild(this.showBaseCurveControlA.getElement());
 
         // Width A
         this.baseCurveWidthControlA = this.createSlider('baseCurveLineWidthA', 0.1, 10, 0.1, 'Line Width');
@@ -381,8 +401,18 @@ export class InterpolationPanel extends Panel {
         groupB.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source B Curve' }));
 
         // Toggle B
-        this.showBaseCurveControlB = this.createCheckbox('showBaseCurveB', 'Show Base Curve');
-        groupB.appendChild(this.showBaseCurveControlB.container);
+        this.showBaseCurveControlB = new ParamToggle({
+            key: 'showBaseCurveB',
+            label: 'Show Base Curve',
+            value: false,
+            onChange: (val) => {
+                store.dispatch({
+                    type: ACTIONS.UPDATE_HYBRID,
+                    payload: { showBaseCurveB: val }
+                });
+            }
+        });
+        groupB.appendChild(this.showBaseCurveControlB.getElement());
 
         // Width B
         this.baseCurveWidthControlB = this.createSlider('baseCurveLineWidthB', 0.1, 10, 0.1, 'Line Width');
@@ -582,14 +612,14 @@ export class InterpolationPanel extends Panel {
         }
 
         // Base Curve Viz Updates (A)
-        this.showBaseCurveControlA.input.checked = hybridParams.showBaseCurveA;
+        if (this.showBaseCurveControlA) this.showBaseCurveControlA.setValue(hybridParams.showBaseCurveA);
         if (this.baseCurveWidthControlA) this.baseCurveWidthControlA.instance.setValue(hybridParams.baseCurveLineWidthA ?? 2);
         if (this.baseCurveColorControlA) this.baseCurveColorControlA.setValue(hybridParams.baseCurveColorA || '#666666');
         if (this.baseCurveOpacityControlA) this.baseCurveOpacityControlA.instance.setValue(hybridParams.baseCurveOpacityA ?? 1);
         if (this.baseCurveBlendSelectA) this.baseCurveBlendSelectA.setValue(hybridParams.baseCurveBlendModeA || 'source-over');
 
         // Base Curve Viz Updates (B)
-        this.showBaseCurveControlB.input.checked = hybridParams.showBaseCurveB;
+        if (this.showBaseCurveControlB) this.showBaseCurveControlB.setValue(hybridParams.showBaseCurveB);
         if (this.baseCurveWidthControlB) this.baseCurveWidthControlB.instance.setValue(hybridParams.baseCurveLineWidthB ?? 2);
         if (this.baseCurveColorControlB) this.baseCurveColorControlB.setValue(hybridParams.baseCurveColorB || '#666666');
         if (this.baseCurveOpacityControlB) this.baseCurveOpacityControlB.instance.setValue(hybridParams.baseCurveOpacityB ?? 1);
@@ -599,7 +629,7 @@ export class InterpolationPanel extends Panel {
 
         // Vertex Rendering Updates
         if (this.showVerticesControl) {
-            this.showVerticesControl.input.checked = hybridParams.showVertices;
+            this.showVerticesControl.setValue(hybridParams.showVertices);
         }
         if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
             this.vertexRadiusControl.instance.setValue(hybridParams.vertexRadius ?? 2);
@@ -688,22 +718,7 @@ export class InterpolationPanel extends Panel {
         `;
     }
 
-    createCheckbox(key, label) {
-        const container = createElement('div', 'flex items-center mb-2'); // Added mb-2
-        const input = createElement('input', 'mr-2', { type: 'checkbox' });
-        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label }); // Changed text-xs to text-sm
 
-        input.addEventListener('change', (e) => {
-            store.dispatch({
-                type: ACTIONS.UPDATE_HYBRID,
-                payload: { [key]: e.target.checked }
-            });
-        });
-
-        container.appendChild(input);
-        container.appendChild(labelEl);
-        return { container, input };
-    }
 
     createSlider(key, min, max, step, label) {
         // Use ParamNumber

@@ -10,6 +10,7 @@ import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
 import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
+import { ParamToggle } from './ParamToggle.js';
 
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
@@ -512,20 +513,34 @@ export class ChordalRosettePanel extends Panel {
     }
 
     createCheckbox(key, label) {
-        const container = createElement('div', 'flex items-center mb-2');
-        const input = createElement('input', 'mr-2', { type: 'checkbox' });
-        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label });
+        const paramToggle = new ParamToggle({
+            key,
+            label,
+            value: false, // Default, updated by updateUI
+            onChange: (val) => {
+                store.dispatch({
+                    type: this.actionType,
+                    payload: { [key]: val }
+                });
+            },
+            onLinkToggle: (isActive) => {
+                const myKey = `${this.roseId}.${key}`;
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = `${otherRoseId}.${key}`;
 
-        input.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { [key]: e.target.checked }
-            });
+                import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    const linked = linkManager.toggleLink(myKey, otherKey);
+                    if (linked !== isActive) {
+                        paramToggle.setLinkActive(linked);
+                    }
+                });
+            }
         });
 
-        container.appendChild(input);
-        container.appendChild(labelEl);
-        return { container, input };
+        return {
+            container: paramToggle.getElement(),
+            instance: paramToggle
+        };
     }
 
     createColorInput(key, label) {
@@ -686,7 +701,7 @@ export class ChordalRosettePanel extends Panel {
             this.updateControl(this.lineWidthControl, params.lineWidth ?? 2);
         }
         if (this.antiAliasControl) {
-            this.antiAliasControl.input.checked = params.antiAlias !== false; // Default true
+            this.antiAliasControl.instance.setValue(params.antiAlias !== false); // Default true
         }
         if (this.colorInput) {
             this.colorInput.setValue(params.color || '#ffffff');
@@ -700,7 +715,7 @@ export class ChordalRosettePanel extends Panel {
 
         // Base Curve Viz Updates
         if (this.showBaseCurveControl) {
-            this.showBaseCurveControl.input.checked = params.showBaseCurve;
+            this.showBaseCurveControl.instance.setValue(params.showBaseCurve);
         }
         if (this.baseCurveWidthControl && document.activeElement !== this.baseCurveWidthControl.input) {
             this.updateControl(this.baseCurveWidthControl, params.baseCurveLineWidth ?? 2);
@@ -717,7 +732,7 @@ export class ChordalRosettePanel extends Panel {
 
         // Vertex Rendering Updates
         if (this.showVerticesControl) {
-            this.showVerticesControl.input.checked = params.showVertices;
+            this.showVerticesControl.instance.setValue(params.showVertices);
         }
         if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
             this.updateControl(this.vertexRadiusControl, params.vertexRadius ?? 2);
@@ -915,11 +930,11 @@ export class ChordalRosettePanel extends Panel {
         // Helper to check and update a control
         const checkControl = (control, paramKey) => {
             if (!control) return;
-            // Handle both wrapped controls (from createSlider) and direct instances (ParamColor/Select)
+            // Handle both wrapped controls (from createSlider/Checkbox) and direct instances (ParamColor/Select)
             const instance = control.instance || control;
 
             // Ensure it's a valid Param component with linking support
-            if (!instance.setLinkActive) return;
+            if (!instance || !instance.setLinkActive) return;
 
             const myKey = `${this.roseId}.${paramKey}`;
             const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
@@ -945,6 +960,7 @@ export class ChordalRosettePanel extends Panel {
 
         // 3. Standalone Controls
         // Base Curve
+        checkControl(this.showBaseCurveControl, 'showBaseCurve');
         checkControl(this.baseCurveColorControl, 'baseCurveColor');
         checkControl(this.baseCurveWidthControl, 'baseCurveLineWidth');
         checkControl(this.baseCurveOpacityControl, 'baseCurveOpacity');
@@ -952,17 +968,20 @@ export class ChordalRosettePanel extends Panel {
 
         // Sequencer / Modulo
         checkControl(this.divsControl, 'totalDivs');
+        checkControl(this.showAllCosetsControl, 'showAllCosets');
         checkControl(this.cosetCountControl, 'cosetCount');
         checkControl(this.cosetIndexControl, 'cosetIndex');
 
         // Chordal Line Viz
         checkControl(this.opacityControl, 'opacity');
+        checkControl(this.antiAliasControl, 'antiAlias');
         checkControl(this.methodSelect, 'colorMethod');
         checkControl(this.colorInput, 'color');
         checkControl(this.blendSelect, 'blendMode');
         checkControl(this.lineWidthControl, 'lineWidth');
 
         // Vertex Rendering
+        checkControl(this.showVerticesControl, 'showVertices');
         checkControl(this.vertexRadiusControl, 'vertexRadius');
         checkControl(this.vertexColorControl, 'vertexColor');
         checkControl(this.vertexOpacityControl, 'vertexOpacity');
@@ -971,7 +990,7 @@ export class ChordalRosettePanel extends Panel {
 
     updateControl(control, value) {
         if (control.instance) {
-            // New ParamNumber Path
+            // New ParamNumber/ParamToggle Path
             control.instance.setValue(value);
         } else {
             // Legacy Path (if any remaining)
