@@ -5,13 +5,36 @@ import { ChordalRosettePanel } from './ui/components/ChordalRosettePanel.js';
 import { InterpolationPanel } from './ui/components/InterpolationPanel.js';
 import { createElement } from './ui/utils/dom.js';
 import { Recorder } from './engine/recorder/Recorder.js';
+import { persistenceManager } from './engine/state/PersistenceManager.js';
+import { linkManager } from './engine/logic/LinkManager.js';
 
 // Application Bootstrapper
 class App {
     constructor() {
+        this.initPersistence();
         this.initUI();
         this.initRenderer();
         this.loop();
+    }
+
+    initPersistence() {
+        // 1. Load saved state
+        const saved = persistenceManager.load();
+
+        if (saved) {
+            // Hydrate Store
+            if (saved.state) {
+                store.hydrate(saved.state);
+            }
+            // Hydrate Links
+            if (saved.links) {
+                linkManager.restoreLinks(saved.links);
+            }
+        }
+
+        // 2. Setup Save Triggers
+        store.subscribe(() => persistenceManager.save());
+        linkManager.subscribe(() => persistenceManager.save());
     }
 
     initUI() {

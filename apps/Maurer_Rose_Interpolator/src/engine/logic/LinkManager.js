@@ -175,6 +175,51 @@ export class LinkManager {
         const parts = key.split('.');
         return [parts[0], parts.slice(1).join('.')];
     }
+    // --- Persistence Methods ---
+
+    /**
+     * Returns an array of link pairs for saving.
+     * Format: [['rosetteA.n', 'rosetteB.n'], ...]
+     * We need to avoid duplicates (A-B and B-A).
+     */
+    getLinks() {
+        const uniqueLinks = new Set();
+        const exportList = [];
+
+        this.links.forEach((neighbors, keyA) => {
+            neighbors.forEach(keyB => {
+                // Create a canonical string for the pair to check uniqueness
+                const pair = [keyA, keyB].sort().join('<->');
+                if (!uniqueLinks.has(pair)) {
+                    uniqueLinks.add(pair);
+                    exportList.push([keyA, keyB]);
+                }
+            });
+        });
+
+        return exportList;
+    }
+
+    /**
+     * Restore links from a saved array of pairs.
+     */
+    restoreLinks(linksArray) {
+        if (!Array.isArray(linksArray)) return;
+
+        // Clear existing? Or just add?
+        // Let's clear to be safe implies a full restore.
+        this.links.clear();
+
+        linksArray.forEach(pair => {
+            if (Array.isArray(pair) && pair.length === 2) {
+                this.addLink(pair[0], pair[1]);
+            }
+        });
+
+        // After restoring, we should probably sync values to ensure consistency?
+        // Or assume the saved state already has consistent values.
+        // Let's assume saved state is consistent.
+    }
 }
 
 export const linkManager = new LinkManager();

@@ -2,9 +2,9 @@ import { DEFAULTS } from '../../config/defaults.js';
 import { ACTIONS } from './Actions.js';
 
 class Store {
-    constructor() {
-        // I need to check defaults.js first. I will abort this tool call and view defaults.js instead.
-        this.state = JSON.parse(JSON.stringify(DEFAULTS));
+    constructor(initialState = null) {
+        // If initial state provided, use it. Otherwise copy defaults.
+        this.state = initialState ? initialState : JSON.parse(JSON.stringify(DEFAULTS));
         this.listeners = new Set();
         this.isDirty = true; // Initial render required
     }
@@ -66,6 +66,13 @@ class Store {
 
     clearDirty() {
         this.isDirty = false;
+    }
+
+    // Hydrate state from persistence
+    hydrate(newState) {
+        this.state = newState;
+        this.isDirty = true;
+        this.notify();
     }
 }
 
