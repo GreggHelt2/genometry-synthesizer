@@ -17,6 +17,9 @@ export class InterpolationPanel extends Panel {
         super(id, title);
         this.renderContent();
         store.subscribe(this.updateUI.bind(this));
+
+        // Initial UI update to sync with default state
+        this.updateUI(store.getState());
     }
 
     renderContent() {
