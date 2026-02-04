@@ -153,10 +153,13 @@ export class PersistenceManager {
     /**
      * Saves a named snapshot to IndexedDB.
      */
-    async saveSnapshot(name) {
+    async saveSnapshot(name, thumbnailData = null) {
         try {
             const payload = this.captureState();
             payload.name = name; // Attach name field for Index
+            if (thumbnailData) {
+                payload.thumbnail = thumbnailData;
+            }
 
             const result = await this.dbAdapter.save(payload);
 

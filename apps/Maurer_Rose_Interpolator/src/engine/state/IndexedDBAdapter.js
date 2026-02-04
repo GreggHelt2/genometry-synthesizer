@@ -128,8 +128,8 @@ export class IndexedDBAdapter {
             request.onsuccess = (event) => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    const { id, name, timestamp, tags } = cursor.value;
-                    results.push({ id, name, timestamp, tags });
+                    const { id, name, timestamp, tags, thumbnail } = cursor.value;
+                    results.push({ id, name, timestamp, tags, thumbnail });
                     cursor.continue();
                 } else {
                     resolve(results);

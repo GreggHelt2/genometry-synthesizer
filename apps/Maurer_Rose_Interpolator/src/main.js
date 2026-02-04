@@ -8,6 +8,7 @@ import { Recorder } from './engine/recorder/Recorder.js';
 import { persistenceManager } from './engine/state/PersistenceManager.js';
 import { linkManager } from './engine/logic/LinkManager.js';
 import { SnapshotModal } from './ui/components/SnapshotModal.js';
+import { SnapshotSidebar } from './ui/components/SnapshotSidebar.js';
 
 // Application Bootstrapper
 class App {
@@ -126,6 +127,55 @@ class App {
         persistenceManager.forceSave();
     }
 
+    getCompositeThumbnail() {
+        // Create offscreen canvas for composite (3:1 aspect ratio)
+        // e.g. 300x100
+        const width = 300;
+        const height = 100;
+        const subWidth = 100;
+
+        const cvs = document.createElement('canvas');
+        cvs.width = width;
+        cvs.height = height;
+        const ctx = cvs.getContext('2d');
+
+        // Fill background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+
+        // Helper to draw scaled image
+        const drawSource = (sourceCanvas, xOffset) => {
+            if (sourceCanvas && sourceCanvas.width > 0) {
+                // Source might be large (600x600), scale down to 100x100
+                ctx.drawImage(sourceCanvas, 0, 0, sourceCanvas.width, sourceCanvas.height, xOffset, 0, subWidth, height);
+            }
+        };
+
+        // 1. Rosette A
+        if (this.panelA && this.panelA.canvas) {
+            drawSource(this.panelA.canvas, 0);
+        }
+
+        // 2. Hybrid (Middle)
+        if (this.canvas) {
+            drawSource(this.canvas, 100);
+        }
+
+        // 3. Rosette B
+        if (this.panelB && this.panelB.canvas) {
+            drawSource(this.panelB.canvas, 200);
+        }
+
+        // Optional: draw thin dividers?
+        ctx.strokeStyle = '#333';
+        ctx.beginPath();
+        ctx.moveTo(100, 0); ctx.lineTo(100, 100);
+        ctx.moveTo(200, 0); ctx.lineTo(200, 100);
+        ctx.stroke();
+
+        return cvs.toDataURL('image/jpeg', 0.7); // Use JPEG 0.7 for size/quality balance
+    }
+
     initUI() {
         const app = document.getElementById('app');
         app.className = 'flex flex-col h-screen w-screen bg-black text-white';
@@ -161,7 +211,17 @@ class App {
             try {
                 const name = saveInput.value;
                 if (name && name.trim()) {
-                    await persistenceManager.saveSnapshot(name.trim());
+                    // Capture Thumbnail
+                    const thumb = this.getCompositeThumbnail();
+
+                    await persistenceManager.saveSnapshot(name.trim(), thumb);
+
+                    // Refresh Sidebar if open (or just always refresh list)
+                    if (this.sidebar) {
+                        const list = await persistenceManager.listSnapshots();
+                        this.sidebar.updateList(list);
+                    }
+
                     // Visual feedback
                     const originalText = saveBtn.textContent;
                     saveBtn.textContent = 'Saved!';
@@ -183,26 +243,38 @@ class App {
         saveGroup.appendChild(saveInput);
         saveGroup.appendChild(saveBtn);
 
-        // Load Button
-        const loadBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', { textContent: 'Load Snapshot' });
-        loadBtn.onclick = async () => {
-            const snapshots = await persistenceManager.listSnapshots();
-            const modal = new SnapshotModal(async (name) => {
-                const payload = await persistenceManager.loadSnapshot(name);
-                this.handleLoadState(payload);
-            });
-            modal.show(snapshots);
+        // Toggle Sidebar Button
+        const sidebarBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors flex items-center gap-1', {
+            title: 'Toggle Snapshots'
+        });
+        sidebarBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            <span>Snapshots</span>
+        `;
+        sidebarBtn.onclick = async () => {
+            if (this.sidebar) {
+                // Refresh list right before opening
+                if (!this.sidebar.isOpen) {
+                    const list = await persistenceManager.listSnapshots();
+                    this.sidebar.updateList(list);
+                }
+                this.sidebar.toggle();
+            }
         };
 
         snapControls.appendChild(saveGroup);
-        snapControls.appendChild(loadBtn);
+        snapControls.appendChild(sidebarBtn);
         header.appendChild(snapControls);
 
         app.appendChild(header);
 
         // 2. Main Content Row (Flex Container for Columns)
-        const mainContent = createElement('div', 'flex-1 flex flex-col md:flex-row overflow-hidden relative');
+        const mainContent = createElement('div', 'flex-1 flex flex-row overflow-hidden relative w-full');
         app.appendChild(mainContent);
+
+        // -- Main UI Columns Wrappeer --
+        // We wrap the 3 visual columns in a flexible div that will shrink when sidebar opens
+        const visualArea = createElement('div', 'flex-1 flex flex-col md:flex-row overflow-hidden relative min-w-0');
 
         // Column 1: Curve A
         this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'rosetteA');
@@ -238,10 +310,32 @@ class App {
         this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'rosetteB');
         this.panelB.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden';
 
-        // Mount Columns to Main Content
-        this.panelA.mount(mainContent);
-        mainContent.appendChild(this.centerArea);
-        this.panelB.mount(mainContent);
+        // Mount Columns to Visual Area
+        this.panelA.mount(visualArea);
+        visualArea.appendChild(this.centerArea);
+        this.panelB.mount(visualArea);
+
+        // Append Visual Area to Main Content
+        mainContent.appendChild(visualArea);
+
+        // -- Sidebar (Flex Child) --
+        this.sidebar = new SnapshotSidebar(mainContent, {
+            onLoad: async (name) => {
+                try {
+                    const payload = await persistenceManager.loadSnapshot(name);
+                    this.handleLoadState(payload);
+                } catch (e) {
+                    console.error(e);
+                    alert('Error loading snapshot');
+                }
+            },
+            onDelete: async (name) => {
+                await persistenceManager.dbAdapter.deleteByName(name);
+                // Refresh list
+                const list = await persistenceManager.listSnapshots();
+                this.sidebar.updateList(list);
+            }
+        });
 
         // 3. Footer Row
         const footer = createElement('div', 'h-6 bg-gray-900 border-t border-gray-700 flex items-center justify-center text-xs text-gray-500', { textContent: 'Ready' });
