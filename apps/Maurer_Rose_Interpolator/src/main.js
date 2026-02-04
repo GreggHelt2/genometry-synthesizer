@@ -11,9 +11,16 @@ import { linkManager } from './engine/logic/LinkManager.js';
 // Application Bootstrapper
 class App {
     constructor() {
-        this.initPersistence();
+        const savedState = this.initPersistence();
         this.initUI();
         this.initRenderer();
+
+        // Restore UI-specific state (Animations)
+        this.setupPersistenceProviders();
+        if (savedState && savedState.animations) {
+            this.restoreAnimationState(savedState.animations);
+        }
+
         this.loop();
     }
 
@@ -35,6 +42,30 @@ class App {
         // 2. Setup Save Triggers
         store.subscribe(() => persistenceManager.save());
         linkManager.subscribe(() => persistenceManager.save());
+
+        return saved;
+    }
+
+    setupPersistenceProviders() {
+        persistenceManager.registerStateProvider('animations', () => {
+            return {
+                rosetteA: this.panelA ? this.panelA.getAnimationState() : {},
+                rosetteB: this.panelB ? this.panelB.getAnimationState() : {},
+                interpolation: this.interpPanel ? this.interpPanel.getAnimationState() : {}
+            };
+        });
+    }
+
+    restoreAnimationState(animState) {
+        if (animState.rosetteA && this.panelA) {
+            this.panelA.restoreAnimationState(animState.rosetteA);
+        }
+        if (animState.rosetteB && this.panelB) {
+            this.panelB.restoreAnimationState(animState.rosetteB);
+        }
+        if (animState.interpolation && this.interpPanel) {
+            this.interpPanel.restoreAnimationState(animState.interpolation);
+        }
     }
 
     initUI() {

@@ -62,6 +62,17 @@ export class AnimationController {
         if (shape !== undefined) this.easingShape = shape;
     }
 
+    getConfig() {
+        return {
+            min: this.min,
+            max: this.max,
+            period: this.period,
+            type: this.easingType,
+            shape: this.easingShape,
+            isPlaying: this.isPlaying
+        };
+    }
+
     /**
      * computeValue
      * @param {number} totalTime - Total elapsed time in seconds

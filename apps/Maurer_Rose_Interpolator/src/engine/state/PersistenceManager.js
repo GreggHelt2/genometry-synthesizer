@@ -8,6 +8,23 @@ const DEBOUNCE_MS = 1000;
 export class PersistenceManager {
     constructor() {
         this.saveTimeout = null;
+        this.stateProviders = new Map(); // key -> providerFn
+
+        // Ensure pending saves are flushed on unload
+        window.addEventListener('beforeunload', () => {
+            if (this.saveTimeout) {
+                this.forceSave();
+            }
+        });
+    }
+
+    /**
+     * Registers a state provider.
+     * @param {string} key - Top level key in saved JSON (e.g. 'animations')
+     * @param {Function} providerFn - Returns serializable object
+     */
+    registerStateProvider(key, providerFn) {
+        this.stateProviders.set(key, providerFn);
     }
 
     /**
@@ -47,7 +64,7 @@ export class PersistenceManager {
 
     /**
      * Loads state from localStorage and merges with DEFAULTS.
-     * Returns { state, links } or null.
+     * Returns { state, links, ...providers } or null.
      */
     load() {
         try {
@@ -71,7 +88,9 @@ export class PersistenceManager {
 
             console.log('[PersistenceManager] State loaded and merged.');
 
+            // Return full object, consumer routes data
             return {
+                ...savedData,
                 state: mergedState,
                 links: savedData.links || []
             };
@@ -110,6 +129,15 @@ export class PersistenceManager {
                 state: currentState,
                 links: links
             };
+
+            // Collect data from providers
+            this.stateProviders.forEach((providerFn, key) => {
+                try {
+                    payload[key] = providerFn();
+                } catch (err) {
+                    console.error(`[PersistenceManager] Provider '${key}' failed:`, err);
+                }
+            });
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
             console.log('[PersistenceManager] Saved.');

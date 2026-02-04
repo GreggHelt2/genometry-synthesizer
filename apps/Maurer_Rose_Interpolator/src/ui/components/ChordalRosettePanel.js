@@ -642,11 +642,56 @@ export class ChordalRosettePanel extends Panel {
             }
         });
 
+        // Track for Animation Persistence
+        if (!this.animationParams) this.animationParams = new Set();
+        this.animationParams.add(paramGui);
+
+        // Hook dispose to cleanup
+        const originalDispose = paramGui.dispose.bind(paramGui);
+        paramGui.dispose = () => {
+            this.animationParams.delete(paramGui);
+            originalDispose();
+        };
+
         return {
             container: paramGui.getElement(),
             instance: paramGui,
             input: paramGui.slider
         };
+    }
+
+    getAnimationState() {
+        const state = {};
+        if (this.animationParams) {
+            this.animationParams.forEach(param => {
+                const config = param.getAnimationConfig();
+                // Only save if it has meaningful config (e.g. playing or non-default)
+                // But getAnimationConfig returns current config.
+                // We should check if it's "active" or just save everything?
+                // Save everything for consistency.
+                if (config) {
+                    // Only save if modified from defaults? 
+                    // Defaults are local to AnimationController.
+                    // Let's save if it exists.
+                    // Use the key associated with the param. 
+                    // ParamNumber stores 'key' in `this.key`?
+                    // Let's check ParamNumber.js. Step 155: constructor({ key... }) -> this.key = key;
+                    if (param.key) {
+                        state[param.key] = config;
+                    }
+                }
+            });
+        }
+        return state;
+    }
+
+    restoreAnimationState(savedState) {
+        if (!savedState || !this.animationParams) return;
+        this.animationParams.forEach(param => {
+            if (param.key && savedState[param.key]) {
+                param.setAnimationConfig(savedState[param.key]);
+            }
+        });
     }
 
     updateUI(state) {

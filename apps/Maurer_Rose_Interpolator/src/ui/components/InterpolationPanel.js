@@ -781,11 +781,45 @@ export class InterpolationPanel extends Panel {
 
         // Adapter to match old structure expecting { container, input }
         // We attach the full instance so updateUI can use .setValue
+
+        // Track for Animation Persistence
+        if (!this.animationParams) this.animationParams = new Set();
+        this.animationParams.add(paramGui);
+
+        // Hook dispose to cleanup
+        const originalDispose = paramGui.dispose.bind(paramGui);
+        paramGui.dispose = () => {
+            this.animationParams.delete(paramGui);
+            originalDispose();
+        };
+
         return {
             container: paramGui.getElement(),
             instance: paramGui,
             // Legacy support if needed, though we should use instance.setValue
             input: paramGui.slider
         };
+    }
+
+    getAnimationState() {
+        const state = {};
+        if (this.animationParams) {
+            this.animationParams.forEach(param => {
+                const config = param.getAnimationConfig();
+                if (config && param.key) {
+                    state[param.key] = config;
+                }
+            });
+        }
+        return state;
+    }
+
+    restoreAnimationState(savedState) {
+        if (!savedState || !this.animationParams) return;
+        this.animationParams.forEach(param => {
+            if (param.key && savedState[param.key]) {
+                param.setAnimationConfig(savedState[param.key]);
+            }
+        });
     }
 }

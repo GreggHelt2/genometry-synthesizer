@@ -171,6 +171,18 @@ export class WaveformSelector {
         this.drawWaveform();
     }
 
+    setShape(type, shape) {
+        if (type) {
+            this.type = type;
+            if (this.typeSelect) this.typeSelect.value = type;
+        }
+        if (shape) {
+            this.shape = shape;
+            if (this.shapeSelect) this.shapeSelect.value = shape;
+        }
+        this.drawWaveform();
+    }
+
     setPhase(t) {
         this.phase = t;
         // Redraw every frame to scroll the graph

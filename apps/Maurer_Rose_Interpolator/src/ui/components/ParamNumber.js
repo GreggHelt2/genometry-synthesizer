@@ -1,6 +1,8 @@
 import { createElement } from '../utils/dom.js';
 import { WaveformSelector } from './WaveformSelector.js';
 import { AnimationController } from '../../logic/AnimationController.js';
+import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+
 
 
 export class ParamNumber {
@@ -231,21 +233,27 @@ export class ParamNumber {
             return inp;
         };
 
-        const minInput = createNumInput(this.min, (v) => {
+        this.animMinInput = createNumInput(this.min, (v) => {
             this.animationController.setConfig({ min: v });
             if (this.min !== undefined && v < this.min) this.setMin(v);
+            persistenceManager.save();
         });
 
-        const maxInput = createNumInput(this.max, (v) => {
+
+        this.animMaxInput = createNumInput(this.max, (v) => {
             this.animationController.setConfig({ max: v });
             if (this.max !== undefined && v > this.max) this.setMax(v);
+            persistenceManager.save();
         });
 
-        const speedInput = createNumInput(this.animationController.period, (v) => {
+
+        this.animPeriodInput = createNumInput(this.animationController.period, (v) => {
             this.animationController.setConfig({ period: v });
             // Update visualization scale
             this.waveformSelector.setPeriod(v);
+            persistenceManager.save();
         });
+
 
         // Labels
         const lblClass = 'text-[10px] text-gray-500 uppercase tracking-widest';
@@ -261,9 +269,9 @@ export class ParamNumber {
             return d;
         }
 
-        animControls.appendChild(wrap(minInput, 'Min'));
-        animControls.appendChild(wrap(maxInput, 'Max'));
-        animControls.appendChild(wrap(speedInput, 'Period (s)'));
+        animControls.appendChild(wrap(this.animMinInput, 'Min'));
+        animControls.appendChild(wrap(this.animMaxInput, 'Max'));
+        animControls.appendChild(wrap(this.animPeriodInput, 'Period (s)'));
 
         // remove appendChild(animControls) - passed to selector instead
         // this.animPanel.appendChild(animControls);
@@ -276,7 +284,9 @@ export class ParamNumber {
             extraControls: animControls, // Pass the controls to be injected
             onChange: (type, shape) => {
                 this.animationController.setConfig({ type, shape });
+                persistenceManager.save();
             }
+
         });
 
         this.animPanel.appendChild(this.waveformSelector.getElement());
@@ -429,7 +439,9 @@ export class ParamNumber {
             this.playBtn.classList.remove('text-gray-500', 'border-transparent');
             this.playBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         }
+        persistenceManager.save();
     }
+
 
     dispose() {
         if (this.animationController) {
@@ -440,6 +452,69 @@ export class ParamNumber {
         if (this.downBtn) {
             // we have anonymous listeners so we can't remove them easily, but they are attached to DOM elements which will be GC'd.
             // window mouseup is the only risk, but it removes itself.
+        }
+    }
+
+    getAnimationConfig() {
+        if (!this.animationController) return null;
+        return this.animationController.getConfig();
+    }
+
+    setAnimationConfig(config) {
+        if (!this.animationController || !config) return;
+        this.animationController.setConfig(config);
+
+        // Update UI logic for range?
+        if (config.min !== undefined && config.min < this.min) this.setMin(config.min);
+        if (config.max !== undefined && config.max > this.max) this.setMax(config.max);
+
+        // Sync Waveform selector?
+        if (this.waveformSelector) {
+            // It listens to onChange from controller, but setConfig updates raw values.
+            // We might need to manually update waveform selector if it doesn't poll.
+            if (config.type || config.shape) {
+                // WaveformSelector reads from where? It updates controller. 
+                // We need to reverse update it.
+                // WaveformSelector constructor took initial values. It doesn't seem to have a set method?
+                // Let's look at its API.
+                // Assuming it has setType/Shape or we just redraw.
+                // The implementation in ParamNumber line 272 passes initial values.
+                // We might need to recreate or update it.
+                // Let's assume for now just setting config on controller is enough for logic, 
+                // but UI might desync.
+                // Step 209: WaveformSelector logic in ParamNumber (lines 272-280)
+                // It passes `this.animationController.period` etc.
+                // Does it allow updating?
+                // this.waveformSelector.setPeriod(v) exists (line 247).
+                // But type/shape?
+                // Step 209: `onChange: (type, shape) => controller.setConfig(...)`.
+                // We need `waveformSelector.setType(type, shape)` or similar.
+                // If not available, we might skip visual update or add it.
+                // User requirement: "Verified... Open LFO again. Verify... Waveform is Triangle".
+                // So visual update IS required.
+
+                // Let's check WaveformSelector.js in next step if needed. 
+                // For now, let's implement the basic plumbing.
+                if (this.waveformSelector && this.waveformSelector.setShape) {
+                    this.waveformSelector.setShape(config.type, config.shape);
+                }
+            }
+            if (config.period) {
+                if (this.waveformSelector) this.waveformSelector.setPeriod(config.period);
+                if (this.animPeriodInput) this.animPeriodInput.value = config.period;
+            }
+            if (config.min !== undefined && this.animMinInput) this.animMinInput.value = config.min;
+            if (config.max !== undefined && this.animMaxInput) this.animMaxInput.value = config.max;
+        }
+
+        if (config.isPlaying) {
+            if (!this.animationController.isPlaying) {
+                this.togglePlayback(); // Visual + Logic
+            }
+        } else {
+            if (this.animationController.isPlaying) {
+                this.togglePlayback();
+            }
         }
     }
 }
