@@ -24,7 +24,7 @@ export class ParamNumber {
             // Heuristic rounded
             const decimals = (this.step && this.step.toString().split('.')[1]?.length) || 0;
             const rounded = parseFloat(val.toFixed(decimals));
-            this.handleUserChange(rounded);
+            this.handleUserChange(rounded, { transient: true, isAnimation: true });
         });
 
         // Sync configuration defaults immediately
@@ -149,10 +149,16 @@ export class ParamNumber {
         this.downBtn.addEventListener('mousedown', (e) => onMouseDown(e, -1));
         // this.downBtn.addEventListener('mouseleave', stopRepeating);
 
-        // Slider Input
+        // Slider Input (Transient)
         this.slider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
-            this.handleUserChange(val);
+            this.handleUserChange(val, { transient: true });
+        });
+
+        // Slider Change (Final)
+        this.slider.addEventListener('change', (e) => {
+            const val = parseFloat(e.target.value);
+            this.handleUserChange(val, { transient: false }); // Force save
         });
 
         // Number Input
@@ -304,7 +310,7 @@ export class ParamNumber {
 
     }
 
-    handleUserChange(val) {
+    handleUserChange(val, meta = {}) {
         if (isNaN(val)) return;
 
         // Update local UI immediately for responsiveness
@@ -312,7 +318,7 @@ export class ParamNumber {
 
         // Notify parent
         if (this.onChange) {
-            this.onChange(val);
+            this.onChange(val, meta);
         }
     }
 

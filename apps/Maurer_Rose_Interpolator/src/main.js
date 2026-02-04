@@ -40,7 +40,13 @@ class App {
         }
 
         // 2. Setup Save Triggers
-        store.subscribe(() => persistenceManager.save());
+        store.subscribe((state, action) => {
+            // Optimization: Skip saving for transient updates (animations, dragging)
+            if (action && action.meta && action.meta.transient) {
+                return;
+            }
+            persistenceManager.save();
+        });
         linkManager.subscribe(() => persistenceManager.save());
 
         return saved;

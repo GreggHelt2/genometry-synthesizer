@@ -14,8 +14,8 @@ class Store {
         return () => this.listeners.delete(listener);
     }
 
-    notify() {
-        this.listeners.forEach(listener => listener(this.state));
+    notify(action) {
+        this.listeners.forEach(listener => listener(this.state, action));
     }
 
     dispatch(action) {
@@ -24,7 +24,7 @@ class Store {
 
         if (this.state !== prevState) {
             this.isDirty = true;
-            this.notify();
+            this.notify(action);
         }
     }
 

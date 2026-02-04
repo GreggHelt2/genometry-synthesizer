@@ -608,10 +608,11 @@ export class ChordalRosettePanel extends Panel {
             max,
             step,
             value: 0, // Default, will be updated by updateUI
-            onChange: (val) => {
+            onChange: (val, meta) => {
                 store.dispatch({
                     type: this.actionType,
-                    payload: { [key]: val }
+                    payload: { [key]: val },
+                    meta: meta
                 });
             },
             onLinkToggle: (isActive) => {
