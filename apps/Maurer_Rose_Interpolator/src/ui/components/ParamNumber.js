@@ -330,6 +330,11 @@ export class ParamNumber {
         }
     }
 
+    setLinkActive(isActive) {
+        this.isLinked = isActive;
+        this.updateLinkVisuals();
+    }
+
     updateLinkVisuals() {
         if (this.isLinked) {
             this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
@@ -448,12 +453,10 @@ export class ParamNumber {
     // ... (rest of methods)
 
     updateLinkVisuals() {
-        if (!this.linkManager || !this.linkBtn) return;
-
-        const isActive = this.linkManager.isLinked(this.key);
+        if (!this.linkBtn) return;
 
         // Visual toggle: Green vs Gray
-        if (isActive) {
+        if (this.isLinked) {
             this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
             this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         } else {
@@ -461,11 +464,7 @@ export class ParamNumber {
             this.linkBtn.classList.add('text-gray-500', 'border-transparent');
         }
 
-        // Avoid infinite loops if triggered by self
-        if (this.isLinked !== isActive) {
-            this.isLinked = isActive;
-            this.updateLinkVisuals();
-        }
+
     }
 
     toggleAnimationPanel() {
