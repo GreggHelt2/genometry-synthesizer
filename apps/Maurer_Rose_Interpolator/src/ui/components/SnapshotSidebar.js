@@ -6,9 +6,88 @@ export class SnapshotSidebar {
         this.onLoad = onLoad;
         this.onDelete = onDelete;
         this.isOpen = false;
-        this.snapshots = [];
+        this.onDelete = onDelete;
+        this.isOpen = false;
+        this.allSnapshots = []; // Store full list
+        this.filterQuery = '';  // Current search regex string
+        this.filteredSnapshots = []; // Currently visible list
+        this.selectedIndex = -1; // Index in filteredSnapshots
 
+        this._boundHandleKeydown = this.handleKeydown.bind(this);
         this.render();
+    }
+
+    handleKeydown(e) {
+        if (!this.isOpen) return;
+
+        // Ignore if focus is in search input (unless it's Enter/Arrows which we might want to override, 
+        // but typically standard behavior is better. Let's allow Arrows to navigate list even from input)
+        // Actually, if in input, Up/Down usually moves caret. Let's hijack if default behavior isn't critical?
+        // Better UX: If in input, Up/Down moves focus to list.
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.moveSelection(1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.moveSelection(-1);
+        } else if (e.key === 'Enter') {
+            // Load selected
+            if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredSnapshots.length) {
+                const snap = this.filteredSnapshots[this.selectedIndex];
+                this.onLoad(snap.name);
+            }
+        }
+    }
+
+    moveSelection(delta) {
+        const len = this.filteredSnapshots.length;
+        if (len === 0) return;
+
+        let newIndex = this.selectedIndex + delta;
+
+        // Clamp
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= len) newIndex = len - 1;
+
+        if (newIndex !== this.selectedIndex) {
+            this.selectedIndex = newIndex;
+            this.updateSelectionVisuals();
+            this.scrollToSelected();
+
+            // Auto-load on selection change
+            if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredSnapshots.length) {
+                const snap = this.filteredSnapshots[this.selectedIndex];
+                this.onLoad(snap.name);
+            }
+        }
+    }
+
+    scrollToSelected() {
+        // Simple logic: find element by data-index or just re-render is easiest but expensive?
+        // Let's use re-render for now as list isn't huge, OR just toggle classes if we keep ref to elements?
+        // Re-rendering whole list on every arrow key is bad. 
+        // Better: Query DOM for current selected and new selected.
+
+        // Actually, let's defer scroll logic to 'updateSelectionVisuals'
+    }
+
+    updateSelectionVisuals() {
+        // Toggle classes on DOM elements
+        const cards = this.listElement.children;
+        for (let i = 0; i < cards.length; i++) {
+            const card = cards[i];
+            if (i === this.selectedIndex) {
+                card.classList.add('border-blue-500', 'ring-1', 'ring-blue-500');
+                card.classList.remove('border-gray-700', 'hover:border-gray-500');
+
+                // Scroll into view
+                card.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+            } else {
+                card.classList.remove('border-blue-500', 'ring-1', 'ring-blue-500');
+                card.classList.add('border-gray-700', 'hover:border-gray-500');
+            }
+        }
     }
 
     render() {
@@ -34,7 +113,24 @@ export class SnapshotSidebar {
 
         header.appendChild(title);
         header.appendChild(closeBtn);
+        header.appendChild(title);
+        header.appendChild(closeBtn);
         wrapper.appendChild(header);
+
+        // Search Input
+        const searchContainer = createElement('div', 'p-2 border-b border-gray-700 bg-gray-800');
+        const searchInput = createElement('input', 'w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500', {
+            type: 'text',
+            placeholder: 'Filter (Glob "*" or Regex)...'
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            this.filterQuery = e.target.value;
+            this.applyFilter();
+        });
+
+        searchContainer.appendChild(searchInput);
+        wrapper.appendChild(searchContainer);
 
         // List Container
         this.listElement = createElement('div', 'flex-1 overflow-y-auto p-3 flex flex-col gap-3');
@@ -48,11 +144,50 @@ export class SnapshotSidebar {
     }
 
     updateList(snapshots) {
-        this.snapshots = snapshots;
+        this.allSnapshots = snapshots;
+        this.applyFilter();
+    }
+
+    applyFilter() {
+        let filtered = this.allSnapshots;
+        if (this.filterQuery) {
+            try {
+                let pattern = this.filterQuery;
+
+                // Hybrid Logic: Check for explicit regex characters
+                // If NO advanced regex syntax is present, treat '*' as a GLOB wildcard (.*)
+                // We exclude '.' from this check so 'v1.0' still works as expected (wildcard dot is standard enough, or literal enough)
+                const hasAdvancedRegex = /[\\^$|+?(){}\[\]]/.test(pattern);
+
+                if (!hasAdvancedRegex) {
+                    // Replace glob * with regex .*
+                    pattern = pattern.replace(/\*/g, '.*');
+                }
+
+                const regex = new RegExp(pattern, 'i');
+                filtered = this.allSnapshots.filter(s => regex.test(s.name));
+            } catch (e) {
+                // If invalid regex, maybe strictly match or just ignore?
+                // Let's fallback to simple substring match if regex fails
+                const lower = this.filterQuery.toLowerCase();
+                filtered = this.allSnapshots.filter(s => s.name.toLowerCase().includes(lower));
+            }
+        }
+
+        // Update state
+        this.filteredSnapshots = filtered;
+        // Reset selection on filter change? Or try to keep? Reseting is safer.
+        this.selectedIndex = -1;
+
+        this.renderSnapshots(filtered);
+    }
+
+    renderSnapshots(snapshots) {
         this.listElement.innerHTML = '';
 
         if (snapshots.length === 0) {
-            const empty = createElement('div', 'text-center text-gray-500 py-8 italic text-sm', { textContent: 'No snapshots saved.' });
+            const msg = this.allSnapshots.length === 0 ? 'No snapshots saved.' : 'No matches found.';
+            const empty = createElement('div', 'text-center text-gray-500 py-8 italic text-sm', { textContent: msg });
             this.listElement.appendChild(empty);
             return;
         }
@@ -60,8 +195,13 @@ export class SnapshotSidebar {
         // Sort by timestamp desc
         snapshots.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-        snapshots.forEach(snap => {
-            const card = createElement('div', 'bg-gray-800 rounded border border-gray-700 overflow-hidden hover:border-gray-500 transition-colors group relative shrink-0');
+        snapshots.forEach((snap, index) => {
+            const isSelected = index === this.selectedIndex;
+            // Conditional classes
+            const borderClass = isSelected ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-700 hover:border-gray-500';
+
+            const card = createElement('div', `bg-gray-800 rounded border ${borderClass} overflow-hidden transition-colors group relative shrink-0`);
+            // Store index for referencing? Not strictly needed if loop order matches filteredSnapshots
 
             // Thumbnail
             // Expecting a 3:1 composite image
@@ -107,8 +247,10 @@ export class SnapshotSidebar {
             card.appendChild(thumbContainer);
             card.appendChild(info);
 
-            // Load on click
+            // Load on click (and Select)
             card.onclick = () => {
+                this.selectedIndex = index;
+                this.updateSelectionVisuals();
                 this.onLoad(snap.name);
             };
             card.style.cursor = 'pointer';
@@ -123,8 +265,10 @@ export class SnapshotSidebar {
 
         if (this.isOpen) {
             this.container.style.width = '320px'; // Open width
+            window.addEventListener('keydown', this._boundHandleKeydown);
         } else {
             this.container.style.width = '0px';
+            window.removeEventListener('keydown', this._boundHandleKeydown);
         }
 
         // Trigger resize event for canvas layout after transition
