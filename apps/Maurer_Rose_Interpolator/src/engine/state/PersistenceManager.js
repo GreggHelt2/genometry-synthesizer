@@ -124,7 +124,7 @@ export class PersistenceManager {
             const links = linkManager.getLinks();
 
             const payload = {
-                version: '2.1',
+                version: '2.2',
                 timestamp: Date.now(),
                 state: currentState,
                 links: links

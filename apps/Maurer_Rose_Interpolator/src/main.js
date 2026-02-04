@@ -103,7 +103,7 @@ class App {
         app.className = 'flex flex-col h-screen w-screen bg-black text-white';
 
         // 1. Header Row
-        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 font-bold text-sm text-gray-400', { textContent: 'Chordal Rosette Explorer v2.1' });
+        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 font-bold text-sm text-gray-400', { textContent: 'Chordal Rosette Explorer v2.2' });
         app.appendChild(header);
 
         // 2. Main Content Row (Flex Container for Columns)
