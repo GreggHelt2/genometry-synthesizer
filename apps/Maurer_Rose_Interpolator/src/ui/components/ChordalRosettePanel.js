@@ -196,7 +196,8 @@ export class ChordalRosettePanel extends Panel {
         this.maurerAccordion.append(this.sequencerParamsContainer);
 
         // --- Relatives Navigation ---
-        const relativesAccordion = new Accordion('Relatives Navigation', true);
+        const relativesAccordion = new Accordion('Relatives Navigation', true, this.handleAccordionToggle.bind(this), `${this.roseId}-relatives`);
+        this.accordions.set(`${this.roseId}-relatives`, relativesAccordion);
 
         const relTypeContainer = createElement('div', 'flex items-center justify-between mb-2');
         const relLabel = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Relative Criterion' });
@@ -233,9 +234,11 @@ export class ChordalRosettePanel extends Panel {
         this.controlsContainer.appendChild(relativesAccordion.element);
 
         // Chordal Line Viz Accordion
-        const chordalVizAccordion = new Accordion('Chordal Line Viz', true, (isOpen) => {
+        const chordalVizAccordion = new Accordion('Chordal Line Viz', true, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(chordalVizAccordion.content));
-        });
+        }, `${this.roseId}-chordal-viz`);
+        this.accordions.set(`${this.roseId}-chordal-viz`, chordalVizAccordion);
         this.controlsContainer.appendChild(chordalVizAccordion.element);
 
         // Opacity Control
@@ -403,9 +406,11 @@ export class ChordalRosettePanel extends Panel {
         vertexAccordion.append(this.vertexBlendSelect.getElement());
 
         // Coset Visualization Accordion
-        const cosetAccordion = new Accordion('Coset Visualization', false, (isOpen) => {
+        const cosetAccordion = new Accordion('Coset Visualization', false, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(cosetAccordion.content));
-        }); // Default closed? Or true?
+        }, `${this.roseId}-coset`);
+        this.accordions.set(`${this.roseId}-coset`, cosetAccordion);
         this.controlsContainer.appendChild(cosetAccordion.element);
 
         this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets (k): 1' });
