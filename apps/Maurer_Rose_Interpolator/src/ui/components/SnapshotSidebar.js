@@ -61,7 +61,7 @@ export class SnapshotSidebar {
         snapshots.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
         snapshots.forEach(snap => {
-            const card = createElement('div', 'bg-gray-800 rounded border border-gray-700 overflow-hidden hover:border-gray-500 transition-colors group relative');
+            const card = createElement('div', 'bg-gray-800 rounded border border-gray-700 overflow-hidden hover:border-gray-500 transition-colors group relative shrink-0');
 
             // Thumbnail
             // Expecting a 3:1 composite image
@@ -76,25 +76,11 @@ export class SnapshotSidebar {
                 thumbContainer.appendChild(placeholder);
             }
 
-            // Info
-            const info = createElement('div', 'p-2 flex items-center justify-between');
-
-            const textCol = createElement('div', 'flex flex-col overflow-hidden');
-            const nameEl = createElement('span', 'font-bold text-white text-sm truncate', { textContent: snap.name });
-            const dateStr = new Date(snap.timestamp).toLocaleDateString();
-            const dateEl = createElement('span', 'text-[10px] text-gray-400', { textContent: dateStr });
-
-            textCol.appendChild(nameEl);
-            textCol.appendChild(dateEl);
-
-            // Actions
-            const actions = createElement('div', 'flex items-center gap-1');
-
-            // Delete Button (only visible on hover or always? Let's do always for utility but subtle)
-            const delBtn = createElement('button', 'p-1.5 rounded hover:bg-red-900/50 text-gray-500 hover:text-red-400 transition-colors', {
+            // Delete Button (Overlay on Thumbnail)
+            const delBtn = createElement('button', 'absolute top-1 right-1 p-1 bg-black/60 hover:bg-red-600/90 rounded text-white opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-90 hover:scale-100 shadow-sm z-10', {
                 title: 'Delete Snapshot'
             });
-            delBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+            delBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
             delBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -102,11 +88,21 @@ export class SnapshotSidebar {
                     this.onDelete(snap.name);
                 }
             };
+            thumbContainer.appendChild(delBtn);
 
-            actions.appendChild(delBtn);
+            // Info
+            const info = createElement('div', 'p-2');
+
+            const textCol = createElement('div', 'flex flex-col overflow-hidden gap-0.5');
+            const nameEl = createElement('span', 'font-bold text-white text-sm truncate', { textContent: snap.name });
+            const ts = snap.timestamp ? new Date(snap.timestamp) : new Date();
+            const dateStr = ts.toLocaleDateString();
+            const dateEl = createElement('span', 'text-[10px] text-gray-500', { textContent: dateStr });
+
+            textCol.appendChild(nameEl);
+            textCol.appendChild(dateEl);
 
             info.appendChild(textCol);
-            info.appendChild(actions);
 
             card.appendChild(thumbContainer);
             card.appendChild(info);
