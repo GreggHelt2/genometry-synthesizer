@@ -101,6 +101,15 @@ export class CanvasRenderer {
         this.ctx.imageSmoothingEnabled = aa;
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
 
+        // --- Background Rendering ---
+        if (roseParams.backgroundOpacity > 0) {
+            this.ctx.save();
+            this.ctx.globalAlpha = roseParams.backgroundOpacity;
+            this.ctx.fillStyle = roseParams.backgroundColor || '#000000';
+            this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            this.ctx.restore();
+        }
+
         // --- 1. Collection Phase ---
         const renderables = [];
 

@@ -1,18 +1,21 @@
+// Imports mostly cleaned up, assuming submodules import what they need.
+// Orchestrator needs basic utils + SubSections + Persistence.
+import { StatsSection } from './chordal_rosette/StatsSection.js';
+import { RelativesSection } from './chordal_rosette/RelativesSection.js';
+import { CoreParamsSection } from './chordal_rosette/CoreParamsSection.js';
+import { SequencerSection } from './chordal_rosette/SequencerSection.js';
+import { AppearanceSection } from './chordal_rosette/AppearanceSection.js';
+import { CosetVizSection } from './chordal_rosette/CosetVizSection.js';
+
+import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+
+
 import { Panel } from './Panel.js';
-import { Accordion } from './Accordion.js';
 import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
-import { gcd, getLinesToClose } from '../../engine/math/MathOps.js';
-import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
-import { RelativesFinder } from '../../engine/math/RelativesFinder.js';
-import { ParamNumber } from './ParamNumber.js';
-import { ParamSelect } from './ParamSelect.js';
-import { ParamColor } from './ParamColor.js';
-import { ParamToggle } from './ParamToggle.js';
-
-import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+import { gcd } from '../../engine/math/MathOps.js';
 
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
@@ -45,6 +48,32 @@ export class ChordalRosettePanel extends Panel {
         if (!id) return;
         this.uiState.accordions[id] = isOpen;
         persistenceManager.save();
+    }
+
+    /**
+     * Registers an accordion for UI state persistence
+     * @param {string} id - unique persistence key
+     * @param {Accordion} accordionInstance 
+     */
+    registerAccordion(id, accordionInstance) {
+        this.accordions.set(id, accordionInstance);
+    }
+
+    /**
+     * Registers an animation param/control for persistence
+     * @param {Object} paramInstance - must implement getAnimationConfig/setAnimationConfig/dispose
+     */
+    registerParam(paramInstance) {
+        if (!this.animationParams) this.animationParams = new Set();
+        this.animationParams.add(paramInstance);
+
+        // Auto-cleanup on dispose
+        // We wrap the dispose method to auto-remove from our set
+        const originalDispose = paramInstance.dispose.bind(paramInstance);
+        paramInstance.dispose = () => {
+            this.animationParams.delete(paramInstance);
+            if (originalDispose) originalDispose();
+        };
     }
 
     getUIState() {
@@ -85,388 +114,34 @@ export class ChordalRosettePanel extends Panel {
         this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
         this.element.appendChild(this.controlsContainer);
 
-        // Info Accordion (New)
-        const statsAccordion = new Accordion('Info', false, this.handleAccordionToggle.bind(this), `${this.roseId}-stats`);
-        this.accordions.set(`${this.roseId}-stats`, statsAccordion);
-        this.statsContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
-        statsAccordion.append(this.statsContent);
-        this.controlsContainer.appendChild(statsAccordion.element);
+        // Create Sub-Sections (The new V3 architecture)
 
-        // Core Parameters Accordion
-        this.coreAccordion = new Accordion('Base Curve Generator', true, this.handleAccordionToggle.bind(this), `${this.roseId}-core`);
-        this.accordions.set(`${this.roseId}-core`, this.coreAccordion);
-        this.controlsContainer.appendChild(this.coreAccordion.element);
+        // 1. Stats
+        this.statsSection = new StatsSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.statsSection.element);
 
-        // --- Base Curve Viz Accordion (NEW) ---
-        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
-        }, `${this.roseId}-base-viz`);
-        this.accordions.set(`${this.roseId}-base-viz`, this.baseCurveVizAccordion);
-        this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
+        // 2. Core Params
+        this.coreParamsSection = new CoreParamsSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.coreParamsSection.element);
 
-        // 1. Toggle
-        this.showBaseCurveControl = this.createCheckbox('showBaseCurve', 'Show Base Curve');
-        this.baseCurveVizAccordion.append(this.showBaseCurveControl.container);
+        // 3. Sequencer
+        this.sequencerSection = new SequencerSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.sequencerSection.element);
 
-        // 2. Color
-        // Note: Using ParamColor for UI, mapped to defaults.js hex string
-        this.baseCurveColorControl = new ParamColor({
-            key: 'baseCurveColor',
-            label: 'Color',
-            value: '#666666',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { baseCurveColor: val }
-                });
-            }
-        });
-        this.baseCurveVizAccordion.append(this.baseCurveColorControl.getElement());
+        // 4. Relatives
+        this.relativesSection = new RelativesSection(this);
+        this.controlsContainer.appendChild(this.relativesSection.element);
 
-        // 3. Line Width
-        this.baseCurveWidthControl = this.createSlider('baseCurveLineWidth', 0.1, 10, 0.1, 'Line Width');
-        this.baseCurveVizAccordion.append(this.baseCurveWidthControl.container);
+        // 5. Appearance (Chordal, Vertex, General)
+        this.appearanceSection = new AppearanceSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.appearanceSection.element);
 
-        // 4. Opacity
-        this.baseCurveOpacityControl = this.createSlider('baseCurveOpacity', 0, 1, 0.01, 'Opacity');
-        this.baseCurveVizAccordion.append(this.baseCurveOpacityControl.container);
-
-        // 5. Blend Mode
-        // Reuse logic or create new ParamSelect
-        const baseCurveBlendModes = [
-            { value: 'source-over', label: 'Normal' },
-            { value: 'lighter', label: 'Lighter (Add)' },
-            { value: 'multiply', label: 'Multiply' },
-            { value: 'screen', label: 'Screen' },
-            { value: 'overlay', label: 'Overlay' },
-            { value: 'darken', label: 'Darken' },
-            { value: 'lighten', label: 'Lighten' },
-            { value: 'color-dodge', label: 'Color Dodge' },
-            { value: 'color-burn', label: 'Color Burn' },
-            { value: 'hard-light', label: 'Hard Light' },
-            { value: 'soft-light', label: 'Soft Light' },
-            { value: 'difference', label: 'Difference' },
-            { value: 'exclusion', label: 'Exclusion' },
-            { value: 'hue', label: 'Hue' },
-            { value: 'saturation', label: 'Saturation' },
-            { value: 'color', label: 'Color' },
-            { value: 'luminosity', label: 'Luminosity' }
-        ];
-        this.baseCurveBlendSelect = new ParamSelect({
-            key: 'baseCurveBlendMode',
-            label: 'Blend Mode',
-            options: baseCurveBlendModes,
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { baseCurveBlendMode: val }
-                });
-            }
-        });
-        this.baseCurveVizAccordion.append(this.baseCurveBlendSelect.getElement());
-
-        // --------------------------------------
-
-        // Curve Type Selector
-        this.createCurveTypeSelector(this.coreAccordion);
-
-        // Placeholder for dynamic controls
-        this.dynamicParamsContainer = createElement('div', 'flex flex-col');
-        this.coreAccordion.append(this.dynamicParamsContainer);
-
-        // Maurer Accordion (Sequencer)
-        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.maurerAccordion.content));
-        }, `${this.roseId}-sequencer`);
-        this.accordions.set(`${this.roseId}-sequencer`, this.maurerAccordion);
-        this.controlsContainer.appendChild(this.maurerAccordion.element);
-
-        // Sequencer Type Selector
-        this.createSequencerTypeSelector(this.maurerAccordion);
-
-        // Modulo (Permanent)
-        this.divsControl = this.createSlider('totalDivs', 1, 3600, 1, 'Modulo');
-        this.maurerAccordion.append(this.divsControl.container);
-
-        // Dynamic Sequencer Params Container
-        this.sequencerParamsContainer = createElement('div', 'flex flex-col');
-        this.maurerAccordion.append(this.sequencerParamsContainer);
-
-        // --- Relatives Navigation ---
-        const relativesAccordion = new Accordion('Relatives Navigation', true, this.handleAccordionToggle.bind(this), `${this.roseId}-relatives`);
-        this.accordions.set(`${this.roseId}-relatives`, relativesAccordion);
-
-        const relTypeContainer = createElement('div', 'flex items-center justify-between mb-2');
-        const relLabel = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Relative Criterion' });
-
-        this.relativesTypeSelect = createElement('select', 'flex-1 bg-gray-700 text-white p-1 rounded');
-
-        ['Prime', 'Twin Prime', 'Cousin Prime', 'Lines To Close Matches'].forEach(type => {
-            let val = type.toLowerCase();
-            if (type === 'Lines To Close Matches') val = 'ltc';
-            else if (type === 'Twin Prime') val = 'twin';
-            else if (type === 'Cousin Prime') val = 'cousin';
-            else if (type === 'Prime') val = 'prime';
-
-            const opt = createElement('option', '', { value: val, textContent: type });
-            this.relativesTypeSelect.appendChild(opt);
-        });
-
-        // Set Default
-        this.relativesTypeSelect.value = 'ltc';
-
-        relTypeContainer.appendChild(relLabel);
-        relTypeContainer.appendChild(this.relativesTypeSelect);
-
-        const relNavContainer = createElement('div', 'flex gap-2');
-
-        ['Prev', 'Random', 'Next'].forEach(dir => {
-            const btn = createElement('button', 'flex-1 bg-gray-600 hover:bg-gray-500 rounded px-2 py-1 text-sm', { textContent: dir });
-            btn.addEventListener('click', () => this.handleRelativesNav(dir.toLowerCase()));
-            relNavContainer.appendChild(btn);
-        });
-
-        relativesAccordion.append(relTypeContainer);
-        relativesAccordion.append(relNavContainer);
-        this.controlsContainer.appendChild(relativesAccordion.element);
-
-        // Chordal Line Viz Accordion
-        const chordalVizAccordion = new Accordion('Chordal Line Viz', true, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(chordalVizAccordion.content));
-        }, `${this.roseId}-chordal-viz`);
-        this.accordions.set(`${this.roseId}-chordal-viz`, chordalVizAccordion);
-        this.controlsContainer.appendChild(chordalVizAccordion.element);
-
-        // Opacity Control
-        this.opacityControl = this.createSlider('opacity', 0, 1, 0.01, 'Opacity');
-
-        // Color Control
-
-        // 1. Method
-        const methodOptions = [
-            { value: 'solid', label: 'Single Color' },
-            { value: 'length', label: 'Length' },
-            { value: 'angle', label: 'Angle' },
-            { value: 'sequence', label: 'Sequence' }
-        ];
-
-        this.methodSelect = new ParamSelect({
-            key: 'colorMethod',
-            label: 'Color Method',
-            options: methodOptions,
-            value: 'solid',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { colorMethod: val }
-                });
-            }
-        });
-        chordalVizAccordion.append(this.methodSelect.getElement());
-
-        // 2. Color
-        this.colorInput = new ParamColor({
-            key: 'color',
-            label: 'Color',
-            value: '#ffffff',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { color: val }
-                });
-            }
-        });
-        chordalVizAccordion.append(this.colorInput.getElement());
-
-        // 3. Blend Mode
-        const blendModes = [
-            { value: 'source-over', label: 'Normal' },
-            { value: 'lighter', label: 'Lighter (Add)' },
-            { value: 'multiply', label: 'Multiply' },
-            { value: 'screen', label: 'Screen' },
-            { value: 'overlay', label: 'Overlay' },
-            { value: 'darken', label: 'Darken' },
-            { value: 'lighten', label: 'Lighten' },
-            { value: 'color-dodge', label: 'Color Dodge' },
-            { value: 'color-burn', label: 'Color Burn' },
-            { value: 'hard-light', label: 'Hard Light' },
-            { value: 'soft-light', label: 'Soft Light' },
-            { value: 'difference', label: 'Difference' },
-            { value: 'exclusion', label: 'Exclusion' },
-            { value: 'hue', label: 'Hue' },
-            { value: 'saturation', label: 'Saturation' },
-            { value: 'color', label: 'Color' },
-            { value: 'luminosity', label: 'Luminosity' }
-        ];
-
-        this.blendSelect = new ParamSelect({
-            key: 'blendMode',
-            label: 'Blend Mode',
-            options: blendModes,
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { blendMode: val }
-                });
-            }
-        });
-        chordalVizAccordion.append(this.blendSelect.getElement());
-
-        // Line Width
-        this.lineWidthControl = this.createSlider('lineWidth', 0.1, 10, 0.1, 'Line Width');
-        chordalVizAccordion.append(this.lineWidthControl.container);
-
-        // Anti-aliasing
-        this.antiAliasControl = this.createCheckbox('antiAlias', 'Anti-aliasing');
-        chordalVizAccordion.append(this.antiAliasControl.container);
-
-        chordalVizAccordion.append(this.opacityControl.container);
-
-        // Vertex Rendering Accordion
-        const vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen) => {
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(vertexAccordion.content));
-        });
-        this.controlsContainer.appendChild(vertexAccordion.element);
-        // 1. Toggle
-        this.showVerticesControl = this.createCheckbox('showVertices', 'Show Vertices');
-        vertexAccordion.append(this.showVerticesControl.container);
-
-        // General Rendering Settings Accordion (New)
-        this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-        }, `${this.roseId}-general`);
-        this.accordions.set(`${this.roseId}-general`, this.generalAccordion);
-        this.controlsContainer.appendChild(this.generalAccordion.element);
-
-        // 1. Auto Scale
-        this.autoScaleControl = new ParamToggle({
-            key: 'autoScale',
-            label: 'Auto Scale',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { autoScale: val }
-                });
-            }
-        });
-        this.generalAccordion.append(this.autoScaleControl.getElement());
-
-        // 2. Scale Line Width
-        this.scaleLineWidthControl = new ParamToggle({
-            key: 'scaleLineWidth',
-            label: 'Scale Line Width',
-            value: true,
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { scaleLineWidth: val }
-                });
-            }
-        });
-        this.generalAccordion.append(this.scaleLineWidthControl.getElement());
-
-        // 3. Radius
-        this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
-        vertexAccordion.append(this.vertexRadiusControl.container);
-
-        // 3. Color
-        this.vertexColorControl = new ParamColor({
-            key: 'vertexColor',
-            label: 'Color',
-            value: '#ffffff',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { vertexColor: val }
-                });
-            }
-        });
-        vertexAccordion.append(this.vertexColorControl.getElement());
-
-        // 4. Opacity
-        this.vertexOpacityControl = this.createSlider('vertexOpacity', 0, 1, 0.01, 'Opacity');
-        vertexAccordion.append(this.vertexOpacityControl.container);
-
-        // 5. Blend Mode
-        this.vertexBlendSelect = new ParamSelect({
-            key: 'vertexBlendMode',
-            label: 'Blend Mode',
-            options: blendModes, // Reuse existing blendModes array
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { vertexBlendMode: val }
-                });
-            }
-        });
-        vertexAccordion.append(this.vertexBlendSelect.getElement());
-
-        // Coset Visualization Accordion
-        const cosetAccordion = new Accordion('Coset Visualization', false, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(cosetAccordion.content));
-        }, `${this.roseId}-coset`);
-        this.accordions.set(`${this.roseId}-coset`, cosetAccordion);
-        this.controlsContainer.appendChild(cosetAccordion.element);
-
-        this.cosetInfo = createElement('div', 'text-xs text-gray-400 mb-2 p-1', { textContent: 'Cosets (k): 1' });
-        cosetAccordion.append(this.cosetInfo);
-
-        // Show All Cosets Toggle
-        this.showAllCosetsControl = this.createCheckbox('showAllCosets', 'Show All Cosets');
-        cosetAccordion.append(this.showAllCosetsControl.container);
-
-        // Coset Count Slider
-        this.cosetCountControl = this.createSlider('cosetCount', 1, 1, 1, 'Cosets to Show');
-
-        // Disable slider if showAllCosets is on
-        // We'll handle visual disabling in updateUI, but initial set here/updateUI call
-        cosetAccordion.append(this.cosetCountControl.container);
-
-        // Coset Index (Start Offset)
-        this.cosetIndexControl = this.createSlider('cosetIndex', 0, 1, 1, 'Starting Coset Index');
-        cosetAccordion.append(this.cosetIndexControl.container);
-
-        // Distribution Dropdown
-        const distContainer = createElement('div', 'flex items-center justify-between mb-2');
-        const distLabel = createElement('label', 'text-xs text-gray-400 mr-2', { textContent: 'Distribution' });
-        this.distSelect = createElement('select', 'bg-gray-700 text-white text-xs rounded border border-gray-600 px-1 py-1 flex-1');
-
-        ['Sequential', 'Distributed', 'Two-Way'].forEach(m => {
-            const val = m.toLowerCase();
-            const opt = createElement('option', '', { value: val, textContent: m });
-            this.distSelect.appendChild(opt);
-        });
-
-        this.distSelect.addEventListener('change', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { cosetDistribution: e.target.value }
-            });
-        });
-
-        distContainer.appendChild(distLabel);
-        distContainer.appendChild(this.distSelect);
-        cosetAccordion.append(distContainer);
-
-        // Align labels for static accordions if they have sliders
-        // Use requestAnimationFrame to ensure DOM is rendered and layout is calculated
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                this.alignLabels(this.maurerAccordion.content);
-                this.alignLabels(chordalVizAccordion.content);
-                this.alignLabels(vertexAccordion.content);
-                this.alignLabels(cosetAccordion.content);
-            });
-        });
+        // 6. Coset Visualization
+        this.cosetVizSection = new CosetVizSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.cosetVizSection.element);
     }
+
+
 
     createCurveTypeSelector(parent) {
         const options = Object.keys(CurveRegistry);
@@ -694,15 +369,15 @@ export class ChordalRosettePanel extends Panel {
         });
 
         // Track for Animation Persistence
-        if (!this.animationParams) this.animationParams = new Set();
-        this.animationParams.add(paramGui);
+        // Use central register method now
+        this.registerParam(paramGui);
 
-        // Hook dispose to cleanup
-        const originalDispose = paramGui.dispose.bind(paramGui);
-        paramGui.dispose = () => {
-            this.animationParams.delete(paramGui);
-            originalDispose();
-        };
+        // Hook dispose to cleanup - handled by registerParam now
+        // But wait, createSlider returns { instance: paramGui }
+        // The cleanup wrapper is inside registerParam.
+        // We don't need to manually add to set or hook dispose here if we use registerParam.
+        // However, we need to be careful not to double-wrap if registerParam already wraps.
+        // Let's rely on registerParam completely.
 
         return {
             container: paramGui.getElement(),
@@ -751,430 +426,64 @@ export class ChordalRosettePanel extends Panel {
         // Sync visuals if subscribed
         this.updateLinkVisuals();
 
-        // Update Curve Type Selector
-        if (this.curveTypeSelect) {
-            this.curveTypeSelect.setValue(params.curveType || 'Rhodonea');
-        }
-
-        // Update Accordion Title
-        if (this.coreAccordion) {
-            this.coreAccordion.setTitle(`Base Curve: ${params.curveType || 'Rhodonea'}`);
-        }
-
-
-
-        // Re-render params if needed
-        // Re-render params if needed
-        if (this.currentRenderedCurveType !== params.curveType) {
-            this.renderCoreParams(params.curveType || 'Rhodonea', params);
-            this.currentRenderedCurveType = params.curveType || 'Rhodonea';
-        }
-
-        // Update Dynamic Controls
-        if (this.paramControls) {
-            Object.keys(this.paramControls).forEach(key => {
-                const control = this.paramControls[key];
-                const val = params[key];
-                if (val !== undefined) {
-                    this.updateControl(control, val);
-                }
-            });
-        }
-
-        // Sequencer Type
-        // Sequencer Type
-        // Ensure selector matches state
-        if (this.sequencerSelector) {
-            this.sequencerSelector.setValue(params.sequencerType || 'Cyclic Additive Group Modulo N');
-        }
-
-        // Check if we need to rebuild params
-        const currentType = params.sequencerType || 'Cyclic Additive Group Modulo N';
-        if (this.currentRenderedSequencerType !== currentType) {
-            this.updateSequencerParams(state);
-            this.currentRenderedSequencerType = currentType;
-        } else if (!this.sequencerControls || Object.keys(this.sequencerControls).length === 0) {
-            // Initial build or empty
-            this.updateSequencerParams(state);
-            this.currentRenderedSequencerType = currentType;
-        }
-
-        // Update Sequencer Accordion Title
-        if (this.maurerAccordion) {
-            this.maurerAccordion.setTitle(`Chordal Sequencer: ${params.sequencerType || 'Cyclic Additive Group Modulo N'}`);
-        }
-
-        // Modulo (Standard)
-        if (document.activeElement !== this.divsControl.input) { // Changed from .slider to .input
-            this.updateControl(this.divsControl, params.totalDivs);
-        }
-
-        // Update Dynamic Sequencer Controls
-        if (this.sequencerControls) {
-            Object.keys(this.sequencerControls).forEach(key => {
-                const control = this.sequencerControls[key];
-                if (document.activeElement !== control.input) { // Changed from .slider to .input
-                    // Start checking in top-level params (flat structure)
-                    // If undefined, maybe it's a default? The slider should handle it?
-                    // The control creation set min/max/step.
-                    const val = params[key];
-                    if (val !== undefined) {
-                        this.updateControl(control, val);
-                    }
-                }
-            });
-        }
-
-
-
-        if (document.activeElement !== this.opacityControl.input) { // Changed from .slider to .input
-            this.updateControl(this.opacityControl, params.opacity ?? 1);
-        }
-        if (this.lineWidthControl && document.activeElement !== this.lineWidthControl.input) {
-            this.updateControl(this.lineWidthControl, params.lineWidth ?? 2);
-        }
-        if (this.antiAliasControl) {
-            this.antiAliasControl.instance.setValue(params.antiAlias !== false); // Default true
-        }
-        if (this.colorInput) {
-            this.colorInput.setValue(params.color || '#ffffff');
-        }
-        if (this.methodSelect) {
-            this.methodSelect.setValue(params.colorMethod || 'solid');
-        }
-        if (this.blendSelect) {
-            this.blendSelect.setValue(params.blendMode || 'source-over');
-        }
-
-        // Base Curve Viz Updates
-        if (this.showBaseCurveControl) {
-            this.showBaseCurveControl.instance.setValue(params.showBaseCurve);
-        }
-        if (this.baseCurveWidthControl && document.activeElement !== this.baseCurveWidthControl.input) {
-            this.updateControl(this.baseCurveWidthControl, params.baseCurveLineWidth ?? 2);
-        }
-        if (this.baseCurveColorControl) {
-            this.baseCurveColorControl.setValue(params.baseCurveColor || '#666666');
-        }
-        if (this.baseCurveOpacityControl && document.activeElement !== this.baseCurveOpacityControl.input) {
-            this.updateControl(this.baseCurveOpacityControl, params.baseCurveOpacity ?? 1);
-        }
-        if (this.baseCurveBlendSelect) {
-            this.baseCurveBlendSelect.setValue(params.baseCurveBlendMode || 'source-over');
-        }
-
-        // Vertex Rendering Updates
-        if (this.showVerticesControl) {
-            this.showVerticesControl.instance.setValue(params.showVertices);
-        }
-        if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
-            this.updateControl(this.vertexRadiusControl, params.vertexRadius ?? 2);
-        }
-        if (this.vertexColorControl) {
-            this.vertexColorControl.setValue(params.vertexColor || '#ffffff');
-        }
-        // General Rendering Updates
-        if (this.autoScaleControl) {
-            this.autoScaleControl.setValue(params.autoScale || false);
-        }
-        if (this.scaleLineWidthControl) {
-            this.scaleLineWidthControl.setValue(params.scaleLineWidth !== false); // Default true
-        }
-        if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
-            this.updateControl(this.vertexOpacityControl, params.vertexOpacity ?? 1);
-        }
-        if (this.vertexBlendSelect) {
-            this.vertexBlendSelect.setValue(params.vertexBlendMode || 'source-over');
-        }
-
-        // Coset Logic
-        // Determine k based on Sequencer
+        // Calculate k (Coset Count) for Stats and Viz
         let k;
-        const currentSequencerType = params.sequencerType || 'Additive Group Modulo N';
-        // Note: Default changed from Cyclic Additive... to Additive... in other files, 
-        // ensure we use the same key or registry lookup handles it.
-        // Registry keys: 'Additive Group Modulo N', 'Multiplicative Group Modulo N'
-
+        const currentSequencerType = params.sequencerType || 'Cyclic Additive Group Modulo N';
         const SequencerClass = SequencerRegistry[currentSequencerType];
         if (SequencerClass) {
             const seqInstance = new SequencerClass();
             if (seqInstance.getCosets) {
                 const cosets = seqInstance.getCosets(params.totalDivs, params);
-                if (cosets) {
-                    k = cosets.length;
-                }
+                if (cosets) k = cosets.length;
             }
         }
-
-        // Fallback for Additive or unknown
         if (!k) {
-            k = gcd(params.step, params.totalDivs);
+            k = gcd(params.step || 1, params.totalDivs || 360);
         }
 
-        // Update Coset Count Slider Range and disable if showAllCosets is true
-        if (this.cosetCountControl) {
-            const showAllCosets = params.showAllCosets;
-            this.cosetCountControl.instance.setDisabled(showAllCosets);
-
-            // Stats Update
-            const count = showAllCosets ? k : Math.min(params.cosetCount || 1, k);
-            this.cosetInfo.textContent = `Cosets (k): ${k} | Shown: ${count}`;
-
-            // this.cosetCountControl.input.max = k; // OLD
-            this.cosetCountControl.instance.setMax(k); // NEW
-            this.updateControl(this.cosetCountControl, Math.min(params.cosetCount || 1, k));
-            // Dispatch update if clamped? No, simple render update is fine.
+        // 1. Stats
+        if (this.statsSection) {
+            this.statsSection.update(params, k);
         }
 
-        // Update Distribution
-        if (this.distSelect && this.distSelect.value !== params.cosetDistribution) {
-            this.distSelect.value = params.cosetDistribution || 'sequential';
+        // 2. Core Params
+        if (this.coreParamsSection) {
+            this.coreParamsSection.update(params);
         }
 
-        // Update Coset Index (Offset) Range
-        if (this.cosetIndexControl) {
-            // this.cosetIndexControl.input.max = k - 1; // OLD
-            this.cosetIndexControl.instance.setMax(k - 1); // NEW
-            this.updateControl(this.cosetIndexControl, params.cosetIndex || 0);
+        // 3. Sequencer
+        if (this.sequencerSection) {
+            this.sequencerSection.update(params);
         }
 
-        // Update Stats
-        this.updateStats(params, k);
-    }
-
-    updateStats(params, k) {
-        if (!this.statsContent) return;
-
-        // Instantiate temporary curve to get radiansToClosure
-        const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
-
-        // Renderer logic to create curve instance
-        let curve;
-        if (params.curveType === 'Rhodonea' || !params.curveType) {
-            curve = new CurveClass(
-                params.n, params.d, params.A, params.c, (params.rot * Math.PI) / 180
-            );
-        } else {
-            curve = new CurveClass(params);
-        }
-        const radiansToClose = curve.getRadiansToClosure();
-
-        // Calculate Lines/Sequence Length based on Sequencer Type
-        const currentSequencerType = params.sequencerType || 'Cyclic Additive Group Modulo N';
-        let lines;
-        let totalRosetteLines = 0;
-        let distributionString = '';
-        let isMultiplicative = false;
-
-        // reused currentSequencerType from above
-        if (currentSequencerType === 'Multiplicative Group Modulo N') {
-            isMultiplicative = true;
-            const SequencerClass = SequencerRegistry[currentSequencerType];
-            if (SequencerClass) {
-                const seqInstance = new SequencerClass();
-                const cosets = seqInstance.getCosets(params.totalDivs, params);
-
-                if (cosets && cosets.length > 0) {
-                    // Calculate stats for ALL cosets to get distribution and total
-                    const distribution = {};
-                    cosets.forEach(seed => {
-                        const seq = seqInstance.generate(params.totalDivs, seed, params);
-                        // generate returns points. The number of chords (lines) is points.length - 1.
-                        const len = seq.length > 0 ? seq.length - 1 : 0;
-                        totalRosetteLines += len;
-                        distribution[len] = (distribution[len] || 0) + 1;
-                    });
-
-                    // Format Distribution String
-                    const sizes = Object.keys(distribution).map(Number).sort((a, b) => b - a);
-                    if (sizes.length === 1) {
-                        distributionString = `${sizes[0]}`;
-                    } else {
-                        distributionString = sizes.map(s => `${s} (${distribution[s]})`).join(', ');
-                    }
-
-                    // Use the user's selected coset index (clamped) for the simple "Lines" display
-                    const index = Math.min(params.cosetIndex || 0, cosets.length - 1);
-                    const sequence = seqInstance.generate(params.totalDivs, cosets[index], params);
-                    lines = sequence.length > 0 ? sequence.length - 1 : 0;
-                } else {
-                    lines = 0;
-                }
-            } else {
-                lines = 0;
-            }
-        } else {
-            // Additive fallback
-            lines = getLinesToClose(params.totalDivs, params.step);
-            // For additive, all cosets are same size = lines.
-            // Total = lines * k (number of cosets)
-            totalRosetteLines = lines * k;
-            distributionString = `${lines}`;
+        // 4. Relatives
+        if (this.relativesSection) {
+            this.relativesSection.update(params);
         }
 
-        // Cycles Logic
-        const cycles = radiansToClose / (2 * Math.PI);
-        const cycleString = parseFloat(cycles.toFixed(3));
-
-        // Cosets Shown Logic
-        const cosetsShown = Math.min(params.cosetCount || 1, k);
-
-        // Determine Generator 'g' for Coprime Check
-        let gForCoprime = null;
-        // reused currentSequencerType from above
-        if (currentSequencerType.includes('Multiplicative')) {
-            gForCoprime = params.generator;
-        } else if (currentSequencerType.includes('Additive')) {
-            gForCoprime = params.step;
+        // 5. Appearance
+        if (this.appearanceSection) {
+            this.appearanceSection.update(params);
         }
 
-        let coprimeString = '';
-        if (gForCoprime !== undefined && gForCoprime !== null) {
-            const isCoprime = gcd(params.totalDivs, gForCoprime) === 1;
-            const colorClass = isCoprime ? 'text-green-400' : 'text-red-400';
-            coprimeString = `<div><span class="text-gray-400">Coprime:</span> <span class="${colorClass}">${isCoprime ? 'True' : 'False'}</span></div>`;
+        // 6. Coset Viz
+        if (this.cosetVizSection) {
+            this.cosetVizSection.update(params);
         }
-
-        // Calculate Lines Displayed
-        let segmentsDisplayed = 0;
-        if (isMultiplicative) {
-            // If we have distribution or specific counting, we might want to be precise, 
-            // but 'lines * cosetsShown' is decent approximation if uniform. 
-            // However, strictly we should sum the lengths of the *shown* cosets.
-            // Given Renderer.getDrawIndices logic is in Renderer, we duplicate it or simplify.
-            // Simplification: use average or just assume one sample 'lines' * cosetsShown for now 
-            // unless we want to pull getDrawIndices logic here. 
-
-            // Attempt approximation:
-            segmentsDisplayed = lines * cosetsShown;
-            // Ideally we'd calculate exactly match what's drawn, but that requires re-running getDrawIndices logic.
-        } else {
-            segmentsDisplayed = lines * cosetsShown;
-        }
-
-        const segmentsPerPathLabel = isMultiplicative ? distributionString : lines;
-
-        this.statsContent.innerHTML = `
-            <div><span class="text-gray-400">Line Segments Displayed:</span> <span class="text-blue-400">${segmentsDisplayed}</span></div>
-            <div><span class="text-gray-400">Closed Paths Displayed (Cosets):</span> <span class="text-blue-400">${cosetsShown}</span></div>
-            <div><span class="text-gray-400">Line Segments Per Path:</span> <span class="text-blue-400">${segmentsPerPathLabel}</span></div>
-            <div><span class="text-gray-400">Total Segments:</span> <span class="text-blue-400">${totalRosetteLines}</span></div>
-            <div><span class="text-gray-400">Total Paths:</span> <span class="text-blue-400">${k}</span></div>
-            ${coprimeString}
-        `;
     }
 
     updateLinkVisuals() {
-        if (!this.linkManager) return;
-
-        // Helper to check and update a control
-        const checkControl = (control, paramKey) => {
-            if (!control) return;
-            // Handle both wrapped controls (from createSlider/Checkbox) and direct instances (ParamColor/Select)
-            const instance = control.instance || control;
-
-            // Ensure it's a valid Param component with linking support
-            if (!instance || !instance.setLinkActive) return;
-
-            const myKey = `${this.roseId}.${paramKey}`;
-            const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-            const otherKey = `${otherRoseId}.${paramKey}`;
-
-            const isLinked = this.linkManager.areLinked(myKey, otherKey);
-            instance.setLinkActive(isLinked);
-        };
-
-        // 1. Param Controls (Dynamic)
-        if (this.paramControls) {
-            Object.entries(this.paramControls).forEach(([key, control]) => {
-                checkControl(control, key);
-            });
+        if (this.coreParamsSection && this.coreParamsSection.updateLinkVisuals) {
+            this.coreParamsSection.updateLinkVisuals();
         }
-
-        // 2. Sequencer Controls (Dynamic)
-        if (this.sequencerControls) {
-            Object.entries(this.sequencerControls).forEach(([key, control]) => {
-                checkControl(control, key);
-            });
+        if (this.sequencerSection && this.sequencerSection.updateLinkVisuals) {
+            this.sequencerSection.updateLinkVisuals();
         }
-
-        // 3. Standalone Controls
-        // Base Curve
-        checkControl(this.showBaseCurveControl, 'showBaseCurve');
-        checkControl(this.baseCurveColorControl, 'baseCurveColor');
-        checkControl(this.baseCurveWidthControl, 'baseCurveLineWidth');
-        checkControl(this.baseCurveOpacityControl, 'baseCurveOpacity');
-        checkControl(this.baseCurveBlendSelect, 'baseCurveBlendMode');
-
-        // Sequencer / Modulo
-        checkControl(this.divsControl, 'totalDivs');
-        checkControl(this.showAllCosetsControl, 'showAllCosets');
-        checkControl(this.cosetCountControl, 'cosetCount');
-        checkControl(this.cosetIndexControl, 'cosetIndex');
-
-        // Chordal Line Viz
-        checkControl(this.opacityControl, 'opacity');
-        checkControl(this.antiAliasControl, 'antiAlias');
-        checkControl(this.methodSelect, 'colorMethod');
-        checkControl(this.colorInput, 'color');
-        checkControl(this.blendSelect, 'blendMode');
-        checkControl(this.lineWidthControl, 'lineWidth');
-
-        // Vertex Rendering
-        checkControl(this.showVerticesControl, 'showVertices');
-        checkControl(this.vertexRadiusControl, 'vertexRadius');
-        checkControl(this.vertexColorControl, 'vertexColor');
-        checkControl(this.vertexOpacityControl, 'vertexOpacity');
-        checkControl(this.vertexBlendSelect, 'vertexBlendMode');
-    }
-
-    updateControl(control, value) {
-        // 1. Direct Instance (ParamColor, ParamSelect used directly)
-        if (typeof control.setValue === 'function') {
-            control.setValue(value);
-            return;
+        if (this.appearanceSection && this.appearanceSection.updateLinkVisuals) {
+            this.appearanceSection.updateLinkVisuals();
         }
-
-        // 2. Wrapped Instance (createSlider/createCheckbox returns { instance: ... })
-        if (control.instance && typeof control.instance.setValue === 'function') {
-            control.instance.setValue(value);
-            return;
-        }
-
-        // 3. Low-level DOM (Legacy or createColorInput generic)
-        if (control.input) {
-            if (control.input.type === 'checkbox') {
-                control.input.checked = !!value;
-            } else {
-                if (document.activeElement !== control.input) {
-                    control.input.value = value;
-                }
-            }
-        }
-
-        if (control.valueDisplay) {
-            control.valueDisplay.textContent = value;
+        if (this.cosetVizSection && this.cosetVizSection.updateLinkVisuals) {
+            this.cosetVizSection.updateLinkVisuals();
         }
     }
-    handleRelativesNav(direction) {
-        const type = this.relativesTypeSelect.value;
-        // Access state directly or via params being passed around?
-        // updateUI sets 'this.state' usually? No, updateUI takes state arg.
-        // We can access 'store.getState()[this.roseId]'
-        const state = store.getState()[this.roseId];
-        const currentGen = state.step; // 'Generator' slider maps to 'step' in params
-        const totalDivs = state.totalDivs; // Modulo
-
-        const newVal = RelativesFinder.findRelative(currentGen, type, direction, totalDivs);
-
-        if (newVal !== null && newVal !== currentGen) {
-            store.dispatch({
-                type: this.actionType,
-                payload: { step: newVal }
-            });
-            // Control update will happen via updateUI subscription
-        }
-    }
-
-
 }

@@ -31,6 +31,8 @@ export const DEFAULTS = {
         baseCurveColor: '#666666',
         baseCurveOpacity: 1,
         baseCurveBlendMode: 'source-over',
+        baseCurveColorMethod: 'solid',
+        baseCurveAntiAlias: true,
         // Vertex Rendering
         showVertices: false,
         vertexRadius: 2,
@@ -69,6 +71,8 @@ export const DEFAULTS = {
         baseCurveColor: '#666666',
         baseCurveOpacity: 1,
         baseCurveBlendMode: 'source-over',
+        baseCurveColorMethod: 'solid',
+        baseCurveAntiAlias: true,
         // Vertex Rendering
         showVertices: false,
         vertexRadius: 2,
