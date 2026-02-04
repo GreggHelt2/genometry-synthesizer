@@ -133,7 +133,7 @@ class App {
         // 1. Header Row
         const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-4 font-bold text-sm text-gray-400');
 
-        const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v2.2' });
+        const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v2.3' });
         header.appendChild(titleText);
 
         // Snapshot Controls Container
