@@ -7,6 +7,7 @@ import { createElement } from './ui/utils/dom.js';
 import { Recorder } from './engine/recorder/Recorder.js';
 import { persistenceManager } from './engine/state/PersistenceManager.js';
 import { linkManager } from './engine/logic/LinkManager.js';
+import { SnapshotModal } from './ui/components/SnapshotModal.js';
 
 // Application Bootstrapper
 class App {
@@ -98,12 +99,105 @@ class App {
         }
     }
 
+    // --- Snapshot Loading Logic ---
+    async handleLoadState(payload) {
+        console.log('[App] Loading snapshot:', payload.name);
+
+        // 1. Hydrate Store (Sync)
+        if (payload.state) {
+            store.hydrate(payload.state);
+        }
+
+        // 2. Hydrate Links (Sync)
+        if (payload.links) {
+            linkManager.restoreLinks(payload.links);
+        }
+
+        // 3. Restore Late State (Async components)
+        // We wait a tick to ensure UI has processed store updates if needed, though usually sync is fine.
+        if (payload.animations) {
+            this.restoreAnimationState(payload.animations);
+        }
+        if (payload.ui) {
+            this.restoreUIState(payload.ui);
+        }
+
+        // 4. Force Persistence to disk so this becomes the new "Current Session"
+        persistenceManager.forceSave();
+    }
+
     initUI() {
         const app = document.getElementById('app');
         app.className = 'flex flex-col h-screen w-screen bg-black text-white';
 
         // 1. Header Row
-        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 font-bold text-sm text-gray-400', { textContent: 'Chordal Rosette Explorer v2.2' });
+        const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-4 font-bold text-sm text-gray-400');
+
+        const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v2.2' });
+        header.appendChild(titleText);
+
+        // Snapshot Controls Container
+        const snapControls = createElement('div', 'flex gap-2');
+
+        // Save Controls Group
+        const saveGroup = createElement('div', 'flex items-center gap-2 bg-gray-800 rounded p-0.5 border border-gray-700');
+
+        // Save Input
+        const saveInput = createElement('input', 'bg-transparent border-none text-xs text-white px-2 py-1 w-32 focus:outline-none placeholder-gray-500', {
+            type: 'text',
+            placeholder: 'Snapshot Name...'
+        });
+
+        // Allow Enter key to save
+        saveInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                saveBtn.click();
+            }
+        });
+
+        // Save Button
+        const saveBtn = createElement('button', 'px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white transition-colors', { textContent: 'Save' });
+        saveBtn.onclick = async () => {
+            try {
+                const name = saveInput.value;
+                if (name && name.trim()) {
+                    await persistenceManager.saveSnapshot(name.trim());
+                    // Visual feedback
+                    const originalText = saveBtn.textContent;
+                    saveBtn.textContent = 'Saved!';
+                    saveBtn.classList.add('text-green-400');
+                    setTimeout(() => {
+                        saveBtn.textContent = originalText;
+                        saveBtn.classList.remove('text-green-400');
+                        saveInput.value = ''; // Clear input
+                    }, 1500);
+                } else {
+                    alert('Please enter a snapshot name.');
+                }
+            } catch (err) {
+                console.error('Save failed:', err);
+                alert('Error saving snapshot: ' + err.message);
+            }
+        };
+
+        saveGroup.appendChild(saveInput);
+        saveGroup.appendChild(saveBtn);
+
+        // Load Button
+        const loadBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', { textContent: 'Load Snapshot' });
+        loadBtn.onclick = async () => {
+            const snapshots = await persistenceManager.listSnapshots();
+            const modal = new SnapshotModal(async (name) => {
+                const payload = await persistenceManager.loadSnapshot(name);
+                this.handleLoadState(payload);
+            });
+            modal.show(snapshots);
+        };
+
+        snapControls.appendChild(saveGroup);
+        snapControls.appendChild(loadBtn);
+        header.appendChild(snapControls);
+
         app.appendChild(header);
 
         // 2. Main Content Row (Flex Container for Columns)
@@ -131,10 +225,6 @@ class App {
         this.centerArea.appendChild(this.canvasContainer);
 
         // Controls Layer (Scrollable area below canvas)
-        // 2. Middle Column: Hybrid Canvas + Controls
-        // Controls Container (Bottom Half)
-        // Removed p-2 to match Rosette panels (flush accordions)
-        // Removed overflow-y-auto here because InterpolationPanel now handles its own scrolling internally
         const centerControls = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden');
 
         this.interpPanel = new InterpolationPanel('interp', 'Controls');
