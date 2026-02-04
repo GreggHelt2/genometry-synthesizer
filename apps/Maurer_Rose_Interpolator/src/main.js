@@ -20,6 +20,9 @@ class App {
         if (savedState && savedState.animations) {
             this.restoreAnimationState(savedState.animations);
         }
+        if (savedState && savedState.ui) {
+            this.restoreUIState(savedState.ui);
+        }
 
         this.loop();
     }
@@ -60,6 +63,15 @@ class App {
                 interpolation: this.interpPanel ? this.interpPanel.getAnimationState() : {}
             };
         });
+
+        // UI Layout Persistence
+        persistenceManager.registerStateProvider('ui', () => {
+            return {
+                rosetteA: this.panelA ? this.panelA.getUIState() : {},
+                rosetteB: this.panelB ? this.panelB.getUIState() : {},
+                interpolation: this.interpPanel ? this.interpPanel.getUIState() : {}
+            };
+        });
     }
 
     restoreAnimationState(animState) {
@@ -71,6 +83,18 @@ class App {
         }
         if (animState.interpolation && this.interpPanel) {
             this.interpPanel.restoreAnimationState(animState.interpolation);
+        }
+    }
+
+    restoreUIState(uiState) {
+        if (uiState.rosetteA && this.panelA) {
+            this.panelA.restoreUIState(uiState.rosetteA);
+        }
+        if (uiState.rosetteB && this.panelB) {
+            this.panelB.restoreUIState(uiState.rosetteB);
+        }
+        if (uiState.interpolation && this.interpPanel) {
+            this.interpPanel.restoreUIState(uiState.interpolation);
         }
     }
 

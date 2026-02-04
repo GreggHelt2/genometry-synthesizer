@@ -396,18 +396,72 @@ export class ParamNumber {
         }
     }
 
-    /**
-     * Updates the value from an external source (Store)
-     * @param {number} val 
-     */
     setValue(val) {
-        // Prevent loops: if the value is what we just set, ignore (or barely different?)
+        // Prevent loops: if the value is what we just set, ignore
         if (Math.abs(val - this.lastValue) < Number.EPSILON) return;
-
         this.updateInternalUI(val);
     }
 
-    setLinkActive(isActive) {
+    getAnimationConfig() {
+        if (!this.animationController) return null;
+        return {
+            ...this.animationController.getConfig(),
+            // Persist UI state of the panel
+            isOpen: this.isAnimPanelOpen || false
+        };
+    }
+
+    setAnimationConfig(config) {
+        if (!this.animationController || !config) return;
+        this.animationController.setConfig(config);
+
+        // Update UI logic for range?
+        if (config.min !== undefined && config.min < this.min) this.setMin(config.min);
+        if (config.max !== undefined && config.max > this.max) this.setMax(config.max);
+
+        // Sync Waveform selector?
+        if (this.waveformSelector) {
+            if (config.type || config.shape) {
+                if (this.waveformSelector && this.waveformSelector.setShape) {
+                    this.waveformSelector.setShape(config.type, config.shape);
+                }
+            }
+        }
+        if (config.period) {
+            if (this.waveformSelector) this.waveformSelector.setPeriod(config.period);
+            if (this.animPeriodInput) this.animPeriodInput.value = config.period;
+        }
+        if (config.min !== undefined && this.animMinInput) this.animMinInput.value = config.min;
+        if (config.max !== undefined && this.animMaxInput) this.animMaxInput.value = config.max;
+
+        // Restore Panel Open State
+        if (config.isOpen !== undefined) {
+            if (config.isOpen && !this.isAnimPanelOpen) {
+                this.toggleAnimationPanel();
+            } else if (!config.isOpen && this.isAnimPanelOpen) {
+                // Close if currently open
+                this.toggleAnimationPanel();
+            }
+        }
+    }
+
+    // ... (rest of methods)
+
+    updateLinkVisuals() {
+        if (!this.linkManager || !this.linkBtn) return;
+
+        const isActive = this.linkManager.isLinked(this.key);
+
+        // Visual toggle: Green vs Gray
+        if (isActive) {
+            this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
+        } else {
+            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+            this.linkBtn.classList.add('text-gray-500', 'border-transparent');
+        }
+
+        // Avoid infinite loops if triggered by self
         if (this.isLinked !== isActive) {
             this.isLinked = isActive;
             this.updateLinkVisuals();
@@ -418,6 +472,7 @@ export class ParamNumber {
         const isHidden = this.animPanel.classList.contains('hidden');
         if (isHidden) {
             this.animPanel.classList.remove('hidden');
+            this.isAnimPanelOpen = true; // Track state
             // Active: Green Text + Green Border + Gray Background
             this.animBtn.classList.remove('text-gray-500', 'border-transparent');
             this.animBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
@@ -425,10 +480,12 @@ export class ParamNumber {
             this.waveformSelector.drawWaveform();
         } else {
             this.animPanel.classList.add('hidden');
+            this.isAnimPanelOpen = false; // Track state
             // Inactive: Gray Text + Transparent Border
             this.animBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
             this.animBtn.classList.add('text-gray-500', 'border-transparent');
         }
+        persistenceManager.save();
     }
 
     togglePlayback() {
@@ -460,67 +517,6 @@ export class ParamNumber {
             // window mouseup is the only risk, but it removes itself.
         }
     }
-
-    getAnimationConfig() {
-        if (!this.animationController) return null;
-        return this.animationController.getConfig();
-    }
-
-    setAnimationConfig(config) {
-        if (!this.animationController || !config) return;
-        this.animationController.setConfig(config);
-
-        // Update UI logic for range?
-        if (config.min !== undefined && config.min < this.min) this.setMin(config.min);
-        if (config.max !== undefined && config.max > this.max) this.setMax(config.max);
-
-        // Sync Waveform selector?
-        if (this.waveformSelector) {
-            // It listens to onChange from controller, but setConfig updates raw values.
-            // We might need to manually update waveform selector if it doesn't poll.
-            if (config.type || config.shape) {
-                // WaveformSelector reads from where? It updates controller. 
-                // We need to reverse update it.
-                // WaveformSelector constructor took initial values. It doesn't seem to have a set method?
-                // Let's look at its API.
-                // Assuming it has setType/Shape or we just redraw.
-                // The implementation in ParamNumber line 272 passes initial values.
-                // We might need to recreate or update it.
-                // Let's assume for now just setting config on controller is enough for logic, 
-                // but UI might desync.
-                // Step 209: WaveformSelector logic in ParamNumber (lines 272-280)
-                // It passes `this.animationController.period` etc.
-                // Does it allow updating?
-                // this.waveformSelector.setPeriod(v) exists (line 247).
-                // But type/shape?
-                // Step 209: `onChange: (type, shape) => controller.setConfig(...)`.
-                // We need `waveformSelector.setType(type, shape)` or similar.
-                // If not available, we might skip visual update or add it.
-                // User requirement: "Verified... Open LFO again. Verify... Waveform is Triangle".
-                // So visual update IS required.
-
-                // Let's check WaveformSelector.js in next step if needed. 
-                // For now, let's implement the basic plumbing.
-                if (this.waveformSelector && this.waveformSelector.setShape) {
-                    this.waveformSelector.setShape(config.type, config.shape);
-                }
-            }
-            if (config.period) {
-                if (this.waveformSelector) this.waveformSelector.setPeriod(config.period);
-                if (this.animPeriodInput) this.animPeriodInput.value = config.period;
-            }
-            if (config.min !== undefined && this.animMinInput) this.animMinInput.value = config.min;
-            if (config.max !== undefined && this.animMaxInput) this.animMaxInput.value = config.max;
-        }
-
-        if (config.isPlaying) {
-            if (!this.animationController.isPlaying) {
-                this.togglePlayback(); // Visual + Logic
-            }
-        } else {
-            if (this.animationController.isPlaying) {
-                this.togglePlayback();
-            }
-        }
-    }
 }
+
+

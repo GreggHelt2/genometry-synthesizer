@@ -1,10 +1,11 @@
 import { createElement } from '../utils/dom.js';
 
 export class Accordion {
-    constructor(title, isOpen = false, onToggle = null) {
+    constructor(title, isOpen = false, onToggle = null, id = null) {
         this.title = title;
         this.isOpen = isOpen;
         this.onToggle = onToggle;
+        this.id = id;
         this.element = this.render();
     }
 
@@ -13,7 +14,7 @@ export class Accordion {
         this.content.style.display = this.isOpen ? 'block' : 'none';
         // Open: Down (0deg), Closed: Right (-90deg)
         this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
-        if (this.onToggle) this.onToggle(this.isOpen);
+        if (this.onToggle) this.onToggle(this.isOpen, this.id);
     }
 
     setTitle(newTitle) {

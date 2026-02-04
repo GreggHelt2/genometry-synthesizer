@@ -15,11 +15,41 @@ import { ParamToggle } from './ParamToggle.js';
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
         super(id, title);
+
+        // UI State Persistence
+        this.uiState = {
+            accordions: {}
+        };
+        this.accordions = new Map();
+
         this.renderContent();
         store.subscribe(this.updateUI.bind(this));
 
         // Initial UI update to sync with default state
         this.updateUI(store.getState());
+    }
+
+    handleAccordionToggle(isOpen, id) {
+        if (!id) return;
+        this.uiState.accordions[id] = isOpen;
+        import('../../engine/state/PersistenceManager.js').then(({ persistenceManager }) => {
+            persistenceManager.save();
+        });
+    }
+
+    getUIState() {
+        return this.uiState;
+    }
+
+    restoreUIState(state) {
+        if (!state || !state.accordions) return;
+        this.uiState = state;
+        for (const [id, isOpen] of Object.entries(state.accordions)) {
+            const acc = this.accordions.get(id);
+            if (acc && acc.isOpen !== isOpen) {
+                acc.toggle();
+            }
+        }
     }
 
     renderContent() {
@@ -28,15 +58,18 @@ export class InterpolationPanel extends Panel {
         this.element.appendChild(this.controlsContainer);
 
         // Info Accordion
-        this.infoAccordion = new Accordion('Hybrid Info', false);
+        this.infoAccordion = new Accordion('Hybrid Info', false, this.handleAccordionToggle.bind(this), 'hybrid-info');
+        this.accordions.set('hybrid-info', this.infoAccordion);
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
         this.controlsContainer.appendChild(this.infoAccordion.element);
 
         // Create "Animation" Accordion for Hybrid controls
-        this.animationAccordion = new Accordion('Animation', true, (isOpen) => {
+        this.animationAccordion = new Accordion('Animation', true, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.animationAccordion.content));
-        });
+        }, 'hybrid-anim');
+        this.accordions.set('hybrid-anim', this.animationAccordion);
         this.controlsContainer.appendChild(this.animationAccordion.element);
 
         // Morph Weight Slider
@@ -134,7 +167,9 @@ export class InterpolationPanel extends Panel {
         // RosettePanel puts it in "Chordal Line Viz".
         // InterpolationPanel had it loose in `container`.
         // Let's create a "Visualization" Accordion to better organize it.
-        this.vizAccordion = new Accordion('Visualization', true);
+        // Let's create a "Visualization" Accordion to better organize it.
+        this.vizAccordion = new Accordion('Visualization', true, this.handleAccordionToggle.bind(this), 'hybrid-viz');
+        this.accordions.set('hybrid-viz', this.vizAccordion);
         this.vizAccordion.append(colorContainer);
         this.controlsContainer.appendChild(this.vizAccordion.element);
 
@@ -154,9 +189,11 @@ export class InterpolationPanel extends Panel {
 
 
         // Vertex Rendering Accordion
-        this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen) => {
+        this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.vertexAccordion.content));
-        });
+        }, 'hybrid-vertex');
+        this.accordions.set('hybrid-vertex', this.vertexAccordion);
         this.controlsContainer.appendChild(this.vertexAccordion.element);
 
         // 1. Toggle
@@ -174,7 +211,8 @@ export class InterpolationPanel extends Panel {
         this.vertexAccordion.append(this.showVerticesControl.getElement());
 
         // General Rendering Settings Accordion (New)
-        this.generalAccordion = new Accordion('General Rendering Settings', false);
+        this.generalAccordion = new Accordion('General Rendering Settings', false, this.handleAccordionToggle.bind(this), 'hybrid-general');
+        this.accordions.set('hybrid-general', this.generalAccordion);
         this.controlsContainer.appendChild(this.generalAccordion.element);
 
         // 1. Auto Scale
@@ -245,7 +283,8 @@ export class InterpolationPanel extends Panel {
 
 
         // Coset Visualization Accordion (Hybrid)
-        this.cosetAccordion = new Accordion('Coset Visualization', false);
+        this.cosetAccordion = new Accordion('Coset Visualization', false, this.handleAccordionToggle.bind(this), 'hybrid-coset');
+        this.accordions.set('hybrid-coset', this.cosetAccordion);
         // Removed manual margin-top
         // this.cosetAccordion.element.style.marginTop = '1rem'; 
 
@@ -348,9 +387,11 @@ export class InterpolationPanel extends Panel {
         this.vizAccordion.append(underlayContainer);
 
         // Base Curve Viz Accordion (Hybrid)
-        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen) => {
+        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
-        });
+        }, 'hybrid-base-viz');
+        this.accordions.set('hybrid-base-viz', this.baseCurveVizAccordion);
         this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
 
         // --- Base Curve A Controls ---
@@ -493,7 +534,8 @@ export class InterpolationPanel extends Panel {
         // Use an Accordion for Recording? Or append to controlsContainer
         // Rosette panels don't have recording.
         // Let's make a Recording Accordion for consistency.
-        this.recordingAccordion = new Accordion('Recording', false);
+        this.recordingAccordion = new Accordion('Recording', false, this.handleAccordionToggle.bind(this), 'hybrid-recording');
+        this.accordions.set('hybrid-recording', this.recordingAccordion);
         this.controlsContainer.appendChild(this.recordingAccordion.element);
 
         // Format Selector

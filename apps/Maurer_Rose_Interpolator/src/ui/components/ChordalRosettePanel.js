@@ -12,11 +12,20 @@ import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
 
+import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+
 export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
         super(id, title);
         this.roseId = roseId; // 'rosetteA' or 'rosetteB'
         this.actionType = roseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B;
+
+        // UI State Tracking
+        this.uiState = {
+            accordions: {} // Map id -> boolean (isOpen)
+        };
+        this.accordions = new Map(); // Keep refs for restoration
+
         this.renderContent();
 
         // Subscribe to store updates
@@ -30,6 +39,33 @@ export class ChordalRosettePanel extends Panel {
 
         // Initial UI update
         this.updateUI(store.getState());
+    }
+
+    handleAccordionToggle(isOpen, id) {
+        if (!id) return;
+        this.uiState.accordions[id] = isOpen;
+        persistenceManager.save();
+    }
+
+    getUIState() {
+        return this.uiState;
+    }
+
+    restoreUIState(state) {
+        if (!state || !state.accordions) return;
+
+        this.uiState = state;
+
+        // Apply to existing accordions
+        for (const [id, isOpen] of Object.entries(state.accordions)) {
+            const acc = this.accordions.get(id);
+            if (acc) {
+                // Only toggle if state differs (avoid animation glitches)
+                if (acc.isOpen !== isOpen) {
+                    acc.toggle();
+                }
+            }
+        }
     }
 
     renderContent() {
@@ -50,19 +86,23 @@ export class ChordalRosettePanel extends Panel {
         this.element.appendChild(this.controlsContainer);
 
         // Info Accordion (New)
-        const statsAccordion = new Accordion('Info', false);
+        const statsAccordion = new Accordion('Info', false, this.handleAccordionToggle.bind(this), `${this.roseId}-stats`);
+        this.accordions.set(`${this.roseId}-stats`, statsAccordion);
         this.statsContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         statsAccordion.append(this.statsContent);
         this.controlsContainer.appendChild(statsAccordion.element);
 
         // Core Parameters Accordion
-        this.coreAccordion = new Accordion('Base Curve Generator', true);
+        this.coreAccordion = new Accordion('Base Curve Generator', true, this.handleAccordionToggle.bind(this), `${this.roseId}-core`);
+        this.accordions.set(`${this.roseId}-core`, this.coreAccordion);
         this.controlsContainer.appendChild(this.coreAccordion.element);
 
         // --- Base Curve Viz Accordion (NEW) ---
-        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen) => {
+        this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
-        });
+        }, `${this.roseId}-base-viz`);
+        this.accordions.set(`${this.roseId}-base-viz`, this.baseCurveVizAccordion);
         this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
 
         // 1. Toggle
@@ -137,9 +177,11 @@ export class ChordalRosettePanel extends Panel {
         this.coreAccordion.append(this.dynamicParamsContainer);
 
         // Maurer Accordion (Sequencer)
-        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true, (isOpen) => {
+        this.maurerAccordion = new Accordion('Chordal Sequencer: Additive Group', true, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
             if (isOpen) requestAnimationFrame(() => this.alignLabels(this.maurerAccordion.content));
-        });
+        }, `${this.roseId}-sequencer`);
+        this.accordions.set(`${this.roseId}-sequencer`, this.maurerAccordion);
         this.controlsContainer.appendChild(this.maurerAccordion.element);
 
         // Sequencer Type Selector
@@ -1079,15 +1121,31 @@ export class ChordalRosettePanel extends Panel {
     }
 
     updateControl(control, value) {
-        if (control.instance) {
-            // New ParamNumber/ParamToggle Path
+        // 1. Direct Instance (ParamColor, ParamSelect used directly)
+        if (typeof control.setValue === 'function') {
+            control.setValue(value);
+            return;
+        }
+
+        // 2. Wrapped Instance (createSlider/createCheckbox returns { instance: ... })
+        if (control.instance && typeof control.instance.setValue === 'function') {
             control.instance.setValue(value);
-        } else {
-            // Legacy Path (if any remaining)
-            control.valueDisplay.textContent = value;
-            if (document.activeElement !== control.input) {
-                control.input.value = value;
+            return;
+        }
+
+        // 3. Low-level DOM (Legacy or createColorInput generic)
+        if (control.input) {
+            if (control.input.type === 'checkbox') {
+                control.input.checked = !!value;
+            } else {
+                if (document.activeElement !== control.input) {
+                    control.input.value = value;
+                }
             }
+        }
+
+        if (control.valueDisplay) {
+            control.valueDisplay.textContent = value;
         }
     }
     handleRelativesNav(direction) {
