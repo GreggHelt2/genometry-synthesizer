@@ -337,7 +337,10 @@ export class ChordalRosettePanel extends Panel {
         vertexAccordion.append(this.showVerticesControl.container);
 
         // General Rendering Settings Accordion (New)
-        this.generalAccordion = new Accordion('General Rendering Settings', false);
+        this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
+            this.handleAccordionToggle(isOpen, id);
+        }, `${this.roseId}-general`);
+        this.accordions.set(`${this.roseId}-general`, this.generalAccordion);
         this.controlsContainer.appendChild(this.generalAccordion.element);
 
         // 1. Auto Scale
