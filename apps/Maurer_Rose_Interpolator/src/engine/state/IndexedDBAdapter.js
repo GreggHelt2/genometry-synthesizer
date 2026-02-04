@@ -128,8 +128,9 @@ export class IndexedDBAdapter {
             request.onsuccess = (event) => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    const { id, name, timestamp, tags, thumbnail } = cursor.value;
-                    results.push({ id, name, timestamp, tags, thumbnail });
+                    // We now return the full object to allow for deep searching of parameters.
+                    // The state JSON is small compared to the thumbnail, so this is performance-safe.
+                    results.push(cursor.value);
                     cursor.continue();
                 } else {
                     resolve(results);

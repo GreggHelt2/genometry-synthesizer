@@ -113,15 +113,13 @@ export class SnapshotSidebar {
 
         header.appendChild(title);
         header.appendChild(closeBtn);
-        header.appendChild(title);
-        header.appendChild(closeBtn);
         wrapper.appendChild(header);
 
         // Search Input
         const searchContainer = createElement('div', 'p-2 border-b border-gray-700 bg-gray-800');
         const searchInput = createElement('input', 'w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500', {
             type: 'text',
-            placeholder: 'Filter (Glob "*" or Regex)...'
+            placeholder: 'Filter (Name, *Glob, n=4)...'
         });
 
         searchInput.addEventListener('input', (e) => {
@@ -150,9 +148,33 @@ export class SnapshotSidebar {
 
     applyFilter() {
         let filtered = this.allSnapshots;
-        if (this.filterQuery) {
+        let query = this.filterQuery;
+
+        // 1. Extract Deep Search Terms (key=value)
+        // Regex to find "key=value" or "key:value". 
+        // We capture key (group 1) and value (group 2).
+        const deepTerms = [];
+        const deepRegex = /\b([a-zA-Z0-9_\.]+)(?:=|:)([^ ]+)/g;
+
+        let match;
+        while ((match = deepRegex.exec(query)) !== null) {
+            deepTerms.push({ key: match[1], value: match[2] });
+        }
+
+        // Remove deep terms from query to get the "Name" search part
+        let nameQuery = query.replace(deepRegex, '').trim();
+
+        // 2. Filter by Deep Terms (Intersection/AND)
+        if (deepTerms.length > 0) {
+            filtered = filtered.filter(snap => {
+                return deepTerms.every(term => this.matchesDeepSearch(snap, term.key, term.value));
+            });
+        }
+
+        // 3. Filter by Name (Hybrid Glob/Regex)
+        if (nameQuery) {
             try {
-                let pattern = this.filterQuery;
+                let pattern = nameQuery;
 
                 // Hybrid Logic: Check for explicit regex characters
                 // If NO advanced regex syntax is present, treat '*' as a GLOB wildcard (.*)
@@ -165,21 +187,59 @@ export class SnapshotSidebar {
                 }
 
                 const regex = new RegExp(pattern, 'i');
-                filtered = this.allSnapshots.filter(s => regex.test(s.name));
+                filtered = filtered.filter(s => regex.test(s.name));
             } catch (e) {
-                // If invalid regex, maybe strictly match or just ignore?
-                // Let's fallback to simple substring match if regex fails
-                const lower = this.filterQuery.toLowerCase();
-                filtered = this.allSnapshots.filter(s => s.name.toLowerCase().includes(lower));
+                // If invalid regex, fallback to simple substring match
+                const lower = nameQuery.toLowerCase();
+                filtered = filtered.filter(s => s.name.toLowerCase().includes(lower));
             }
         }
 
         // Update state
         this.filteredSnapshots = filtered;
-        // Reset selection on filter change? Or try to keep? Reseting is safer.
+        // Reset selection on filter change
         this.selectedIndex = -1;
 
         this.renderSnapshots(filtered);
+    }
+
+    matchesDeepSearch(obj, targetKey, targetValue) {
+        // Recursive search for property path ending with targetKey having targetValue
+        // Uses iterative stack to avoid recursion limit (though improbable here)
+
+        const stack = [{ node: obj, path: '' }];
+
+        while (stack.length > 0) {
+            const { node, path } = stack.pop();
+
+            if (!node || typeof node !== 'object') continue;
+
+            for (const k of Object.keys(node)) {
+                // Skip massive fields we don't care about if they exist (like thumbnail data if we wanted)
+                // but checking string length handles it naturally.
+
+                const val = node[k];
+                const fullPath = path ? `${path}.${k}` : k;
+
+                if (val && typeof val === 'object') {
+                    stack.push({ node: val, path: fullPath });
+                } else {
+                    // Leaf (primitive)
+                    // Check path match: exact match OR suffix match (dot notation)
+                    // e.g. "n" matches "state.rosetteA.n" (suffix '.n')
+                    // e.g. "rosetteA.n" matches "state.rosetteA.n" (suffix '.rosetteA.n')
+
+                    const isPathMatch = (fullPath === targetKey) || fullPath.endsWith('.' + targetKey);
+
+                    if (isPathMatch) {
+                        // Check value match (loose equality for string vs number)
+                        // Case insensitive for extra usability?
+                        if (String(val) == targetValue) return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     renderSnapshots(snapshots) {
