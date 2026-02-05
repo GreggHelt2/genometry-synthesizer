@@ -1,5 +1,5 @@
 import { Accordion } from '../Accordion.js';
-import { RenderingControlsModule, VertexVizModule, GeneralRenderingModule } from '../modules/AppearanceModules.js';
+import { LayerRenderingModule, VertexVizModule, GlobalRenderingModule } from '../modules/AppearanceModules.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
@@ -35,8 +35,8 @@ export class AppearanceSection {
         this.register(this.chordalAccordion, `${this.roseId}-chordal-viz`);
         this.element.appendChild(this.chordalAccordion.element);
 
-        // Uses RenderingControlsModule
-        this.chordalModule = new RenderingControlsModule(
+        // Uses LayerRenderingModule
+        this.chordalModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
             this.orchestrator.actionType
@@ -91,7 +91,7 @@ export class AppearanceSection {
         this.baseCurveAccordion.append(this.baseCurveControls.showBaseCurve.getElement());
 
         // 3b. Rendering Controls Module (Strict Parity with Chordal Viz)
-        this.baseCurveModule = new RenderingControlsModule(
+        this.baseCurveModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
             this.orchestrator.actionType,
@@ -117,7 +117,7 @@ export class AppearanceSection {
         this.register(this.generalAccordion, `${this.roseId}-appearance-general`);
         this.element.appendChild(this.generalAccordion.element);
 
-        this.generalModule = new GeneralRenderingModule(
+        this.generalModule = new GlobalRenderingModule(
             this.orchestrator,
             this.roseId,
             this.orchestrator.actionType

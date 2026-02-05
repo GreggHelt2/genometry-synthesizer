@@ -8,7 +8,7 @@ import { store } from '../../../engine/state/Store.js';
 // Mixin pattern or just factory functions? 
 // Classes are better for maintaining state references if needed.
 
-export class RenderingControlsModule {
+export class LayerRenderingModule {
     /**
      * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Line Width, Anti-Alias
      * @param {Object} orchestrator - Parent panel implementation
@@ -392,7 +392,7 @@ export class VertexVizModule {
     }
 }
 
-export class GeneralRenderingModule {
+export class GlobalRenderingModule {
     constructor(orchestrator, roseId, actionType, keys = {}) {
         this.orchestrator = orchestrator;
         this.roseId = roseId;

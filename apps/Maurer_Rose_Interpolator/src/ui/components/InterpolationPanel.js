@@ -11,7 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
-import { GeneralRenderingModule, VertexVizModule } from './modules/AppearanceModules.js';
+import { GlobalRenderingModule, VertexVizModule } from './modules/AppearanceModules.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -219,7 +219,7 @@ export class InterpolationPanel extends Panel {
         this.accordions.set('hybrid-general', this.generalAccordion);
         this.controlsContainer.appendChild(this.generalAccordion.element);
 
-        this.generalModule = new GeneralRenderingModule(
+        this.generalModule = new GlobalRenderingModule(
             this,      // Orchestrator
             'hybrid',  // roseId
             ACTIONS.UPDATE_HYBRID,
