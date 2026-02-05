@@ -1,5 +1,5 @@
 import { Accordion } from '../Accordion.js';
-import { RenderingControlsModule, VertexVizModule } from '../modules/AppearanceModules.js';
+import { RenderingControlsModule, VertexVizModule, GeneralRenderingModule } from '../modules/AppearanceModules.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
@@ -107,62 +107,22 @@ export class AppearanceSection {
         this.baseCurveAccordion.append(this.baseCurveModule.container);
 
 
-        // 4. General Rendering Settings Accordion
+        // General Rendering Settings Accordion - Use Module
         this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
             if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-        }, `${this.roseId}-general`);
-        this.register(this.generalAccordion, `${this.roseId}-general`);
+            if (isOpen) requestAnimationFrame(() => {
+                if (this.orchestrator.alignLabels) this.orchestrator.alignLabels(this.generalAccordion.content);
+            });
+        }, `${this.roseId}-appearance-general`);
+        this.register(this.generalAccordion, `${this.roseId}-appearance-general`);
         this.element.appendChild(this.generalAccordion.element);
 
-        // Specific General Controls (Auto Scale, Scale Line Width)
-        // These are specific to Rosette Panel currently, maybe not shared with Interpolator?
-        // Interpolator has them too. 
-        // We could make a module, but they are simple toggles.
-        // Let's implement directly for now to save complexity, or add GeneralModule later.
-
-        this.generalControls = {};
-
-        // Auto Scale
-        this.generalControls.autoScale = new ParamToggle({
-            key: 'autoScale',
-            label: 'Auto Scale',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { autoScale: val }
-                });
-            },
-            onLinkToggle: (isActive) => this.handleLinkToggle('autoScale', isActive, this.generalControls.autoScale)
-        });
-        this.initLinkState('autoScale', this.generalControls.autoScale);
-        this.generalAccordion.append(this.generalControls.autoScale.getElement());
-
-        // Scale Line Width
-        this.generalControls.scaleLineWidth = new ParamToggle({
-            key: 'scaleLineWidth',
-            label: 'Scale Line Width',
-            value: true,
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { scaleLineWidth: val }
-                });
-            },
-            onLinkToggle: (isActive) => this.handleLinkToggle('scaleLineWidth', isActive, this.generalControls.scaleLineWidth)
-        });
-        this.initLinkState('scaleLineWidth', this.generalControls.scaleLineWidth);
-        this.generalAccordion.append(this.generalControls.scaleLineWidth.getElement());
-
-        // Background Opacity
-        const bgOpacityControl = this.createSlider('backgroundOpacity', 0, 1, 0.01, 'Background Opacity');
-        this.generalControls.backgroundOpacity = bgOpacityControl.instance;
-        this.generalAccordion.append(bgOpacityControl.container);
-
-        // Background Color
-        const bgColorControl = this.createColorInput('backgroundColor', 'Background Color');
-        this.generalControls.backgroundColor = bgColorControl.instance;
-        this.generalAccordion.append(bgColorControl.container);
+        this.generalModule = new GeneralRenderingModule(
+            this.orchestrator,
+            this.roseId,
+            this.orchestrator.actionType
+        );
+        this.generalAccordion.append(this.generalModule.container);
     }
 
     handleLinkToggle(key, isActive, control) {
@@ -209,14 +169,9 @@ export class AppearanceSection {
 
         // Update own controls
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.generalControls).forEach(key => {
-                const control = this.generalControls[key];
-                // Check if control has setLinkActive (it should if it's an instance)
-                if (control && typeof control.setLinkActive === 'function') {
-                    const fullKey = `${this.roseId}.${key}`;
-                    control.setLinkActive(linkManager.isLinked(fullKey));
-                }
-            });
+            if (this.generalModule && this.generalModule.updateLinkVisuals) {
+                this.generalModule.updateLinkVisuals();
+            }
         });
     }
 
@@ -235,10 +190,7 @@ export class AppearanceSection {
             this.baseCurveControls.showBaseCurve.setValue(params.showBaseCurve || false);
         }
 
-        if (this.generalControls.autoScale) this.generalControls.autoScale.setValue(params.autoScale || false);
-        if (this.generalControls.scaleLineWidth) this.generalControls.scaleLineWidth.setValue(params.scaleLineWidth !== false);
-        if (this.generalControls.backgroundOpacity) this.generalControls.backgroundOpacity.setValue(params.backgroundOpacity ?? 0);
-        if (this.generalControls.backgroundColor) this.generalControls.backgroundColor.setValue(params.backgroundColor || '#000000');
+        if (this.generalModule) this.generalModule.update(params);
     }
 
     createSlider(key, min, max, step, label) {

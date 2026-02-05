@@ -302,6 +302,15 @@ export class CanvasRenderer {
         this.clear();
         this.ctx.save();
 
+        // --- Background Rendering ---
+        if (state.hybrid && state.hybrid.backgroundOpacity > 0) {
+            this.ctx.save();
+            this.ctx.globalAlpha = state.hybrid.backgroundOpacity;
+            this.ctx.fillStyle = state.hybrid.backgroundColor || '#000000';
+            this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            this.ctx.restore();
+        }
+
         const aa = state.rosetteA.antiAlias !== false;
         this.ctx.imageSmoothingEnabled = aa;
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';

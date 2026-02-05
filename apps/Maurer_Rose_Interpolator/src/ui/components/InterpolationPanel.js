@@ -11,6 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
+import { GeneralRenderingModule } from './modules/AppearanceModules.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -215,33 +216,21 @@ export class InterpolationPanel extends Panel {
         this.accordions.set('hybrid-general', this.generalAccordion);
         this.controlsContainer.appendChild(this.generalAccordion.element);
 
-        // 1. Auto Scale
-        this.autoScaleControl = new ParamToggle({
-            key: 'autoScale',
-            label: 'Auto Scale',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { autoScale: val }
-                });
+        this.generalModule = new GeneralRenderingModule(
+            this,      // Orchestrator (mocked by 'this' if interface matches, need to check)
+            'hybrid',  // roseId
+            ACTIONS.UPDATE_HYBRID,
+            {
+                autoScale: 'autoScale',
+                scaleLineWidth: 'scaleLineWidth',
+                backgroundOpacity: 'backgroundOpacity',
+                backgroundColor: 'backgroundColor'
             }
-        });
-        this.generalAccordion.append(this.autoScaleControl.getElement());
+        );
+        // Hybrid panel orchestrator might not have registerParam? Module checks for it.
+        // InterpolationPanel does NOT implement registerParam. Module handles this gracefully with `if`.
 
-        // 2. Scale Line Width
-        this.scaleLineWidthControl = new ParamToggle({
-            key: 'scaleLineWidth',
-            label: 'Scale Line Width',
-            value: true,
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { scaleLineWidth: val }
-                });
-            }
-        });
-        this.generalAccordion.append(this.scaleLineWidthControl.getElement());
+        this.generalAccordion.append(this.generalModule.container);
 
         // 3. Radius
         this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
@@ -718,11 +707,8 @@ export class InterpolationPanel extends Panel {
             this.vertexOpacityControl.instance.setValue(hybridParams.vertexOpacity ?? 1);
         }
         // General Rendering Updates
-        if (this.autoScaleControl) {
-            this.autoScaleControl.setValue(hybridParams.autoScale || false);
-        }
-        if (this.scaleLineWidthControl) {
-            this.scaleLineWidthControl.setValue(hybridParams.scaleLineWidth !== false); // Default true
+        if (this.generalModule) {
+            this.generalModule.update(hybridParams);
         }
         if (this.vertexBlendSelect) {
             this.vertexBlendSelect.setValue(hybridParams.vertexBlendMode || 'source-over');
