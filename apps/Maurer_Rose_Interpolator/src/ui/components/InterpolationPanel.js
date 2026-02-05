@@ -11,7 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
-import { GeneralRenderingModule } from './modules/AppearanceModules.js';
+import { GeneralRenderingModule, VertexVizModule } from './modules/AppearanceModules.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -189,35 +189,38 @@ export class InterpolationPanel extends Panel {
         this.vizAccordion.append(resampleContainer);
 
 
-        // Vertex Rendering Accordion
+        // Vertex Rendering Accordion - Use Module
         this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.vertexAccordion.content));
+            if (this.handleAccordionToggle) this.handleAccordionToggle(isOpen, id);
+            if (isOpen) requestAnimationFrame(() => {
+                if (this.alignLabels) this.alignLabels(this.vertexAccordion.content);
+            });
         }, 'hybrid-vertex');
         this.accordions.set('hybrid-vertex', this.vertexAccordion);
         this.controlsContainer.appendChild(this.vertexAccordion.element);
 
-        // 1. Toggle
-        this.showVerticesControl = new ParamToggle({
-            key: 'showVertices',
-            label: 'Show Vertices',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { showVertices: val }
-                });
+        this.vertexModule = new VertexVizModule(
+            this,      // Orchestrator
+            'hybrid',  // roseId
+            ACTIONS.UPDATE_HYBRID,
+            {
+                showVertices: 'showVertices',
+                vertexRadius: 'vertexRadius',
+                vertexColor: 'vertexColor',
+                vertexOpacity: 'vertexOpacity',
+                vertexBlendMode: 'vertexBlendMode'
             }
-        });
-        this.vertexAccordion.append(this.showVerticesControl.getElement());
+        );
+        this.vertexAccordion.append(this.vertexModule.container);
 
-        // General Rendering Settings Accordion (New)
+
+        // General Rendering Settings Accordion (Module)
         this.generalAccordion = new Accordion('General Rendering Settings', false, this.handleAccordionToggle.bind(this), 'hybrid-general');
         this.accordions.set('hybrid-general', this.generalAccordion);
         this.controlsContainer.appendChild(this.generalAccordion.element);
 
         this.generalModule = new GeneralRenderingModule(
-            this,      // Orchestrator (mocked by 'this' if interface matches, need to check)
+            this,      // Orchestrator
             'hybrid',  // roseId
             ACTIONS.UPDATE_HYBRID,
             {
@@ -227,49 +230,7 @@ export class InterpolationPanel extends Panel {
                 backgroundColor: 'backgroundColor'
             }
         );
-        // Hybrid panel orchestrator might not have registerParam? Module checks for it.
-        // InterpolationPanel does NOT implement registerParam. Module handles this gracefully with `if`.
-
         this.generalAccordion.append(this.generalModule.container);
-
-        // 3. Radius
-        this.vertexRadiusControl = this.createSlider('vertexRadius', 0.5, 20, 0.5, 'Radius');
-        this.vertexAccordion.append(this.vertexRadiusControl.container);
-
-        // 3. Color
-        this.vertexColorControl = new ParamColor({
-            key: 'vertexColor',
-            label: 'Color',
-            value: '#ffffff',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { vertexColor: val }
-                });
-            }
-        });
-        this.vertexAccordion.append(this.vertexColorControl.getElement());
-
-        // 4. Opacity
-        this.vertexOpacityControl = this.createSlider('vertexOpacity', 0, 1, 0.01, 'Opacity');
-        this.vertexAccordion.append(this.vertexOpacityControl.container);
-
-        // 5. Blend Mode
-        // Reuse blendModes array if available or recreate
-        this.vertexBlendSelect = new ParamSelect({
-            key: 'vertexBlendMode',
-            label: 'Blend Mode',
-            options: blendModes, // Reusing the blendModes array defined earlier
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { vertexBlendMode: val }
-                });
-            }
-        });
-        this.vertexAccordion.append(this.vertexBlendSelect.getElement());
-
 
         // Coset Visualization Accordion (Hybrid)
         this.cosetAccordion = new Accordion('Coset Visualization', false, this.handleAccordionToggle.bind(this), 'hybrid-coset');
@@ -694,17 +655,8 @@ export class InterpolationPanel extends Panel {
         }
 
         // Vertex Rendering Updates
-        if (this.showVerticesControl) {
-            this.showVerticesControl.setValue(hybridParams.showVertices);
-        }
-        if (this.vertexRadiusControl && document.activeElement !== this.vertexRadiusControl.input) {
-            this.vertexRadiusControl.instance.setValue(hybridParams.vertexRadius ?? 2);
-        }
-        if (this.vertexColorControl) {
-            this.vertexColorControl.setValue(hybridParams.vertexColor || '#ffffff');
-        }
-        if (this.vertexOpacityControl && document.activeElement !== this.vertexOpacityControl.input) {
-            this.vertexOpacityControl.instance.setValue(hybridParams.vertexOpacity ?? 1);
+        if (this.vertexModule) {
+            this.vertexModule.update(hybridParams);
         }
         // General Rendering Updates
         if (this.generalModule) {
@@ -712,6 +664,11 @@ export class InterpolationPanel extends Panel {
         }
         if (this.vertexBlendSelect) {
             this.vertexBlendSelect.setValue(hybridParams.vertexBlendMode || 'source-over');
+        }
+
+        // General Rendering Updates (Restored)
+        if (this.generalModule) {
+            this.generalModule.update(hybridParams);
         }
 
         const isRecording = state.app.isRecording;
