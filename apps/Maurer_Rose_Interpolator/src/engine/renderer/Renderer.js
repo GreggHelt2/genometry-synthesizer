@@ -351,8 +351,8 @@ export class CanvasRenderer {
         if (state.hybrid.showBaseCurveA) collectBaseCurve(state.rosetteA, state.hybrid, 'A');
         if (state.hybrid.showBaseCurveB) collectBaseCurve(state.rosetteB, state.hybrid, 'B');
 
-        // Underlays
-        const collectUnderlay = (params, color) => {
+        // Underlays (Base Chordal Rendering)
+        const collectUnderlay = (params, options) => {
             const curve = this.createCurve(params);
             const sequencer = this.getSequencer(params.sequencerType);
             let k;
@@ -368,19 +368,42 @@ export class CanvasRenderer {
                     ? sequencer.getCosets(params.totalDivs, params)[idx % k]
                     : idx;
                 const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, sub, params);
+
                 renderables.push({
                     type: 'underlay',
                     points: points,
-                    options: {
-                        color: hexToRgba(color, state.hybrid.underlayOpacity),
-                        width: 1
-                    }
+                    options: options, // Pass full options (color, width, opacity, blend, method)
+                    params: params,    // Pass source params for potential sequence coloring reference if needed
+                    seed: sub
                 });
             });
         };
 
-        if (state.hybrid.showRoseA) collectUnderlay(state.rosetteA, state.rosetteA.color);
-        if (state.hybrid.showRoseB) collectUnderlay(state.rosetteB, state.rosetteB.color);
+        if (state.hybrid.showRoseA) {
+            collectUnderlay(state.rosetteA, {
+                color: state.hybrid.underlayColorA || state.rosetteA.color,
+                colorMethod: state.hybrid.underlayColorMethodA || 'solid', // Default to source or solid? Source panel has method... let's default to solid override unless specified
+                // Actually, if we want it to look like the source, we might default to source params?
+                // But the UI has its own controls now. If they are unset, what happens?
+                // They default to defaults in LayerRenderingModule.
+                // In Renderer, if key is missing, we use fallback.
+
+                width: state.hybrid.underlayLineWidthA,
+                opacity: state.hybrid.underlayOpacityA,
+                blendMode: state.hybrid.underlayBlendModeA,
+                antiAlias: state.hybrid.underlayAntiAliasA
+            });
+        }
+        if (state.hybrid.showRoseB) {
+            collectUnderlay(state.rosetteB, {
+                color: state.hybrid.underlayColorB || state.rosetteB.color,
+                colorMethod: state.hybrid.underlayColorMethodB || 'solid',
+                width: state.hybrid.underlayLineWidthB,
+                opacity: state.hybrid.underlayOpacityB,
+                blendMode: state.hybrid.underlayBlendModeB,
+                antiAlias: state.hybrid.underlayAntiAliasB
+            });
+        }
 
 
         // Interpolated Curve
@@ -467,12 +490,22 @@ export class CanvasRenderer {
             if (item.type === 'baseCurve') {
                 this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
             } else if (item.type === 'underlay') {
-                // Simple single color draw, pass scale? 
-                // Underlay is strictly 1px usually?
-                // Plan said "width: 1". 
-                // If we want underlays to stay 1px, we should scale them too.
-                const opts = { ...item.options, width: (item.options.width || 1) * lineWidthScale };
-                this.polylineLayer.draw(item.points, opts);
+                // Use full rose rendering logic
+                // Construct a params object that mimics what drawRenderableRose expects
+                const drawParams = {
+                    color: item.options.color,
+                    colorMethod: item.options.colorMethod,
+                    lineWidth: item.options.width, // Map 'width' option to 'lineWidth' param
+                    opacity: item.options.opacity,
+                    blendMode: item.options.blendMode,
+                    antiAlias: item.options.antiAlias
+                };
+                // Fallback for colorMethod='sequence' might need seed
+                if (item.options.colorMethod === 'sequence') {
+                    // We might need to handle this if we want sequence coloring on underlays
+                }
+
+                this.drawRenderableRose(item.points, drawParams, 'white', lineWidthScale);
             } else if (item.type === 'hybrid') {
                 // Hybrid styling
                 this.drawRenderableRose(item.points, state.hybrid, state.hybrid.color || 'white', lineWidthScale);
