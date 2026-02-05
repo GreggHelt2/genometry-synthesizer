@@ -10,16 +10,16 @@ import { store } from '../../../engine/state/Store.js';
 
 export class LayerRenderingModule {
     /**
-     * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Line Width, Anti-Alias
+     * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Size (Line Width / Radius), Anti-Alias
      * @param {Object} orchestrator - Parent panel implementation
      * @param {string} roseId - ID prefix for persistence keys if needed (e.g. 'rosetteA')
      * @param {string} actionType - Redux action type to dispatch
      * @param {Object} keys - Map of internal param keys to state keys (allow remapping)
-     * @param {Object} options - Configuration options { showToggle: { key, label, value? } }
+     * @param {Object} options - Configuration options { showToggle: { key, label, value? }, sizeLabel: string }
      */
     constructor(orchestrator, roseId, actionType, keys = {}, options = {}) {
         this.orchestrator = orchestrator;
-        this.roseId = roseId; // Save roseId
+        this.roseId = roseId;
         this.actionType = actionType;
         this.options = options;
         this.keys = Object.assign({
@@ -27,7 +27,7 @@ export class LayerRenderingModule {
             color: 'color',
             blendMode: 'blendMode',
             opacity: 'opacity',
-            lineWidth: 'lineWidth',
+            size: 'lineWidth', // Default maps internal 'size' to state 'lineWidth'
             antiAlias: 'antiAlias'
         }, keys);
 
@@ -46,11 +46,7 @@ export class LayerRenderingModule {
             this.controls.showToggle = new ParamToggle({
                 key: toggleConfig.key,
                 label: toggleConfig.label || 'Show',
-                value: toggleConfig.value !== undefined ? toggleConfig.value : true, // Default true if not specified? Or false? Usually init from state outside.
-                // Wait, modules don't normally set initial value from constructor, they rely on update().
-                // But ParamToggle needs an initial value. 
-                // Let's default to false to be safe, update() will fix it.
-                // Actually, if we don't pass value, ParamToggle defaults to false.
+                value: toggleConfig.value !== undefined ? toggleConfig.value : true,
                 onChange: (val) => this.dispatch(toggleConfig.key, val),
                 onLinkToggle: (isActive) => this.handleLinkToggle(toggleConfig.key, isActive, this.controls.showToggle)
             });
@@ -114,9 +110,10 @@ export class LayerRenderingModule {
         });
         this.container.appendChild(this.controls.blendMode.getElement());
 
-        // 4. Line Width
-        this.controls.lineWidth = this.createSlider(this.keys.lineWidth, 0.1, 10, 0.1, 'Line Width');
-        this.container.appendChild(this.controls.lineWidth.container);
+        // 4. Size (Line Width / Radius)
+        const sizeLabel = this.options.sizeLabel || 'Line Width';
+        this.controls.size = this.createSlider(this.keys.size, 0.1, 20, 0.1, sizeLabel);
+        this.container.appendChild(this.controls.size.container);
 
         // 5. Opacity
         this.controls.opacity = this.createSlider(this.keys.opacity, 0, 1, 0.01, 'Opacity');
@@ -244,177 +241,14 @@ export class LayerRenderingModule {
         if (this.controls.color) this.controls.color.setValue(params[this.keys.color] || '#ffffff');
         if (this.controls.blendMode) this.controls.blendMode.setValue(params[this.keys.blendMode] || 'source-over');
 
-        if (this.controls.lineWidth) this.controls.lineWidth.instance.setValue(params[this.keys.lineWidth] ?? 1);
+        if (this.controls.size) this.controls.size.instance.setValue(params[this.keys.size] ?? 1);
         if (this.controls.opacity) this.controls.opacity.instance.setValue(params[this.keys.opacity] ?? 1);
 
         if (this.controls.antiAlias) this.controls.antiAlias.setValue(params[this.keys.antiAlias] !== false);
     }
 }
 
-export class VertexVizModule {
-    /**
-     * @param {Object} orchestrator 
-     * @param {string} roseId 
-     * @param {string} actionType 
-     * @param {Object} keys 
-     */
-    constructor(orchestrator, roseId, actionType, keys = {}) {
-        this.orchestrator = orchestrator;
-        this.roseId = roseId;
-        this.actionType = actionType;
-        this.keys = Object.assign({
-            showVertices: 'showVertices',
-            vertexRadius: 'vertexRadius',
-            vertexColor: 'vertexColor',
-            vertexOpacity: 'vertexOpacity',
-            vertexBlendMode: 'vertexBlendMode'
-        }, keys);
 
-        this.container = document.createElement('div');
-        this.container.className = 'flex flex-col gap-1';
-        this.controls = {};
-        this.render();
-    }
-
-    render() {
-        // 1. Toggle
-        this.controls.showVertices = new ParamToggle({
-            key: this.keys.showVertices,
-            label: 'Show Vertices',
-            value: false,
-            onChange: (val) => this.dispatch(this.keys.showVertices, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.showVertices, isActive, this.controls.showVertices)
-        });
-        this.initLinkState(this.keys.showVertices, this.controls.showVertices);
-        this.container.appendChild(this.controls.showVertices.getElement());
-
-        // 2. Radius
-        this.controls.vertexRadius = this.createSlider(this.keys.vertexRadius, 0.5, 20, 0.5, 'Radius');
-        this.container.appendChild(this.controls.vertexRadius.container);
-
-        // 3. Color
-        this.controls.vertexColor = new ParamColor({
-            key: this.keys.vertexColor,
-            label: 'Color',
-            value: '#ffffff',
-            onChange: (val) => this.dispatch(this.keys.vertexColor, val)
-        });
-        this.container.appendChild(this.controls.vertexColor.getElement());
-
-        // 4. Opacity
-        this.controls.vertexOpacity = this.createSlider(this.keys.vertexOpacity, 0, 1, 0.01, 'Opacity');
-        this.container.appendChild(this.controls.vertexOpacity.container);
-
-        // 5. Blend Mode
-        const blendModes = [
-            { value: 'source-over', label: 'Normal' },
-            { value: 'lighter', label: 'Lighter (Add)' },
-            { value: 'multiply', label: 'Multiply' },
-            { value: 'screen', label: 'Screen' },
-            { value: 'overlay', label: 'Overlay' },
-            { value: 'darken', label: 'Darken' },
-            { value: 'lighten', label: 'Lighten' },
-            { value: 'color-dodge', label: 'Color Dodge' },
-            { value: 'color-burn', label: 'Color Burn' },
-            { value: 'hard-light', label: 'Hard Light' },
-            { value: 'soft-light', label: 'Soft Light' },
-            { value: 'difference', label: 'Difference' },
-            { value: 'exclusion', label: 'Exclusion' },
-            { value: 'hue', label: 'Hue' },
-            { value: 'saturation', label: 'Saturation' },
-            { value: 'color', label: 'Color' },
-            { value: 'luminosity', label: 'Luminosity' }
-        ];
-
-        this.controls.vertexBlendMode = new ParamSelect({
-            key: this.keys.vertexBlendMode,
-            label: 'Blend Mode',
-            options: blendModes,
-            value: 'source-over',
-            onChange: (val) => this.dispatch(this.keys.vertexBlendMode, val)
-        });
-        this.container.appendChild(this.controls.vertexBlendMode.getElement());
-    }
-
-    createSlider(key, min, max, step, label) {
-        const paramGui = new ParamNumber({
-            key: key,
-            label: label,
-            min: min,
-            max: max,
-            step: step,
-            value: min,
-            onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, paramGui)
-        });
-
-        this.initLinkState(key, paramGui);
-
-        if (this.orchestrator.registerParam) {
-            this.orchestrator.registerParam(paramGui);
-        }
-
-        return {
-            container: paramGui.getElement(),
-            instance: paramGui
-        };
-    }
-
-    handleLinkToggle(key, isActive, control) {
-        const myKey = `${this.roseId}.${key}`;
-        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = `${otherRoseId}.${key}`;
-
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const linked = linkManager.toggleLink(myKey, otherKey);
-            if (linked !== isActive) {
-                control.setLinkActive(linked);
-            }
-        });
-    }
-
-    initLinkState(key, control) {
-        const myKey = `${this.roseId}.${key}`;
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (linkManager.isLinked(myKey)) {
-                control.setLinkActive(true);
-            }
-        });
-    }
-
-    updateLinkVisuals() {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.controls).forEach(k => {
-                const control = this.controls[k];
-                let instance = control;
-                if (control.instance) instance = control.instance;
-
-                if (instance && typeof instance.setLinkActive === 'function') {
-                    const paramKey = this.keys[k];
-                    if (paramKey) {
-                        const fullKey = `${this.roseId}.${paramKey}`;
-                        instance.setLinkActive(linkManager.isLinked(fullKey));
-                    }
-                }
-            });
-        });
-    }
-
-    dispatch(key, val) {
-        store.dispatch({
-            type: this.actionType,
-            payload: { [key]: val }
-        });
-    }
-
-    update(params) {
-        if (this.controls.showVertices) this.controls.showVertices.setValue(params[this.keys.showVertices]);
-        if (this.controls.vertexRadius) this.controls.vertexRadius.instance.setValue(params[this.keys.vertexRadius] ?? 2);
-        if (this.controls.vertexColor) this.controls.vertexColor.setValue(params[this.keys.vertexColor] || '#ffffff');
-        if (this.controls.vertexOpacity) this.controls.vertexOpacity.instance.setValue(params[this.keys.vertexOpacity] ?? 1);
-        if (this.controls.vertexBlendMode) this.controls.vertexBlendMode.setValue(params[this.keys.vertexBlendMode] || 'source-over');
-    }
-}
 
 export class GlobalRenderingModule {
     constructor(orchestrator, roseId, actionType, keys = {}) {

@@ -11,7 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
-import { GlobalRenderingModule, VertexVizModule, LayerRenderingModule } from './modules/AppearanceModules.js';
+import { GlobalRenderingModule, LayerRenderingModule } from './modules/AppearanceModules.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -199,16 +199,21 @@ export class InterpolationPanel extends Panel {
         this.accordions.set('hybrid-vertex', this.vertexAccordion);
         this.controlsContainer.appendChild(this.vertexAccordion.element);
 
-        this.vertexModule = new VertexVizModule(
+        this.vertexModule = new LayerRenderingModule(
             this,      // Orchestrator
             'hybrid',  // roseId
             ACTIONS.UPDATE_HYBRID,
             {
-                showVertices: 'showVertices',
-                vertexRadius: 'vertexRadius',
-                vertexColor: 'vertexColor',
-                vertexOpacity: 'vertexOpacity',
-                vertexBlendMode: 'vertexBlendMode'
+                size: 'vertexRadius',
+                color: 'vertexColor',
+                opacity: 'vertexOpacity',
+                blendMode: 'vertexBlendMode',
+                colorMethod: 'vertexColorMethod', // New feature hook
+                antiAlias: 'vertexAntiAlias'
+            },
+            {
+                showToggle: { key: 'showVertices', label: 'Show Vertices', value: false },
+                sizeLabel: 'Radius'
             }
         );
         this.vertexAccordion.append(this.vertexModule.container);
@@ -413,7 +418,7 @@ export class InterpolationPanel extends Panel {
                 color: 'baseCurveColorA',
                 blendMode: 'baseCurveBlendModeA',
                 opacity: 'baseCurveOpacityA',
-                lineWidth: 'baseCurveLineWidthA',
+                size: 'baseCurveLineWidthA',
                 antiAlias: 'baseCurveAntiAliasA'
             },
             {
@@ -436,7 +441,7 @@ export class InterpolationPanel extends Panel {
                 color: 'baseCurveColorB',
                 blendMode: 'baseCurveBlendModeB',
                 opacity: 'baseCurveOpacityB',
-                lineWidth: 'baseCurveLineWidthB',
+                size: 'baseCurveLineWidthB',
                 antiAlias: 'baseCurveAntiAliasB'
             },
             {

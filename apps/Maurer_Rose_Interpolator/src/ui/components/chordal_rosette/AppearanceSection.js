@@ -1,5 +1,5 @@
 import { Accordion } from '../Accordion.js';
-import { LayerRenderingModule, VertexVizModule, GlobalRenderingModule } from '../modules/AppearanceModules.js';
+import { LayerRenderingModule, GlobalRenderingModule } from '../modules/AppearanceModules.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
@@ -55,11 +55,30 @@ export class AppearanceSection {
         this.register(this.vertexAccordion, `${this.roseId}-vertex-viz`);
         this.element.appendChild(this.vertexAccordion.element);
 
-        // Uses VertexVizModule
-        this.vertexModule = new VertexVizModule(
+        // Uses LayerRenderingModule (General replacement for VertexVizModule)
+        this.vertexModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType
+            this.orchestrator.actionType,
+            {
+                showVertices: 'showVertices', // Mapped below in options.showToggle
+                // size mapped below
+                size: 'vertexRadius',
+                color: 'vertexColor',
+                opacity: 'vertexOpacity',
+                blendMode: 'vertexBlendMode',
+                // Vertex renderer doesn't use colorMethod yet, but module has it. 
+                // We'll leave it mapped to something safe or unmapped?
+                // If unmapped, keys.colorMethod will be 'colorMethod' (default).
+                // Rosette param 'colorMethod' is used for lines.
+                // We shouldn't share the same key for vertices!
+                colorMethod: 'vertexColorMethod',
+                antiAlias: 'vertexAntiAlias' // Not standard, but harmless
+            },
+            {
+                showToggle: { key: 'showVertices', label: 'Show Vertices', value: false },
+                sizeLabel: 'Radius'
+            }
         );
         this.vertexAccordion.append(this.vertexModule.container);
 
@@ -87,7 +106,7 @@ export class AppearanceSection {
                 color: 'baseCurveColor',
                 blendMode: 'baseCurveBlendMode',
                 opacity: 'baseCurveOpacity',
-                lineWidth: 'baseCurveLineWidth',
+                size: 'baseCurveLineWidth',
                 antiAlias: 'baseCurveAntiAlias'
             },
             {
