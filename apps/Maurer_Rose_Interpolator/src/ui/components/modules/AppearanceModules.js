@@ -15,11 +15,13 @@ export class LayerRenderingModule {
      * @param {string} roseId - ID prefix for persistence keys if needed (e.g. 'rosetteA')
      * @param {string} actionType - Redux action type to dispatch
      * @param {Object} keys - Map of internal param keys to state keys (allow remapping)
+     * @param {Object} options - Configuration options { showToggle: { key, label, value? } }
      */
-    constructor(orchestrator, roseId, actionType, keys = {}) {
+    constructor(orchestrator, roseId, actionType, keys = {}, options = {}) {
         this.orchestrator = orchestrator;
         this.roseId = roseId; // Save roseId
         this.actionType = actionType;
+        this.options = options;
         this.keys = Object.assign({
             colorMethod: 'colorMethod',
             color: 'color',
@@ -38,6 +40,24 @@ export class LayerRenderingModule {
     }
 
     render() {
+        // Optional: Show Toggle
+        if (this.options.showToggle) {
+            const toggleConfig = this.options.showToggle;
+            this.controls.showToggle = new ParamToggle({
+                key: toggleConfig.key,
+                label: toggleConfig.label || 'Show',
+                value: toggleConfig.value !== undefined ? toggleConfig.value : true, // Default true if not specified? Or false? Usually init from state outside.
+                // Wait, modules don't normally set initial value from constructor, they rely on update().
+                // But ParamToggle needs an initial value. 
+                // Let's default to false to be safe, update() will fix it.
+                // Actually, if we don't pass value, ParamToggle defaults to false.
+                onChange: (val) => this.dispatch(toggleConfig.key, val),
+                onLinkToggle: (isActive) => this.handleLinkToggle(toggleConfig.key, isActive, this.controls.showToggle)
+            });
+            this.initLinkState(toggleConfig.key, this.controls.showToggle);
+            this.container.appendChild(this.controls.showToggle.getElement());
+        }
+
         // 1. Color Method
         const methodOptions = [
             { value: 'solid', label: 'Single Color' },
@@ -216,6 +236,10 @@ export class LayerRenderingModule {
     }
 
     update(params) {
+        if (this.controls.showToggle && this.options.showToggle) {
+            this.controls.showToggle.setValue(params[this.options.showToggle.key] !== false);
+        }
+
         if (this.controls.colorMethod) this.controls.colorMethod.setValue(params[this.keys.colorMethod] || 'solid');
         if (this.controls.color) this.controls.color.setValue(params[this.keys.color] || '#ffffff');
         if (this.controls.blendMode) this.controls.blendMode.setValue(params[this.keys.blendMode] || 'source-over');

@@ -11,7 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
-import { GlobalRenderingModule, VertexVizModule } from './modules/AppearanceModules.js';
+import { GlobalRenderingModule, VertexVizModule, LayerRenderingModule } from './modules/AppearanceModules.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -291,16 +291,59 @@ export class InterpolationPanel extends Panel {
 
 
         // Underlays Section
+        // Underlays Accordion
+        this.underlaysAccordion = new Accordion('Underlays', false, (isOpen, id) => {
+            if (this.handleAccordionToggle) this.handleAccordionToggle(isOpen, id);
+        }, 'hybrid-underlays');
+
+        // Register accordions if needed, InterpolationPanel uses generic manual set() usually
+        this.accordions.set('hybrid-underlays', this.underlaysAccordion);
+
+        // We previously appended to vizAccordion. Let's append to vizAccordion still but as a sub-accordion? 
+        // Or just replace the "header" inside the container.
+
+        // The original logic was: underlayContainer (div) -> appended to vizAccordion.
+        // inside underlayContainer -> h3 header.
+        // We want: underlayContainer is now the CONTENT of an Accordion.
+        // But wait, vizAccordion is already an accordion.
+        // Nesting accordions? 
+        // Or just let "Underlays" be a group with a nice label.
+        // User asked to "normalize top-level accordion dropdowns".
+        // "Underlays" is INSIDE "Visualization" in my previous edit (lines 294+). 
+        // Wait, "Visualization" IS top level.
+        // "Underlays" was just a sub-section of Visualization.
+        // If it's a sub-section, maybe it shouldn't be a full Accordion? 
+        // But user said "top-level accordion dropdowns".
+        // "Underlays" created a "h3" with "text-sm font-bold".
+        // If I make it an Accordion, it becomes collapsible which is nice.
+
+        // Let's make it a nested accordion inside Visualization? 
+        // Or keep it as a labelled section but DIFFERENT style?
+        // User's issue was "top-level accordions".
+        // "Visualization" IS top level.
+        // "Underlays" is inside it.
+        // The only "Top Level" manual header might be "Underlay Reference" if it was top level.
+        // In my logic above (lines 172), "Visualization" is the accordion.
+        // "Underlays" is just content inside it.
+        // So I don't need to change "Underlays" to an Accordion to satisfy "Top Level" normalization.
+        // BUT, if I want to match the STYLE of headers, I should ensure the h3 matches?
+        // Or maybe Underlays SHOULD be top level?
+        // In Rosette Panel, "Base Curve Generator" is top level.
+        // "Underlays" is specific to Hybrid.
+
+        // Let's stick to the request: "top-level accordion dropdowns in Rosette and Hybrid panels".
+        // "Underlays" is currently INSIDE "Visualization" (line 337: this.vizAccordion.append(underlayContainer)).
+        // So strictly speaking it's not a top level accordion.
+        // However, I suspect the User saw "Underlay Reference" as a header?
+        // Wait, line 295: createElement('h3', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Underlays' })
+
+        // I will keep Underlays as a subsection but maybe ensure the H3 style is consistent or distinctly SUB-section.
+        // BUT, looking at the code around line 294, it mimics a header.
+        // Let's just standardise the css of the h3 to be consistent with normal headers if it's meant to look like one.
+        // 'text-sm font-bold text-gray-400 mb-2' -> 'text-xs font-bold uppercase tracking-wider text-gray-500 mb-2' (Sub-header style)
+
         const underlayContainer = createElement('div', 'mt-4 pt-4 border-t border-gray-700');
-        underlayContainer.appendChild(createElement('h3', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Underlays' }));
-
-        // Toggles
-        // Toggles
-        // const toggleRow = createElement('div', 'flex gap-4 mb-2');
-
-        // Use individual rows for toggle consistency since they are block-level styled now? 
-        // Actually ParamToggle is flex row.
-        // Let's just stack them.
+        underlayContainer.appendChild(createElement('h3', 'text-xs font-bold uppercase tracking-wider text-gray-500 mb-2', { textContent: 'Underlays' }));
 
         this.showACheck = new ParamToggle({
             key: 'showRoseA',
@@ -338,8 +381,10 @@ export class InterpolationPanel extends Panel {
 
         // Base Curve Viz Accordion (Hybrid)
         this.baseCurveVizAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
-            this.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => this.alignLabels(this.baseCurveVizAccordion.content));
+            if (this.handleAccordionToggle) this.handleAccordionToggle(isOpen, id);
+            if (isOpen) requestAnimationFrame(() => {
+                if (this.alignLabels) this.alignLabels(this.baseCurveVizAccordion.content);
+            });
         }, 'hybrid-base-viz');
         this.accordions.set('hybrid-base-viz', this.baseCurveVizAccordion);
         this.controlsContainer.appendChild(this.baseCurveVizAccordion.element);
@@ -348,135 +393,57 @@ export class InterpolationPanel extends Panel {
         const groupA = createElement('div', 'flex flex-col mb-4 p-2 border border-gray-700 rounded bg-gray-900/50');
         groupA.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source A Curve' }));
 
-        // Toggle A
-        this.showBaseCurveControlA = new ParamToggle({
-            key: 'showBaseCurveA',
-            label: 'Show Base Curve',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { showBaseCurveA: val }
-                });
+        this.baseCurveModuleA = new LayerRenderingModule(
+            this,      // Orchestrator
+            'hybrid',  // roseId
+            ACTIONS.UPDATE_HYBRID,
+            {
+                colorMethod: 'baseCurveColorMethodA', // Placeholder if needed, though Hybrid manual didn't have Method? 
+                // Wait, manual controls didn't have ColorMethod. Let's map it but ignore if not used?
+                // Or does LayerRenderingModule force it? 
+                // LayerRenderingModule renders Color Method first.
+                // Hybrid "Source A" group didn't have Color Method.
+                // It had: Toggle, Width, Color, Opacity, Blend.
+                // If I map 'colorMethod' to something unused, it will still show the dropdown.
+                // Is that desired? The user plan said "Reuse shared RenderingControlsModule".
+                // Rosette Base Curve has Color Method.
+                // Hybrid Base Curve previously did NOT.
+                // Adding it is a FEATURE PARITY upgrade.
+                colorMethod: 'baseCurveColorMethodA',
+                color: 'baseCurveColorA',
+                blendMode: 'baseCurveBlendModeA',
+                opacity: 'baseCurveOpacityA',
+                lineWidth: 'baseCurveLineWidthA',
+                antiAlias: 'baseCurveAntiAliasA'
+            },
+            {
+                showToggle: { key: 'showBaseCurveA', label: 'Show Base Curve' }
             }
-        });
-        groupA.appendChild(this.showBaseCurveControlA.getElement());
-
-        // Width A
-        this.baseCurveWidthControlA = this.createSlider('baseCurveLineWidthA', 0.1, 10, 0.1, 'Line Width');
-        groupA.appendChild(this.baseCurveWidthControlA.container);
-
-        // Color A
-        this.baseCurveColorControlA = new ParamColor({
-            key: 'baseCurveColorA',
-            label: 'Color',
-            value: '#666666',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { baseCurveColorA: val }
-                });
-            }
-        });
-        groupA.appendChild(this.baseCurveColorControlA.getElement());
-
-        // Opacity A
-        this.baseCurveOpacityControlA = this.createSlider('baseCurveOpacityA', 0, 1, 0.01, 'Opacity');
-        groupA.appendChild(this.baseCurveOpacityControlA.container);
-
-        // Blend Mode A
-        // Reusing options is fine if defined, but local options safe
-        const baseCurveBlendModes = [
-            { value: 'source-over', label: 'Normal' },
-            { value: 'lighter', label: 'Lighter (Add)' },
-            { value: 'multiply', label: 'Multiply' },
-            { value: 'screen', label: 'Screen' },
-            { value: 'overlay', label: 'Overlay' },
-            { value: 'darken', label: 'Darken' },
-            { value: 'lighten', label: 'Lighten' },
-            { value: 'color-dodge', label: 'Color Dodge' },
-            { value: 'color-burn', label: 'Color Burn' },
-            { value: 'hard-light', label: 'Hard Light' },
-            { value: 'soft-light', label: 'Soft Light' },
-            { value: 'difference', label: 'Difference' },
-            { value: 'exclusion', label: 'Exclusion' },
-            { value: 'hue', label: 'Hue' },
-            { value: 'saturation', label: 'Saturation' },
-            { value: 'color', label: 'Color' },
-            { value: 'luminosity', label: 'Luminosity' }
-        ];
-        this.baseCurveBlendSelectA = new ParamSelect({
-            key: 'baseCurveBlendModeA',
-            label: 'Blend Mode',
-            options: baseCurveBlendModes,
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { baseCurveBlendModeA: val }
-                });
-            }
-        });
-        groupA.appendChild(this.baseCurveBlendSelectA.getElement());
-
+        );
+        groupA.appendChild(this.baseCurveModuleA.container);
         this.baseCurveVizAccordion.append(groupA);
-
 
         // --- Base Curve B Controls ---
         const groupB = createElement('div', 'flex flex-col mb-2 p-2 border border-gray-700 rounded bg-gray-900/50');
         groupB.appendChild(createElement('label', 'text-sm font-bold text-gray-400 mb-2', { textContent: 'Source B Curve' }));
 
-        // Toggle B
-        this.showBaseCurveControlB = new ParamToggle({
-            key: 'showBaseCurveB',
-            label: 'Show Base Curve',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { showBaseCurveB: val }
-                });
+        this.baseCurveModuleB = new LayerRenderingModule(
+            this,
+            'hybrid',
+            ACTIONS.UPDATE_HYBRID,
+            {
+                colorMethod: 'baseCurveColorMethodB',
+                color: 'baseCurveColorB',
+                blendMode: 'baseCurveBlendModeB',
+                opacity: 'baseCurveOpacityB',
+                lineWidth: 'baseCurveLineWidthB',
+                antiAlias: 'baseCurveAntiAliasB'
+            },
+            {
+                showToggle: { key: 'showBaseCurveB', label: 'Show Base Curve' }
             }
-        });
-        groupB.appendChild(this.showBaseCurveControlB.getElement());
-
-        // Width B
-        this.baseCurveWidthControlB = this.createSlider('baseCurveLineWidthB', 0.1, 10, 0.1, 'Line Width');
-        groupB.appendChild(this.baseCurveWidthControlB.container);
-
-        // Color B
-        this.baseCurveColorControlB = new ParamColor({
-            key: 'baseCurveColorB',
-            label: 'Color',
-            value: '#666666',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { baseCurveColorB: val }
-                });
-            }
-        });
-        groupB.appendChild(this.baseCurveColorControlB.getElement());
-
-        // Opacity B
-        this.baseCurveOpacityControlB = this.createSlider('baseCurveOpacityB', 0, 1, 0.01, 'Opacity');
-        groupB.appendChild(this.baseCurveOpacityControlB.container);
-
-        // Blend Mode B
-        this.baseCurveBlendSelectB = new ParamSelect({
-            key: 'baseCurveBlendModeB',
-            label: 'Blend Mode',
-            options: baseCurveBlendModes, // Reusing local variable which now has full list
-            value: 'source-over',
-            onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { baseCurveBlendModeB: val }
-                });
-            }
-        });
-        groupB.appendChild(this.baseCurveBlendSelectB.getElement());
-
+        );
+        groupB.appendChild(this.baseCurveModuleB.container);
         this.baseCurveVizAccordion.append(groupB);
 
 
@@ -639,20 +606,10 @@ export class InterpolationPanel extends Panel {
         }
 
         // Base Curve Viz Updates (A)
-        if (this.showBaseCurveControlA) this.showBaseCurveControlA.setValue(hybridParams.showBaseCurveA);
-        if (this.baseCurveWidthControlA) this.baseCurveWidthControlA.instance.setValue(hybridParams.baseCurveLineWidthA ?? 2);
-        if (this.baseCurveColorControlA) this.baseCurveColorControlA.setValue(hybridParams.baseCurveColorA || '#666666');
-        if (this.baseCurveOpacityControlA) this.baseCurveOpacityControlA.instance.setValue(hybridParams.baseCurveOpacityA ?? 1);
-        if (this.baseCurveBlendSelectA) this.baseCurveBlendSelectA.setValue(hybridParams.baseCurveBlendModeA || 'source-over');
+        if (this.baseCurveModuleA) this.baseCurveModuleA.update(hybridParams);
 
         // Base Curve Viz Updates (B)
-        if (this.showBaseCurveControlB) this.showBaseCurveControlB.setValue(hybridParams.showBaseCurveB);
-        if (this.baseCurveWidthControlB) this.baseCurveWidthControlB.instance.setValue(hybridParams.baseCurveLineWidthB ?? 2);
-        if (this.baseCurveColorControlB) this.baseCurveColorControlB.setValue(hybridParams.baseCurveColorB || '#666666');
-        if (this.baseCurveOpacityControlB) this.baseCurveOpacityControlB.instance.setValue(hybridParams.baseCurveOpacityB ?? 1);
-        if (this.baseCurveBlendSelectB) {
-            this.baseCurveBlendSelectB.setValue(hybridParams.baseCurveBlendModeB || 'source-over');
-        }
+        if (this.baseCurveModuleB) this.baseCurveModuleB.update(hybridParams);
 
         // Vertex Rendering Updates
         if (this.vertexModule) {

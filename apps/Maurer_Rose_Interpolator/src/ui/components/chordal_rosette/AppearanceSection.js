@@ -17,7 +17,8 @@ export class AppearanceSection {
 
         // Container for multiple accordions
         this.element = document.createElement('div');
-        this.element.className = 'flex flex-col gap-1';
+        // Removed 'flex flex-col gap-1' to allow standard margin collapse (matching Hybrid panel)
+        this.element.className = '';
 
         this.modules = {};
 
@@ -73,22 +74,8 @@ export class AppearanceSection {
         this.register(this.baseCurveAccordion, `${this.roseId}-base-viz`);
         this.element.appendChild(this.baseCurveAccordion.element);
 
-        // 3a. Show Toggle
-        this.baseCurveControls = {};
-        this.baseCurveControls.showBaseCurve = new ParamToggle({
-            key: 'showBaseCurve',
-            label: 'Show Base Curve',
-            value: false,
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { showBaseCurve: val }
-                });
-            },
-            onLinkToggle: (isActive) => this.handleLinkToggle('showBaseCurve', isActive, this.baseCurveControls.showBaseCurve)
-        });
-        this.initLinkState('showBaseCurve', this.baseCurveControls.showBaseCurve);
-        this.baseCurveAccordion.append(this.baseCurveControls.showBaseCurve.getElement());
+        // 3a. Show Toggle (Managed by Module now)
+        // this.baseCurveControls was removed in favor of module.
 
         // 3b. Rendering Controls Module (Strict Parity with Chordal Viz)
         this.baseCurveModule = new LayerRenderingModule(
@@ -102,6 +89,9 @@ export class AppearanceSection {
                 opacity: 'baseCurveOpacity',
                 lineWidth: 'baseCurveLineWidth',
                 antiAlias: 'baseCurveAntiAlias'
+            },
+            {
+                showToggle: { key: 'showBaseCurve', label: 'Show Base Curve' }
             }
         );
         this.baseCurveAccordion.append(this.baseCurveModule.container);
@@ -159,13 +149,9 @@ export class AppearanceSection {
             this.baseCurveModule.updateLinkVisuals();
         }
 
-        // Base Curve Toggle
-        if (this.baseCurveControls && this.baseCurveControls.showBaseCurve) {
-            const myKey = `${this.roseId}.showBaseCurve`;
-            import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                this.baseCurveControls.showBaseCurve.setLinkActive(linkManager.isLinked(myKey));
-            });
-        }
+        // Base Curve Toggle (Now in module)
+        // Module handles its own link visuals if updateLinkVisuals calls it.
+        // We just need to ensure baseCurveModule.updateLinkVisuals() is called, which it is below.
 
         // Update own controls
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
@@ -186,9 +172,7 @@ export class AppearanceSection {
         if (this.vertexModule) this.vertexModule.update(params);
         if (this.baseCurveModule) this.baseCurveModule.update(params);
 
-        if (this.baseCurveControls && this.baseCurveControls.showBaseCurve) {
-            this.baseCurveControls.showBaseCurve.setValue(params.showBaseCurve || false);
-        }
+        // Base Curve Toggle handled by module update now
 
         if (this.generalModule) this.generalModule.update(params);
     }

@@ -31,7 +31,7 @@ export class Accordion {
         const header = createElement('div', 'flex justify-between items-center p-2 cursor-pointer bg-gray-800 hover:bg-gray-700 select-none');
         header.addEventListener('click', () => this.toggle());
 
-        this.titleEl = createElement('span', 'font-bold text-sm', { textContent: this.title });
+        this.titleEl = createElement('span', 'font-bold text-sm uppercase tracking-wider text-gray-200', { textContent: this.title });
         // User requested: Larger triangle, Right (Closed) -> Down (Open)
         // Using '▼' (Down) as base.
         // Open: rotate(0deg) = Down
