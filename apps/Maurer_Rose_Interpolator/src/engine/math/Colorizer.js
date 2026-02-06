@@ -66,6 +66,12 @@ export class Colorizer {
                 const tCyclic = t <= 0.5 ? t * 2 : 2 - (t * 2);
                 return ColorUtils.lerpColor(startColor, endColor, tCyclic);
 
+            case 'custom':
+                if (options.gradientStops && options.gradientStops.length > 0) {
+                    return ColorUtils.lerpStops(options.gradientStops, t);
+                }
+                // Fallback to normal interpolation if no stops defined (prevents white flash)
+                return ColorUtils.lerpColor(startColor, endColor, t);
             case GradientType.PRESET:
                 // TODO: Implement presets
                 // Fallback to 2-point for now

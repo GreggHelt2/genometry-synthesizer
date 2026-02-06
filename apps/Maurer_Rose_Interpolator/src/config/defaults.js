@@ -21,6 +21,10 @@ export const DEFAULTS = {
         colorEnd: '#FF00FF', // Magenta (Gradient End)
         gradientType: '2-point', // '2-point', 'cyclic', 'preset'
         gradientPreset: 'rainbow',
+        gradientStops: [
+            { color: '#ffffff', position: 0 },
+            { color: '#ff0000', position: 1 }
+        ],
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
@@ -66,6 +70,10 @@ export const DEFAULTS = {
         colorEnd: '#0000FF', // Blue (Gradient End)
         gradientType: '2-point',
         gradientPreset: 'rainbow',
+        gradientStops: [
+            { color: '#ffffff', position: 0 },
+            { color: '#0000ff', position: 1 }
+        ],
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
@@ -102,6 +110,10 @@ export const DEFAULTS = {
         colorEnd: '#ef4444',
         gradientType: '2-point',
         gradientPreset: 'rainbow',
+        gradientStops: [
+            { color: '#ffffff', position: 0 },
+            { color: '#00ff00', position: 1 }
+        ],
         colorMethod: 'solid',
         blendMode: 'lighter',
         // Base Curve Rendering (A)

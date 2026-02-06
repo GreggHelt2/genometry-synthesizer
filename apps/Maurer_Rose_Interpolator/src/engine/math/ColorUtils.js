@@ -51,5 +51,40 @@ export const ColorUtils = {
      */
     rgbToHex(r, g, b) {
         return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    },
+
+    /**
+     * Interpolates color based on a list of stops.
+     * @param {Array<{color: string, position: number}>} stops - Array of stop objects
+     * @param {number} t - Interpolation factor (0-1)
+     * @returns {string} Interpolated hex color
+     */
+    lerpStops(stops, t) {
+        if (!stops || stops.length === 0) return '#000000';
+        if (stops.length === 1) return stops[0].color;
+
+        // Ensure sorted by position
+        // Optimization: Assume sorted or sort once? For safety, sort if needed, 
+        // but sorting every pixel/segment is expensive. 
+        // Better to assume the state ensures sorted order or sort before rendering phase.
+        // Let's assume sorted for now, or do a quick search.
+
+        // Clamp t
+        t = Math.max(0, Math.min(1, t));
+
+        // Find the two stops surrounding t
+        for (let i = 0; i < stops.length - 1; i++) {
+            const s1 = stops[i];
+            const s2 = stops[i + 1];
+
+            if (t >= s1.position && t <= s2.position) {
+                // Normalise t within this segment
+                const segmentT = (t - s1.position) / (s2.position - s1.position);
+                return this.lerpColor(s1.color, s2.color, segmentT);
+            }
+        }
+
+        // Fallback (e.g., if t is exactly 1 or float errors)
+        return stops[stops.length - 1].color;
     }
 };

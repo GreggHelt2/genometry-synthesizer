@@ -3,6 +3,7 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamToggle } from '../ParamToggle.js';
+import { ParamGradient } from '../ParamGradient.js';
 import { store } from '../../../engine/state/Store.js';
 
 // Mixin pattern or just factory functions? 
@@ -28,6 +29,7 @@ export class LayerRenderingModule {
             colorEnd: 'colorEnd',
             gradientType: 'gradientType',
             gradientPreset: 'gradientPreset',
+            gradientStops: 'gradientStops',
             blendMode: 'blendMode',
             opacity: 'opacity',
             size: 'lineWidth',
@@ -80,6 +82,7 @@ export class LayerRenderingModule {
         const gradientTypes = [
             { value: '2-point', label: '2-Point Interpolation' },
             { value: 'cyclic', label: 'Cyclic (Start-End-Start)' },
+            { value: 'custom', label: 'Custom (Grapick)' },
             { value: 'preset', label: 'Preset (Rainbow)' } // Placeholder
         ];
 
@@ -109,6 +112,15 @@ export class LayerRenderingModule {
             onChange: (val) => this.dispatch(this.keys.colorEnd, val)
         });
         this.container.appendChild(this.controls.colorEnd.getElement());
+
+        // 4b. Custom Gradient (Grapick)
+        this.controls.gradientStops = new ParamGradient({
+            key: this.keys.gradientStops,
+            label: 'Gradient Editor',
+            value: [],
+            onChange: (val) => this.dispatch(this.keys.gradientStops, val)
+        });
+        this.container.appendChild(this.controls.gradientStops.getElement());
 
 
         // 5. Blend Mode
@@ -170,7 +182,28 @@ export class LayerRenderingModule {
 
         // Toggle Gradient Controls
         this.controls.gradientType.getElement().style.display = isGradient ? 'flex' : 'none';
-        this.controls.colorEnd.getElement().style.display = isGradient ? 'flex' : 'none';
+
+        // Get current gradient type to decide between 2-point controls and custom
+        // We need access to current state? Or pass it in?
+        // updateVisibility is usually called with just method, but we need type too.
+        // We can check the control value if it exists or define a separate update method.
+        // Let's grab value from control if possible or default to 2-point.
+        const type = this.controls.gradientType.lastValue || '2-point';
+
+        const isCustom = type === 'custom';
+
+        // 2-Point / Cyclic Controls
+        this.controls.colorEnd.getElement().style.display = (isGradient && !isCustom) ? 'flex' : 'none';
+
+        // Custom Controls
+        if (this.controls.gradientStops) {
+            this.controls.gradientStops.getElement().style.display = (isGradient && isCustom) ? 'flex' : 'none';
+        }
+
+        // Start Color visibility?
+        // In Custom mode, start/end are defined in stops. So hide standard color picker too?
+        // Yes, likely hide "Start Color" if using custom editor.
+        this.controls.color.getElement().style.display = (isCustom && isGradient) ? 'none' : 'flex';
 
         // Update Start Color Label
         // Accessed via private property or just assume ParamColor structure?
@@ -269,7 +302,17 @@ export class LayerRenderingModule {
 
         if (this.controls.color) this.controls.color.setValue(params[this.keys.color] || '#ffffff');
         if (this.controls.colorEnd) this.controls.colorEnd.setValue(params[this.keys.colorEnd] || '#000000');
-        if (this.controls.gradientType) this.controls.gradientType.setValue(params[this.keys.gradientType] || '2-point');
+
+        const gradType = params[this.keys.gradientType] || '2-point';
+        if (this.controls.gradientType) {
+            this.controls.gradientType.setValue(gradType);
+            // Re-run visibility check because type might have changed which affects sub-controls
+            this.updateVisibility(method);
+        }
+
+        if (this.controls.gradientStops) {
+            this.controls.gradientStops.setValue(params[this.keys.gradientStops] || []);
+        }
 
         if (this.controls.blendMode) this.controls.blendMode.setValue(params[this.keys.blendMode] || 'source-over');
 
