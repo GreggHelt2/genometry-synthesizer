@@ -6,13 +6,14 @@ import { persistenceManager } from '../../engine/state/PersistenceManager.js';
 
 
 export class ParamNumber {
-    constructor({ key, label, min, max, step, value, onChange, onLinkToggle }) {
+    constructor({ key, label, min, max, step, value, onChange, onLinkToggle, hardLimits }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
         this.min = min;
         this.max = max;
         this.step = step;
+        this.hardLimits = hardLimits || false;
 
         // Internal state tracking to avoid echo-back loops
         this.lastValue = value;
@@ -23,7 +24,13 @@ export class ParamNumber {
             // Round if needed based on step?
             // Heuristic rounded
             const decimals = (this.step && this.step.toString().split('.')[1]?.length) || 0;
-            const rounded = parseFloat(val.toFixed(decimals));
+            let rounded = parseFloat(val.toFixed(decimals));
+
+            // Clamp to min/max to prevent unwanted auto-expansion of the slider range
+            // especially for properties like 'weight' that must stay 0-1
+            if (this.min !== undefined) rounded = Math.max(rounded, this.min);
+            if (this.max !== undefined) rounded = Math.min(rounded, this.max);
+
             this.handleUserChange(rounded, { transient: true, isAnimation: true });
         });
 
@@ -313,6 +320,12 @@ export class ParamNumber {
     handleUserChange(val, meta = {}) {
         if (isNaN(val)) return;
 
+        // Strict limit enforcement on output
+        if (this.hardLimits) {
+            if (this.max !== undefined) val = Math.min(val, this.max);
+            if (this.min !== undefined) val = Math.max(val, this.min);
+        }
+
         // Update local UI immediately for responsiveness
         this.updateInternalUI(val);
 
@@ -348,12 +361,18 @@ export class ParamNumber {
     updateInternalUI(val) {
         this.lastValue = val;
 
-        // Auto-expand range if value exceeds bounds (e.g. from animation)
-        if (this.max !== undefined && val > this.max) {
-            this.setMax(val);
-        }
-        if (this.min !== undefined && val < this.min) {
-            this.setMin(val);
+        if (this.hardLimits) {
+            // Strict clamping
+            if (this.max !== undefined) val = Math.min(val, this.max);
+            if (this.min !== undefined) val = Math.max(val, this.min);
+        } else {
+            // Auto-expand range if value exceeds bounds (e.g. from animation)
+            if (this.max !== undefined && val > this.max) {
+                this.setMax(val);
+            }
+            if (this.min !== undefined && val < this.min) {
+                this.setMin(val);
+            }
         }
 
         // Only update if not the active element to avoid fighting cursor
