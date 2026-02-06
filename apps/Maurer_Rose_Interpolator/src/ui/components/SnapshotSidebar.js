@@ -13,12 +13,17 @@ export class SnapshotSidebar {
         this.filteredSnapshots = []; // Currently visible list
         this.selectedIndex = -1; // Index in filteredSnapshots
 
+        this.selectedIndex = -1; // Index in filteredSnapshots
+
         this._boundHandleKeydown = this.handleKeydown.bind(this);
+        this._boundHandleOutsideClick = this.handleOutsideClick.bind(this);
+        this.hasFocus = false;
         this.render();
     }
 
     handleKeydown(e) {
         if (!this.isOpen) return;
+        if (!this.hasFocus) return;
 
         // Ignore inputs (except our own search input)
         // This prevents hijacking Enter from other UI components (like Color Picker)
@@ -141,6 +146,23 @@ export class SnapshotSidebar {
         // Append to parent
         // Note: Main.js needs to ensure this is appended as a flex child *after* the main content column
         this.parentContainer.appendChild(this.container);
+    }
+
+    handleOutsideClick(e) {
+        if (!this.isOpen) return;
+
+        // Check if click is inside container
+        if (this.container.contains(e.target)) {
+            this.hasFocus = true;
+        } else {
+            // Click outside
+            this.hasFocus = false;
+
+            // If an element inside is focused (like search input), blur it
+            if (this.container.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        }
     }
 
     updateList(snapshots) {
@@ -327,10 +349,14 @@ export class SnapshotSidebar {
 
         if (this.isOpen) {
             this.container.style.width = '320px'; // Open width
+            this.hasFocus = true; // Initial focus on open
             window.addEventListener('keydown', this._boundHandleKeydown);
+            window.addEventListener('mousedown', this._boundHandleOutsideClick);
         } else {
             this.container.style.width = '0px';
+            this.hasFocus = false;
             window.removeEventListener('keydown', this._boundHandleKeydown);
+            window.removeEventListener('mousedown', this._boundHandleOutsideClick);
         }
 
         // Trigger resize event for canvas layout after transition
