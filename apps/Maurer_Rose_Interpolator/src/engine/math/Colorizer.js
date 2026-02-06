@@ -1,3 +1,5 @@
+import { ColorUtils } from './ColorUtils.js';
+
 /**
  * Utility for generating colors based on geometric properties of polyline segments.
  */
@@ -8,36 +10,78 @@ export const ColorMethod = {
     SEQUENCE: 'sequence'
 };
 
+export const GradientType = {
+    TWO_POINT: '2-point',
+    CYCLIC: 'cyclic',
+    PRESET: 'preset'
+};
+
 export class Colorizer {
     /**
      * Generates an array of colors for each segment of a polyline.
      * @param {Array<{x, y}>} points - The vertices of the polyline.
      * @param {string} method - The coloring method (ColorMethod).
-     * @param {string} baseColor - The base color (hex) for tinting or fallback.
-     * @returns {Array<string>} Array of color strings (hsl or rgba).
+     * @param {string} baseColor - The base color (hex).
+     * @param {Object} options - Gradient options { colorEnd, gradientType, gradientPreset }.
+     * @returns {Array<string>} Array of color strings.
      */
-    static generateSegmentColors(points, method, baseColor) {
+    static generateSegmentColors(points, method, baseColor, options = {}) {
         if (!points || points.length < 2) return [];
+
+        const startColor = baseColor || '#ffffff';
+        const endColor = options.colorEnd || '#000000';
+        const gradientType = options.gradientType || GradientType.TWO_POINT;
+
+        // Methods calculate normalized 't' (0-1) for each segment
+        let tValues = [];
 
         switch (method) {
             case ColorMethod.LENGTH:
-                return this.byLength(points);
+                tValues = this.getTByLength(points);
+                break;
             case ColorMethod.ANGLE:
-                return this.byAngle(points);
+                tValues = this.getTByAngle(points);
+                break;
             case ColorMethod.SEQUENCE:
-                return this.bySequence(points);
+                tValues = this.getTBySequence(points);
+                break;
             default:
-                // Return empty to signal fallback to solid stroke
-                return [];
+                return []; // Solid fallback
+        }
+
+        return tValues.map(t => this.getGradientColor(t, startColor, endColor, gradientType, options));
+    }
+
+    static getGradientColor(t, startColor, endColor, type, options) {
+        // Clamp t just in case
+        t = Math.max(0, Math.min(1, t));
+
+        switch (type) {
+            case GradientType.CYCLIC:
+                // Map 0->1 to 0->1->0 (Triangle wave) or Sine
+                // Simple version: 2 * |0.5 - t| is wrong for peak at center.
+                // Let's do Sine for smooth cycle: sin(t * PI) -> 0 at ends, 1 at mid
+                // Or: t * 2, if t > 0.5 then 2 - (t*2)
+                // Let's try simple linear cycle: Start -> End -> Start
+                const tCyclic = t <= 0.5 ? t * 2 : 2 - (t * 2);
+                return ColorUtils.lerpColor(startColor, endColor, tCyclic);
+
+            case GradientType.PRESET:
+                // TODO: Implement presets
+                // Fallback to 2-point for now
+                return ColorUtils.lerpColor(startColor, endColor, t);
+
+            case GradientType.TWO_POINT:
+            default:
+                return ColorUtils.lerpColor(startColor, endColor, t);
         }
     }
 
-    static byLength(points) {
+    static getTByLength(points) {
         const lengths = [];
         let minLen = Infinity;
         let maxLen = -Infinity;
 
-        // 1. Calculate lengths
         for (let i = 0; i < points.length - 1; i++) {
             const dx = points[i + 1].x - points[i].x;
             const dy = points[i + 1].y - points[i].y;
@@ -47,41 +91,29 @@ export class Colorizer {
             if (len > maxLen) maxLen = len;
         }
 
-        // 2. Map to heatmap (Blue -> Red or HSL)
-        // Short = Cool/Dark, Long = Hot/Bright
-        return lengths.map(len => {
-            const t = (len - minLen) / (maxLen - minLen || 1);
-            // Hue: 240 (Blue) -> 0 (Red)
-            const hue = 240 * (1 - t);
-            // Lightness: 30% -> 60%
-            const light = 30 + (30 * t);
-            return `hsl(${hue}, 100%, ${light}%)`;
-        });
+        const range = maxLen - minLen || 1;
+        return lengths.map(len => (len - minLen) / range);
     }
 
-    static byAngle(points) {
-        const colors = [];
+    static getTByAngle(points) {
+        const tValues = [];
         for (let i = 0; i < points.length - 1; i++) {
             const dx = points[i + 1].x - points[i].x;
             const dy = points[i + 1].y - points[i].y;
-            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            if (angle < 0) angle += 360;
-
-            // Map angle directly to Hue
-            // Saturation 100%, Lightness 50%
-            colors.push(`hsl(${angle}, 100%, 50%)`);
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI); // -180 to 180
+            // Normalize to 0-1
+            const t = (angle + 180) / 360;
+            tValues.push(t);
         }
-        return colors;
+        return tValues;
     }
 
-    static bySequence(points) {
-        const colors = [];
+    static getTBySequence(points) {
+        const tValues = [];
         const total = points.length - 1;
         for (let i = 0; i < total; i++) {
-            // Rainbow walk through the entire path
-            const hue = (i / total) * 360;
-            colors.push(`hsl(${hue}, 100%, 50%)`);
+            tValues.push(i / (total || 1));
         }
-        return colors;
+        return tValues;
     }
 }

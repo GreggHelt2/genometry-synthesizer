@@ -261,7 +261,7 @@ export class CanvasRenderer {
         if (useSegments) {
             let colors;
             if (params.colorMethod && params.colorMethod !== 'solid') {
-                colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || defaultColor);
+                colors = Colorizer.generateSegmentColors(points, params.colorMethod, params.color || defaultColor, params);
             } else {
                 colors = [params.color || defaultColor];
             }

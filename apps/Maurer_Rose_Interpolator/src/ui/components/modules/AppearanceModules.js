@@ -10,11 +10,11 @@ import { store } from '../../../engine/state/Store.js';
 
 export class LayerRenderingModule {
     /**
-     * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Size (Line Width / Radius), Anti-Alias
+     * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Size, Anti-Alias
      * @param {Object} orchestrator - Parent panel implementation
-     * @param {string} roseId - ID prefix for persistence keys if needed (e.g. 'rosetteA')
+     * @param {string} roseId - ID prefix for persistence keys if needed
      * @param {string} actionType - Redux action type to dispatch
-     * @param {Object} keys - Map of internal param keys to state keys (allow remapping)
+     * @param {Object} keys - Map of internal param keys to state keys
      * @param {Object} options - Configuration options { showToggle: { key, label, value? }, sizeLabel: string }
      */
     constructor(orchestrator, roseId, actionType, keys = {}, options = {}) {
@@ -25,13 +25,15 @@ export class LayerRenderingModule {
         this.keys = Object.assign({
             colorMethod: 'colorMethod',
             color: 'color',
+            colorEnd: 'colorEnd',
+            gradientType: 'gradientType',
+            gradientPreset: 'gradientPreset',
             blendMode: 'blendMode',
             opacity: 'opacity',
-            size: 'lineWidth', // Default maps internal 'size' to state 'lineWidth'
+            size: 'lineWidth',
             antiAlias: 'antiAlias'
         }, keys);
 
-        // No own accordion, usually appended to a parent container or accordion
         this.container = document.createElement('div');
         this.container.className = 'flex flex-col gap-1';
 
@@ -57,9 +59,9 @@ export class LayerRenderingModule {
         // 1. Color Method
         const methodOptions = [
             { value: 'solid', label: 'Single Color' },
-            { value: 'length', label: 'Length' },
-            { value: 'angle', label: 'Angle' },
-            { value: 'sequence', label: 'Sequence' }
+            { value: 'length', label: 'Length Gradient' },
+            { value: 'angle', label: 'Angle Gradient' },
+            { value: 'sequence', label: 'Sequence Gradient' }
         ];
 
         this.controls.colorMethod = new ParamSelect({
@@ -67,20 +69,49 @@ export class LayerRenderingModule {
             label: 'Color Method',
             options: methodOptions,
             value: 'solid',
-            onChange: (val) => this.dispatch(this.keys.colorMethod, val)
+            onChange: (val) => {
+                this.dispatch(this.keys.colorMethod, val);
+                this.updateVisibility(val);
+            }
         });
         this.container.appendChild(this.controls.colorMethod.getElement());
 
-        // 2. Color
+        // 2. Gradient Type (Hidden for solid)
+        const gradientTypes = [
+            { value: '2-point', label: '2-Point Interpolation' },
+            { value: 'cyclic', label: 'Cyclic (Start-End-Start)' },
+            { value: 'preset', label: 'Preset (Rainbow)' } // Placeholder
+        ];
+
+        this.controls.gradientType = new ParamSelect({
+            key: this.keys.gradientType,
+            label: 'Gradient Type',
+            options: gradientTypes,
+            value: '2-point',
+            onChange: (val) => this.dispatch(this.keys.gradientType, val)
+        });
+        this.container.appendChild(this.controls.gradientType.getElement());
+
+        // 3. Start Color
         this.controls.color = new ParamColor({
             key: this.keys.color,
-            label: 'Color',
+            label: 'Color', // Label updated dynamically
             value: '#ffffff',
             onChange: (val) => this.dispatch(this.keys.color, val)
         });
         this.container.appendChild(this.controls.color.getElement());
 
-        // 3. Blend Mode
+        // 4. End Color (Hidden for solid)
+        this.controls.colorEnd = new ParamColor({
+            key: this.keys.colorEnd,
+            label: 'End Color',
+            value: '#000000',
+            onChange: (val) => this.dispatch(this.keys.colorEnd, val)
+        });
+        this.container.appendChild(this.controls.colorEnd.getElement());
+
+
+        // 5. Blend Mode
         const blendModes = [
             { value: 'source-over', label: 'Normal' },
             { value: 'lighter', label: 'Lighter (Add)' },
@@ -110,16 +141,16 @@ export class LayerRenderingModule {
         });
         this.container.appendChild(this.controls.blendMode.getElement());
 
-        // 4. Size (Line Width / Radius)
+        // 6. Size (Line Width / Radius)
         const sizeLabel = this.options.sizeLabel || 'Line Width';
         this.controls.size = this.createSlider(this.keys.size, 0.1, 20, 0.1, sizeLabel);
         this.container.appendChild(this.controls.size.container);
 
-        // 5. Opacity
+        // 7. Opacity
         this.controls.opacity = this.createSlider(this.keys.opacity, 0, 1, 0.01, 'Opacity');
         this.container.appendChild(this.controls.opacity.container);
 
-        // 6. Anti-Alias (Toggle)
+        // 8. Anti-Alias (Toggle)
         this.controls.antiAlias = new ParamToggle({
             key: this.keys.antiAlias,
             label: 'Anti-aliasing',
@@ -129,15 +160,32 @@ export class LayerRenderingModule {
         });
         this.initLinkState(this.keys.antiAlias, this.controls.antiAlias);
         this.container.appendChild(this.controls.antiAlias.getElement());
+
+        // Initial Visibility
+        this.updateVisibility('solid');
+    }
+
+    updateVisibility(method) {
+        const isGradient = method !== 'solid';
+
+        // Toggle Gradient Controls
+        this.controls.gradientType.getElement().style.display = isGradient ? 'flex' : 'none';
+        this.controls.colorEnd.getElement().style.display = isGradient ? 'flex' : 'none';
+
+        // Update Start Color Label
+        // Accessed via private property or just assume ParamColor structure?
+        // ParamColor has setLabel method? Let's check or just re-render.
+        // Assuming strict component interface, we might not have setLabel.
+        // But for CSS Grid layout in ParamColor, changing label text content might be enough?
+        // Let's rely on standard ParamColor: it renders title.
+        // We can access DOM directly if needed.
+        const colorLabel = this.controls.color.getElement().querySelector('span'); // Simple heuristic
+        if (colorLabel) {
+            colorLabel.textContent = isGradient ? 'Start Color' : 'Color';
+        }
     }
 
     handleLinkToggle(key, isActive, control) {
-        const fullKey = `${this.orchestrator.roseId}.${key}`; // Use orchestrator.roseId exposed? 
-        // Wait, constructor didn't save roseId to `this.roseId`. It only used it for keys or ignored it?
-        // Constructor was: constructor(orchestrator, roseId, actionType, keys = {})
-        // I need to save roseId.
-
-        // Let's assume I fix constructor below.
         const myKey = `${this.roseId}.${key}`;
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = `${otherRoseId}.${key}`;
@@ -151,7 +199,6 @@ export class LayerRenderingModule {
     }
 
     initLinkState(key, control) {
-        // We need roseId.
         const myKey = `${this.roseId}.${key}`;
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             if (linkManager.isLinked(myKey)) {
@@ -169,21 +216,11 @@ export class LayerRenderingModule {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: (isActive) => {
-                // We need reference to paramGui instance to call setLinkActive
-                // But variable isn't initialized? Closures work fine.
-                // But wait, `this.handleLinkToggle` logic is cleaner. 
-                // However, I need to pass control.
-                // Let's rely on variable `paramGui` being available in closure.
-
-                // Oops, handleLinkToggle tries to use `this.roseId`.
-                this.handleLinkToggle(key, isActive, paramGui);
-            }
+            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, paramGui)
         });
 
         this.initLinkState(key, paramGui);
 
-        // Register if Orchestrator supports it
         if (this.orchestrator.registerParam) {
             this.orchestrator.registerParam(paramGui);
         }
@@ -198,24 +235,11 @@ export class LayerRenderingModule {
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             Object.keys(this.controls).forEach(k => {
                 const control = this.controls[k];
-                // control might be instance (ParamToggle) or object { container, instance }
                 let instance = control;
                 if (control.instance) instance = control.instance;
 
                 if (instance && typeof instance.setLinkActive === 'function') {
-                    // Find key for this control. 
-                    // this.controls keys match this.keys keys? 
-                    // No, `this.controls.lineWidth` uses `this.keys.lineWidth`.
-                    // So we must look up the correct semantic key?
-                    // Actually, for `this.controls.colorMethod`, key is `this.keys.colorMethod`.
-                    // Is `k` the internal property name (e.g. 'lineWidth')? Yes.
-                    // The actual param key is `this.keys[k]`.
-
                     const paramKey = this.keys[k];
-                    // If keys don't map 1:1, we might have issues.
-                    // But in constructor: `this.keys = Object.assign({ ... }, keys)`
-                    // And `this.controls.lineWidth = ...`
-
                     if (paramKey) {
                         const fullKey = `${this.roseId}.${paramKey}`;
                         instance.setLinkActive(linkManager.isLinked(fullKey));
@@ -237,8 +261,16 @@ export class LayerRenderingModule {
             this.controls.showToggle.setValue(params[this.options.showToggle.key] !== false);
         }
 
-        if (this.controls.colorMethod) this.controls.colorMethod.setValue(params[this.keys.colorMethod] || 'solid');
+        const method = params[this.keys.colorMethod] || 'solid';
+        if (this.controls.colorMethod) {
+            this.controls.colorMethod.setValue(method);
+            this.updateVisibility(method);
+        }
+
         if (this.controls.color) this.controls.color.setValue(params[this.keys.color] || '#ffffff');
+        if (this.controls.colorEnd) this.controls.colorEnd.setValue(params[this.keys.colorEnd] || '#000000');
+        if (this.controls.gradientType) this.controls.gradientType.setValue(params[this.keys.gradientType] || '2-point');
+
         if (this.controls.blendMode) this.controls.blendMode.setValue(params[this.keys.blendMode] || 'source-over');
 
         if (this.controls.size) this.controls.size.instance.setValue(params[this.keys.size] ?? 1);

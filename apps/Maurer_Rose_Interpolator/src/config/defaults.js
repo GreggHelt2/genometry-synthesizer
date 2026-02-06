@@ -18,6 +18,9 @@ export const DEFAULTS = {
         cosetIndex: 0,
         showAllCosets: false,
         color: '#00FFFF', // Cyan
+        colorEnd: '#FF00FF', // Magenta (Gradient End)
+        gradientType: '2-point', // '2-point', 'cyclic', 'preset'
+        gradientPreset: 'rainbow',
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
@@ -60,6 +63,9 @@ export const DEFAULTS = {
         cosetIndex: 0,
         showAllCosets: false,
         color: '#FF0000', // Red
+        colorEnd: '#0000FF', // Blue (Gradient End)
+        gradientType: '2-point',
+        gradientPreset: 'rainbow',
         colorMethod: 'solid',
         opacity: 0.5,
         blendMode: 'lighter',
@@ -93,6 +99,9 @@ export const DEFAULTS = {
         underlayOpacity: 0.15,
         opacity: 0.5,
         color: '#a855f7',
+        colorEnd: '#ef4444',
+        gradientType: '2-point',
+        gradientPreset: 'rainbow',
         colorMethod: 'solid',
         blendMode: 'lighter',
         // Base Curve Rendering (A)
