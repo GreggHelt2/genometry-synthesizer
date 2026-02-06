@@ -66,7 +66,7 @@ export class ParamGradient {
         `;
 
         // Gradient Preview (on top of checkerboard)
-        this.trackEl = createElement('div', 'absolute inset-0 w-full h-full rounded opacity-90');
+        this.trackEl = createElement('div', 'absolute inset-0 w-full h-full rounded');
         this.trackBg.appendChild(this.trackEl);
         this.editorEl.appendChild(this.trackBg);
 
@@ -77,8 +77,9 @@ export class ParamGradient {
         this.container.appendChild(this.editorEl);
 
         // --- Invisible Native Color Input ---
+        // We append to editorEl so positioning is relative to the editor area
         this.colorInput = createElement('input', 'absolute opacity-0 w-0 h-0 pointer-events-none', { type: 'color' });
-        this.container.appendChild(this.colorInput);
+        this.editorEl.appendChild(this.colorInput);
 
         // --- Events ---
         // 1. Add Stop (Clicking the editor background/track)
@@ -184,7 +185,13 @@ export class ParamGradient {
 
     openColorPicker(index) {
         this.editingStopIndex = index;
-        this.colorInput.value = this.state[index].color;
+        const stop = this.state[index];
+        this.colorInput.value = stop.color;
+
+        // Move the hidden input to the stop's position to assist OS with popup anchoring
+        this.colorInput.style.left = `${stop.position * 100}%`;
+        this.colorInput.style.top = '100%'; // Match swatch position at bottom
+
         this.colorInput.click();
     }
 
