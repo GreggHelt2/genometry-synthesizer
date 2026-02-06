@@ -59,32 +59,63 @@ export const ColorUtils = {
      * @param {number} t - Interpolation factor (0-1)
      * @returns {string} Interpolated hex color
      */
+    /**
+     * Interpolates color properly handling alpha if present in stops.
+     * @param {Array<{color: string, position: number, alpha?: number}>} stops 
+     * @param {number} t 
+     */
     lerpStops(stops, t) {
         if (!stops || stops.length === 0) return '#000000';
-        if (stops.length === 1) return stops[0].color;
+        if (stops.length === 1) return stops[0].color; // Ignore alpha if single stop? Or return rgba? 
+        // If single stop has alpha, we should probably respect it.
+        // But legacy behavior expects hex string often. 
+        // Let's assume if alpha defined, we return rgba.
 
-        // Ensure sorted by position
-        // Optimization: Assume sorted or sort once? For safety, sort if needed, 
-        // but sorting every pixel/segment is expensive. 
-        // Better to assume the state ensures sorted order or sort before rendering phase.
-        // Let's assume sorted for now, or do a quick search.
-
-        // Clamp t
         t = Math.max(0, Math.min(1, t));
 
-        // Find the two stops surrounding t
+        // Find segments
         for (let i = 0; i < stops.length - 1; i++) {
             const s1 = stops[i];
             const s2 = stops[i + 1];
 
             if (t >= s1.position && t <= s2.position) {
-                // Normalise t within this segment
                 const segmentT = (t - s1.position) / (s2.position - s1.position);
+
+                // Check if we need alpha processing
+                // If either has alpha defined, we treat both as having alpha (default 1)
+                if (s1.alpha !== undefined || s2.alpha !== undefined) {
+                    const a1 = s1.alpha !== undefined ? s1.alpha : 1;
+                    const a2 = s2.alpha !== undefined ? s2.alpha : 1;
+                    const alphaInterp = a1 + (a2 - a1) * segmentT;
+
+                    return this.lerpColorRGBA(s1.color, s2.color, segmentT, alphaInterp);
+                }
+
+                // Standard Hex
                 return this.lerpColor(s1.color, s2.color, segmentT);
             }
         }
 
-        // Fallback (e.g., if t is exactly 1 or float errors)
-        return stops[stops.length - 1].color;
+        // Fallback
+        const last = stops[stops.length - 1];
+        if (last.alpha !== undefined) {
+            const rgb = this.hexToRgb(last.color);
+            return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${last.alpha})`;
+        }
+        return last.color;
+    },
+
+    lerpColorRGBA(c1_hex, c2_hex, t, alpha) {
+        t = Math.max(0, Math.min(1, t));
+        const c1 = this.hexToRgb(c1_hex);
+        const c2 = this.hexToRgb(c2_hex);
+
+        const r = Math.round(c1.r + (c2.r - c1.r) * t);
+        const g = Math.round(c1.g + (c2.g - c1.g) * t);
+        const b = Math.round(c1.b + (c2.b - c1.b) * t);
+
+        // Return rgba string
+        // Limit alpha to 0-1 precision?
+        return `rgba(${r}, ${g}, ${b}, ${Number(alpha.toFixed(3))})`;
     }
 };

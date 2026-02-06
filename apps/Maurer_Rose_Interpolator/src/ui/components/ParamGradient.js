@@ -1,4 +1,5 @@
 import { createElement } from '../utils/dom.js';
+import { ColorUtils } from '../../engine/math/ColorUtils.js';
 
 export class ParamGradient {
     /**
@@ -14,23 +15,32 @@ export class ParamGradient {
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
 
-        // Deep copy state to ensure isolation
-        this.state = (value && value.length > 0) ? JSON.parse(JSON.stringify(value)) : [
-            { color: '#ffffff', position: 0 },
-            { color: '#ff0000', position: 1 }
+        // Internal State
+        // Ensure default alpha if missing
+        const initial = (value && value.length > 0) ? JSON.parse(JSON.stringify(value)) : [
+            { color: '#ffffff', position: 0, alpha: 1 },
+            { color: '#ff0000', position: 1, alpha: 1 }
         ];
+
+        // Normalize state (add alpha if missing)
+        this.state = initial.map(s => ({
+            ...s,
+            alpha: s.alpha !== undefined ? s.alpha : 1
+        }));
 
         this.isLinked = false;
         this.draggedStopIndex = -1;
         this.dragStartX = 0;
         this.isDragging = false;
         this.dragHasMoved = false;
+        this.editingStopIndex = -1;
+        this.selectedStopIndex = 0; // Default select first one
 
         this.render({ label });
     }
 
     render({ label }) {
-        this.container = createElement('div', 'flex flex-col mb-4 gradient-param'); // Increased margin
+        this.container = createElement('div', 'flex flex-col mb-4 gradient-param');
 
         // --- Header ---
         const header = createElement('div', 'flex justify-between items-center mb-1');
@@ -52,89 +62,150 @@ export class ParamGradient {
         this.container.appendChild(header);
 
         // --- Editor Visuals ---
-        // Need height for Top(X) + Track + Bottom(Swatch)
-        // Let's say: 12px (X) + 16px (Track) + 16px (Swatch) + spacing = ~48px height
         this.editorEl = createElement('div', 'w-full h-12 relative select-none cursor-pointer mt-2');
 
         // Background Checkerboard (Track only)
-        // Center the track vertically. h-4 = 16px.
-        // top-4 gives room for top handles (approx)
         this.trackBg = createElement('div', 'absolute left-0 right-0 h-4 top-4 rounded border border-gray-600');
         this.trackBg.style.background = `
             conic-gradient(#374151 90deg, #1f2937 90deg 180deg, #374151 180deg 270deg, #1f2937 270deg)
             0 0/10px 10px
         `;
 
-        // Gradient Preview (on top of checkerboard)
+        // Gradient Preview (on top)
         this.trackEl = createElement('div', 'absolute inset-0 w-full h-full rounded');
         this.trackBg.appendChild(this.trackEl);
         this.editorEl.appendChild(this.trackBg);
 
-        // Stops Layer (Full Editor Size)
+        // Stops Layer
         this.stopsLayer = createElement('div', 'absolute inset-0 w-full h-full pointer-events-none');
         this.editorEl.appendChild(this.stopsLayer);
 
-        this.container.appendChild(this.editorEl);
-
-        // --- Invisible Native Color Input ---
-        // We append to editorEl so positioning is relative to the editor area
+        // Invisible Native Color Input (append to editor for positioning)
         this.colorInput = createElement('input', 'absolute opacity-0 w-0 h-0 pointer-events-none', { type: 'color' });
         this.editorEl.appendChild(this.colorInput);
 
-        // --- Events ---
-        // 1. Add Stop (Clicking the editor background/track)
-        this.editorEl.addEventListener('mousedown', (e) => this.handleTrackMouseDown(e));
+        this.container.appendChild(this.editorEl);
 
-        // 2. Color Input Logic
+        // --- Property Controls (Opacity) ---
+        this.controlsEl = createElement('div', 'flex items-center text-xs mt-2 space-x-2 text-gray-400 h-6 px-1');
+
+        // Text Label
+        const oLabel = createElement('span', '', { textContent: 'Opacity:' });
+
+        // Slider
+        this.opacitySlider = createElement('input', 'w-24 accent-gray-500', {
+            type: 'range', min: '0', max: '1', step: '0.01', value: '1'
+        });
+
+        // Value Text
+        this.opacityValue = createElement('span', 'w-8 text-right font-mono', { textContent: '1.0' });
+
+        this.controlsEl.appendChild(oLabel);
+        this.controlsEl.appendChild(this.opacitySlider);
+        this.controlsEl.appendChild(this.opacityValue);
+        this.container.appendChild(this.controlsEl);
+
+        // --- Events ---
+        this.editorEl.addEventListener('mousedown', (e) => this.handleTrackMouseDown(e));
         this.colorInput.addEventListener('input', (e) => this.handleColorChange(e));
         this.colorInput.addEventListener('change', (e) => this.handleColorChangeFinal(e));
 
+        this.opacitySlider.addEventListener('input', (e) => this.handleOpacityInput(e));
+        this.opacitySlider.addEventListener('change', (e) => this.emitChange()); // Finalize
+
+        // Initial selection setup
+        this.updateSelectionUI();
         this.updateVisuals();
     }
 
     handleTrackMouseDown(e) {
-        // If the event target is the Editor or Track, we add a stop.
-        // If it was a Stop Handle/Swatch, that element stopped propagation, so we won't get here.
-
-        // Calculate position relative to the TRACK (not the full editor height if we want precision)
-        // Actually, let's map the X coordinate of the editor to 0-1.
-
+        // Add Stop Logic
         const rect = this.editorEl.getBoundingClientRect();
         const x = e.clientX - rect.left;
         let pos = x / rect.width;
         pos = Math.max(0, Math.min(1, pos));
 
-        // Add Stop
-        this.addStop(pos, '#ffffff');
+        // Add Stop (default white opaque? or match nearby?)
+        // Default White Opaque
+        this.addStop(pos, '#ffffff', 1);
     }
 
-    addStop(position, color) {
-        const newStop = { position, color };
+    addStop(position, color, alpha = 1) {
+        const newStop = { position, color, alpha };
         this.state.push(newStop);
-        this.sortStops();
+        this.sortStops(); // This might change index of what we just added
+
+        // Find index of our new stop to select it
+        // We know logical object ref, so we can find it? 
+        // Or just find by matching position (risky if dupes).
+        // Let's use referencing.
+        const index = this.state.indexOf(newStop);
+        this.selectStop(index);
+
         this.updateVisuals();
         this.emitChange();
     }
 
     removeStop(index) {
-        if (this.state.length <= 2) return; // Enforce min 2
+        if (this.state.length <= 2) return;
+
         this.state.splice(index, 1);
+
+        // Adjust selection
+        if (this.selectedStopIndex === index) {
+            this.selectStop(-1); // Deselect
+        } else if (this.selectedStopIndex > index) {
+            this.selectedStopIndex--;
+        }
+
         this.updateVisuals();
         this.emitChange();
     }
 
+    selectStop(index) {
+        this.selectedStopIndex = index;
+        this.updateSelectionUI();
+        this.updateVisuals(false); // Update visuals to highlight selected handle?
+    }
+
+    updateSelectionUI() {
+        if (this.selectedStopIndex > -1 && this.state[this.selectedStopIndex]) {
+            const stop = this.state[this.selectedStopIndex];
+            this.opacitySlider.disabled = false;
+            this.opacitySlider.value = stop.alpha;
+            this.opacityValue.textContent = stop.alpha.toFixed(2);
+            this.controlsEl.classList.remove('opacity-50', 'pointer-events-none');
+        } else {
+            this.opacitySlider.disabled = true;
+            this.opacityValue.textContent = '--';
+            this.controlsEl.classList.add('opacity-50', 'pointer-events-none');
+        }
+    }
+
+    handleOpacityInput(e) {
+        if (this.selectedStopIndex > -1 && this.state[this.selectedStopIndex]) {
+            const val = parseFloat(e.target.value);
+            this.state[this.selectedStopIndex].alpha = val;
+            this.opacityValue.textContent = val.toFixed(2);
+            this.updateVisuals(false);
+            // We emit change on 'change' (mouseup), not every input event for perf?
+            // Actually smooth preview is nice.
+            this.emitChange();
+        }
+    }
+
     handleStopMouseDown(e, index) {
-        // Critical: Stop bubbling so track doesn't receive "Add Stop"
         e.stopPropagation();
 
-        // Left Click -> Start Drag logic
+        // Select this stop
+        this.selectStop(index);
+
         if (e.button === 0) {
             this.draggedStopIndex = index;
             this.isDragging = true;
-            this.dragHasMoved = false; // Reset move tracker
+            this.dragHasMoved = false;
             this.dragStartX = e.clientX;
 
-            // Global listeners for drag/up
             const moveHandler = (ev) => this.handleDragMove(ev);
             const upHandler = (ev) => {
                 window.removeEventListener('mousemove', moveHandler);
@@ -151,9 +222,7 @@ export class ParamGradient {
         if (!this.isDragging) return;
 
         const dx = Math.abs(e.clientX - this.dragStartX);
-        if (dx > 2) {
-            this.dragHasMoved = true;
-        }
+        if (dx > 2) this.dragHasMoved = true;
 
         const rect = this.editorEl.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -162,7 +231,6 @@ export class ParamGradient {
 
         this.state[this.draggedStopIndex].position = pos;
 
-        // Live update visuals (no sort to keep index stable)
         this.updateVisuals(false);
         this.emitChange();
     }
@@ -170,12 +238,16 @@ export class ParamGradient {
     handleDragEnd(e, index) {
         this.isDragging = false;
 
-        // If we didn't move significantly, treat as Click -> Open Picker
         if (!this.dragHasMoved) {
             this.openColorPicker(index);
         } else {
-            // If we did move, sort and save
+            // Sort state after drag
+            // When we sort, indices change. We must find our selected stop again.
+            const selectedStopObj = this.state[this.selectedStopIndex];
             this.sortStops();
+            // Re-find index
+            this.selectedStopIndex = this.state.indexOf(selectedStopObj);
+
             this.updateVisuals();
             this.emitChange();
         }
@@ -188,9 +260,8 @@ export class ParamGradient {
         const stop = this.state[index];
         this.colorInput.value = stop.color;
 
-        // Move the hidden input to the stop's position to assist OS with popup anchoring
         this.colorInput.style.left = `${stop.position * 100}%`;
-        this.colorInput.style.top = '100%'; // Match swatch position at bottom
+        this.colorInput.style.top = '100%';
 
         this.colorInput.click();
     }
@@ -205,6 +276,8 @@ export class ParamGradient {
 
     handleColorChangeFinal(e) {
         this.handleColorChange(e);
+        // Do not reset editing index immediately if we want to support continuous editing?
+        // But system picker is modal or modal-like.
         this.editingStopIndex = -1;
     }
 
@@ -214,6 +287,7 @@ export class ParamGradient {
 
     emitChange() {
         if (this.onChange) {
+            // Export state
             this.onChange(JSON.parse(JSON.stringify(this.state)));
         }
     }
@@ -221,18 +295,37 @@ export class ParamGradient {
     updateVisuals(rebuildDOM = true) {
         // 1. Update Track Gradient CSS
         const sortedForCss = [...this.state].sort((a, b) => a.position - b.position);
-        const gradientStr = sortedForCss.map(s => `${s.color} ${s.position * 100}%`).join(', ');
+
+        const gradientStr = sortedForCss.map(s => {
+            const rgb = ColorUtils.hexToRgb(s.color);
+            const alpha = s.alpha !== undefined ? s.alpha : 1;
+            return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha}) ${s.position * 100}%`;
+        }).join(', ');
+
         this.trackEl.style.background = `linear-gradient(90deg, ${gradientStr})`;
 
         // 2. Update Stop Handles
         if (!rebuildDOM) {
-            // Lightweight update: just move existing elements
             Array.from(this.stopsLayer.children).forEach((child, i) => {
                 if (this.state[i]) {
-                    child.style.left = `${this.state[i].position * 100}%`;
-                    // Update the color swatch background (it's the last child in our structure)
-                    const swatch = child.lastElementChild;
-                    if (swatch) swatch.style.backgroundColor = this.state[i].color;
+                    const stop = this.state[i];
+                    child.style.left = `${stop.position * 100}%`;
+
+                    // Update Swatch Bg
+                    const swatch = child.querySelector('.swatch');
+                    if (swatch) {
+                        const rgb = ColorUtils.hexToRgb(stop.color);
+                        const alpha = stop.alpha !== undefined ? stop.alpha : 1;
+                        swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    }
+
+                    // Highlight selection
+                    child.classList.toggle('z-10', i === this.selectedStopIndex);
+                    const line = child.querySelector('.guideline');
+                    if (line) {
+                        line.style.opacity = (i === this.selectedStopIndex) ? '1' : '0.4';
+                        line.style.boxShadow = (i === this.selectedStopIndex) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
+                    }
                 }
             });
             return;
@@ -241,60 +334,55 @@ export class ParamGradient {
         // Full Rebuild
         this.stopsLayer.innerHTML = '';
         this.state.forEach((stop, index) => {
-            // Container for the Handle Assembly
-            // Centered on the position: -translate-x-1/2
-            // pointer-events-auto is CRITICAL here since parent is none
             const stopContainer = createElement('div', 'absolute top-0 bottom-0 flex flex-col items-center pointer-events-auto cursor-ew-resize group');
             stopContainer.style.left = `${stop.position * 100}%`;
-            stopContainer.style.transform = 'translateX(-50%)'; // Center it
-            stopContainer.style.width = '20px'; // Hit area
+            stopContainer.style.transform = 'translateX(-50%)';
+            stopContainer.style.width = '20px';
 
-            // 1. Delete Button (Top) - X
-            // Hidden by default, show on hover? User asked for "X above".
+            // Delete Btn
             const deleteBtn = createElement('div', 'w-4 h-4 text-[10px] flex items-center justify-center bg-gray-800 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-full border border-gray-600 mb-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer');
             deleteBtn.textContent = '✕';
             deleteBtn.title = 'Remove Stop';
-
             deleteBtn.addEventListener('mousedown', (e) => {
-                e.stopPropagation(); // prevent drag start
-                // We handle click here manually because 'click' event might be messy with mousedown
-                // Actually standard click is fine if we stop prop on mousedown
+                e.stopPropagation();
                 this.removeStop(index);
             });
-            // Stop mousedown propagation so it doesn't trigger track-click ADD or stop-drag MOVE
-            // wait, if we stop prop, we can't drag. But this is delete button. Correct.
 
-            // 2. Guide Line (Middle) - Crossing the track
-            const line = createElement('div', 'w-0.5 h-full bg-white opacity-40 shadow-sm');
+            // Guide Line
+            const line = createElement('div', 'guideline w-0.5 h-full bg-white shadow-sm transition-opacity');
             line.style.height = '16px';
             line.style.marginTop = '0px';
-            line.style.boxShadow = '0 0 2px rgba(0,0,0,0.5)';
+            line.style.opacity = (index === this.selectedStopIndex) ? '1' : '0.4';
+            line.style.boxShadow = (index === this.selectedStopIndex) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
 
-            // 3. Color Swatch (Bottom)
-            const swatch = createElement('div', 'w-3 h-3 border border-white rounded-sm shadow-md mt-0.5');
-            swatch.style.backgroundColor = stop.color;
+            // Swatch
+            const swatch = createElement('div', 'swatch w-3 h-3 border border-white rounded-sm shadow-md mt-0.5');
+            const rgb = ColorUtils.hexToRgb(stop.color);
+            const alpha = stop.alpha !== undefined ? stop.alpha : 1;
+            swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            // Show checkerboard behind swatch if transparent?
+            // Actually hard to show transparent swatch on transparent bg without checker.
+            // Let's add a tiny checkerboard *inside* the swatch?
+            // Or just rely on the main track preview.
 
             // Assemble
             if (this.state.length > 2) {
                 stopContainer.appendChild(deleteBtn);
             } else {
-                // Spacing filler if no delete button
                 const spacer = createElement('div', 'h-4 bg-transparent mb-0.5');
                 stopContainer.appendChild(spacer);
             }
             stopContainer.appendChild(line);
             stopContainer.appendChild(swatch);
 
-            // Events on the CONTAINER
-            // Any mousedown on container starts drag
             stopContainer.addEventListener('mousedown', (e) => this.handleStopMouseDown(e, index));
-
-            // Right click context menu
             stopContainer.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this.removeStop(index);
             });
+
+            if (index === this.selectedStopIndex) stopContainer.classList.add('z-10');
 
             this.stopsLayer.appendChild(stopContainer);
         });
@@ -302,23 +390,34 @@ export class ParamGradient {
 
     setValue(stops) {
         if (!stops || JSON.stringify(stops) === JSON.stringify(this.state)) return;
-        this.state = JSON.parse(JSON.stringify(stops));
+
+        // Normalize incoming (add default alpha)
+        const incoming = (stops && stops.length > 0) ? stops : [
+            { color: '#ffffff', position: 0, alpha: 1 },
+            { color: '#ff0000', position: 1, alpha: 1 }
+        ];
+
+        this.state = incoming.map(s => ({
+            ...s,
+            alpha: s.alpha !== undefined ? s.alpha : 1
+        }));
+
+        // If selection is out of bounds, reset
+        if (this.selectedStopIndex >= this.state.length) {
+            this.selectedStopIndex = 0;
+        }
+
+        this.updateSelectionUI();
         this.updateVisuals();
     }
 
-    getElement() {
-        return this.container;
-    }
-
-    // ... Link methods same as before ...
+    // ... Methods getElement, toggleLink, etc ...
+    getElement() { return this.container; }
     toggleLink() {
         this.isLinked = !this.isLinked;
         this.updateLinkVisuals();
-        if (this.onLinkToggle) {
-            this.onLinkToggle(this.isLinked);
-        }
+        if (this.onLinkToggle) this.onLinkToggle(this.isLinked);
     }
-
     updateLinkVisuals() {
         if (this.isLinked) {
             this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
@@ -328,7 +427,6 @@ export class ParamGradient {
             this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
         }
     }
-
     setLinkActive(isActive) {
         if (this.isLinked !== isActive) {
             this.isLinked = isActive;
