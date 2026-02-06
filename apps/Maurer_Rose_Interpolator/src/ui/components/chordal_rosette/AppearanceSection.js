@@ -1,5 +1,6 @@
 import { Accordion } from '../Accordion.js';
-import { LayerRenderingModule, GlobalRenderingModule } from '../modules/AppearanceModules.js';
+import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
+import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';

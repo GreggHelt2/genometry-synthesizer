@@ -1,5 +1,6 @@
 import { Accordion } from '../Accordion.js';
-import { GlobalRenderingModule, LayerRenderingModule } from '../modules/AppearanceModules.js';
+import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
+import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { createElement } from '../../utils/dom.js';
 import { ParamNumber } from '../ParamNumber.js';
 import { store } from '../../../engine/state/Store.js';
