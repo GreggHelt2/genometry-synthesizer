@@ -1,5 +1,6 @@
 import { createElement } from '../utils/dom.js';
 import { ColorUtils } from '../../engine/math/ColorUtils.js';
+import { SimpleColorPicker } from './SimpleColorPicker.js';
 
 export class ParamGradient {
     /**
@@ -34,7 +35,13 @@ export class ParamGradient {
         this.isDragging = false;
         this.dragHasMoved = false;
         this.editingStopIndex = -1;
-        this.selectedStopIndex = 0; // Default select first one
+        this.selectedStopIndex = 0;
+
+        // Picker instance
+        this.picker = new SimpleColorPicker({
+            onChange: (hex, alpha) => this.handlePickerChange(hex, alpha),
+            onClose: () => this.handlePickerClose()
+        });
 
         this.render({ label });
     }
@@ -80,41 +87,12 @@ export class ParamGradient {
         this.stopsLayer = createElement('div', 'absolute inset-0 w-full h-full pointer-events-none');
         this.editorEl.appendChild(this.stopsLayer);
 
-        // Invisible Native Color Input (append to editor for positioning)
-        this.colorInput = createElement('input', 'absolute opacity-0 w-0 h-0 pointer-events-none', { type: 'color' });
-        this.editorEl.appendChild(this.colorInput);
-
         this.container.appendChild(this.editorEl);
-
-        // --- Property Controls (Opacity) ---
-        this.controlsEl = createElement('div', 'flex items-center text-xs mt-2 space-x-2 text-gray-400 h-6 px-1');
-
-        // Text Label
-        const oLabel = createElement('span', '', { textContent: 'Opacity:' });
-
-        // Slider
-        this.opacitySlider = createElement('input', 'w-24 accent-gray-500', {
-            type: 'range', min: '0', max: '1', step: '0.01', value: '1'
-        });
-
-        // Value Text
-        this.opacityValue = createElement('span', 'w-8 text-right font-mono', { textContent: '1.0' });
-
-        this.controlsEl.appendChild(oLabel);
-        this.controlsEl.appendChild(this.opacitySlider);
-        this.controlsEl.appendChild(this.opacityValue);
-        this.container.appendChild(this.controlsEl);
 
         // --- Events ---
         this.editorEl.addEventListener('mousedown', (e) => this.handleTrackMouseDown(e));
-        this.colorInput.addEventListener('input', (e) => this.handleColorChange(e));
-        this.colorInput.addEventListener('change', (e) => this.handleColorChangeFinal(e));
-
-        this.opacitySlider.addEventListener('input', (e) => this.handleOpacityInput(e));
-        this.opacitySlider.addEventListener('change', (e) => this.emitChange()); // Finalize
 
         // Initial selection setup
-        this.updateSelectionUI();
         this.updateVisuals();
     }
 
@@ -125,35 +103,35 @@ export class ParamGradient {
         let pos = x / rect.width;
         pos = Math.max(0, Math.min(1, pos));
 
-        // Add Stop (default white opaque? or match nearby?)
-        // Default White Opaque
+        // Add Stop 
         this.addStop(pos, '#ffffff', 1);
     }
 
     addStop(position, color, alpha = 1) {
         const newStop = { position, color, alpha };
         this.state.push(newStop);
-        this.sortStops(); // This might change index of what we just added
+        this.sortStops();
 
-        // Find index of our new stop to select it
-        // We know logical object ref, so we can find it? 
-        // Or just find by matching position (risky if dupes).
-        // Let's use referencing.
         const index = this.state.indexOf(newStop);
         this.selectStop(index);
 
         this.updateVisuals();
         this.emitChange();
+
+        // Open Picker for new stop
+        setTimeout(() => this.openPickerForIndex(index), 10);
     }
 
     removeStop(index) {
         if (this.state.length <= 2) return;
 
+        if (this.editingStopIndex === index) this.picker.close();
+
         this.state.splice(index, 1);
 
         // Adjust selection
         if (this.selectedStopIndex === index) {
-            this.selectStop(-1); // Deselect
+            this.selectStop(-1);
         } else if (this.selectedStopIndex > index) {
             this.selectedStopIndex--;
         }
@@ -164,34 +142,7 @@ export class ParamGradient {
 
     selectStop(index) {
         this.selectedStopIndex = index;
-        this.updateSelectionUI();
-        this.updateVisuals(false); // Update visuals to highlight selected handle?
-    }
-
-    updateSelectionUI() {
-        if (this.selectedStopIndex > -1 && this.state[this.selectedStopIndex]) {
-            const stop = this.state[this.selectedStopIndex];
-            this.opacitySlider.disabled = false;
-            this.opacitySlider.value = stop.alpha;
-            this.opacityValue.textContent = stop.alpha.toFixed(2);
-            this.controlsEl.classList.remove('opacity-50', 'pointer-events-none');
-        } else {
-            this.opacitySlider.disabled = true;
-            this.opacityValue.textContent = '--';
-            this.controlsEl.classList.add('opacity-50', 'pointer-events-none');
-        }
-    }
-
-    handleOpacityInput(e) {
-        if (this.selectedStopIndex > -1 && this.state[this.selectedStopIndex]) {
-            const val = parseFloat(e.target.value);
-            this.state[this.selectedStopIndex].alpha = val;
-            this.opacityValue.textContent = val.toFixed(2);
-            this.updateVisuals(false);
-            // We emit change on 'change' (mouseup), not every input event for perf?
-            // Actually smooth preview is nice.
-            this.emitChange();
-        }
+        this.updateVisuals(false);
     }
 
     handleStopMouseDown(e, index) {
@@ -231,6 +182,11 @@ export class ParamGradient {
 
         this.state[this.draggedStopIndex].position = pos;
 
+        if (this.editingStopIndex > -1) {
+            this.picker.close();
+            this.editingStopIndex = -1;
+        }
+
         this.updateVisuals(false);
         this.emitChange();
     }
@@ -239,13 +195,10 @@ export class ParamGradient {
         this.isDragging = false;
 
         if (!this.dragHasMoved) {
-            this.openColorPicker(index);
+            this.openPickerForIndex(index);
         } else {
-            // Sort state after drag
-            // When we sort, indices change. We must find our selected stop again.
             const selectedStopObj = this.state[this.selectedStopIndex];
             this.sortStops();
-            // Re-find index
             this.selectedStopIndex = this.state.indexOf(selectedStopObj);
 
             this.updateVisuals();
@@ -255,30 +208,32 @@ export class ParamGradient {
         this.draggedStopIndex = -1;
     }
 
-    openColorPicker(index) {
+    openPickerForIndex(index) {
         this.editingStopIndex = index;
         const stop = this.state[index];
-        this.colorInput.value = stop.color;
 
-        this.colorInput.style.left = `${stop.position * 100}%`;
-        this.colorInput.style.top = '100%';
+        // Calculate Position relative to Handle
+        const trackRect = this.trackBg.getBoundingClientRect();
+        const x = trackRect.left + (trackRect.width * stop.position);
+        const y = trackRect.bottom + 5;
 
-        this.colorInput.click();
+        this.picker.show(x, y, stop.color, stop.alpha);
+        this.updateVisuals(false);
     }
 
-    handleColorChange(e) {
+    handlePickerChange(hex, alpha) {
         if (this.editingStopIndex > -1 && this.state[this.editingStopIndex]) {
-            this.state[this.editingStopIndex].color = e.target.value;
-            this.updateVisuals();
+            const stop = this.state[this.editingStopIndex];
+            stop.color = hex;
+            stop.alpha = alpha;
+            this.updateVisuals(false);
             this.emitChange();
         }
     }
 
-    handleColorChangeFinal(e) {
-        this.handleColorChange(e);
-        // Do not reset editing index immediately if we want to support continuous editing?
-        // But system picker is modal or modal-like.
+    handlePickerClose() {
         this.editingStopIndex = -1;
+        this.updateVisuals(false);
     }
 
     sortStops() {
@@ -287,7 +242,6 @@ export class ParamGradient {
 
     emitChange() {
         if (this.onChange) {
-            // Export state
             this.onChange(JSON.parse(JSON.stringify(this.state)));
         }
     }
@@ -307,11 +261,10 @@ export class ParamGradient {
         // 2. Update Stop Handles
         if (!rebuildDOM) {
             Array.from(this.stopsLayer.children).forEach((child, i) => {
-                if (this.state[i]) {
-                    const stop = this.state[i];
+                const stop = this.state[i];
+                if (stop) {
                     child.style.left = `${stop.position * 100}%`;
 
-                    // Update Swatch Bg
                     const swatch = child.querySelector('.swatch');
                     if (swatch) {
                         const rgb = ColorUtils.hexToRgb(stop.color);
@@ -319,12 +272,14 @@ export class ParamGradient {
                         swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
                     }
 
-                    // Highlight selection
-                    child.classList.toggle('z-10', i === this.selectedStopIndex);
+                    const isEditing = (i === this.editingStopIndex);
+                    const isSelected = (i === this.selectedStopIndex);
+
+                    child.classList.toggle('z-10', isSelected || isEditing);
                     const line = child.querySelector('.guideline');
                     if (line) {
-                        line.style.opacity = (i === this.selectedStopIndex) ? '1' : '0.4';
-                        line.style.boxShadow = (i === this.selectedStopIndex) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
+                        line.style.opacity = (isSelected || isEditing) ? '1' : '0.4';
+                        line.style.boxShadow = (isSelected || isEditing) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
                     }
                 }
             });
@@ -360,10 +315,6 @@ export class ParamGradient {
             const rgb = ColorUtils.hexToRgb(stop.color);
             const alpha = stop.alpha !== undefined ? stop.alpha : 1;
             swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-            // Show checkerboard behind swatch if transparent?
-            // Actually hard to show transparent swatch on transparent bg without checker.
-            // Let's add a tiny checkerboard *inside* the swatch?
-            // Or just rely on the main track preview.
 
             // Assemble
             if (this.state.length > 2) {
@@ -375,6 +326,7 @@ export class ParamGradient {
             stopContainer.appendChild(line);
             stopContainer.appendChild(swatch);
 
+            // Events
             stopContainer.addEventListener('mousedown', (e) => this.handleStopMouseDown(e, index));
             stopContainer.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -391,7 +343,6 @@ export class ParamGradient {
     setValue(stops) {
         if (!stops || JSON.stringify(stops) === JSON.stringify(this.state)) return;
 
-        // Normalize incoming (add default alpha)
         const incoming = (stops && stops.length > 0) ? stops : [
             { color: '#ffffff', position: 0, alpha: 1 },
             { color: '#ff0000', position: 1, alpha: 1 }
@@ -402,16 +353,10 @@ export class ParamGradient {
             alpha: s.alpha !== undefined ? s.alpha : 1
         }));
 
-        // If selection is out of bounds, reset
-        if (this.selectedStopIndex >= this.state.length) {
-            this.selectedStopIndex = 0;
-        }
-
-        this.updateSelectionUI();
+        if (this.selectedStopIndex >= this.state.length) this.selectedStopIndex = 0;
         this.updateVisuals();
     }
 
-    // ... Methods getElement, toggleLink, etc ...
     getElement() { return this.container; }
     toggleLink() {
         this.isLinked = !this.isLinked;
