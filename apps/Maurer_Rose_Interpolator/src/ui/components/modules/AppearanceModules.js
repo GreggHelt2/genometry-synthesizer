@@ -82,7 +82,7 @@ export class LayerRenderingModule {
         const gradientTypes = [
             { value: '2-point', label: '2-Point Interpolation' },
             { value: 'cyclic', label: 'Cyclic (Start-End-Start)' },
-            { value: 'custom', label: 'Custom (Grapick)' },
+            { value: 'custom', label: 'Custom' },
             { value: 'preset', label: 'Preset (Rainbow)' } // Placeholder
         ];
 

@@ -295,7 +295,7 @@ export class ParamGradient {
             stopContainer.style.width = '20px';
 
             // Delete Btn
-            const deleteBtn = createElement('div', 'w-4 h-4 text-[10px] flex items-center justify-center bg-gray-800 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-full border border-gray-600 mb-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer');
+            const deleteBtn = createElement('div', 'w-4 h-4 text-[10px] flex items-center justify-center bg-gray-800 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-full border border-gray-600 opacity-100 transition-opacity cursor-pointer');
             deleteBtn.textContent = '✕';
             deleteBtn.title = 'Remove Stop';
             deleteBtn.addEventListener('mousedown', (e) => {
@@ -311,7 +311,7 @@ export class ParamGradient {
             line.style.boxShadow = (index === this.selectedStopIndex) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
 
             // Swatch
-            const swatch = createElement('div', 'swatch w-3 h-3 border border-white rounded-sm shadow-md mt-0.5');
+            const swatch = createElement('div', 'swatch w-3 h-3 border border-white rounded-sm shadow-md mt-0.5 cursor-pointer');
             const rgb = ColorUtils.hexToRgb(stop.color);
             const alpha = stop.alpha !== undefined ? stop.alpha : 1;
             swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
