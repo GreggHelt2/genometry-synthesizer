@@ -20,10 +20,12 @@ export class SnapshotSidebar {
     handleKeydown(e) {
         if (!this.isOpen) return;
 
-        // Ignore if focus is in search input (unless it's Enter/Arrows which we might want to override, 
-        // but typically standard behavior is better. Let's allow Arrows to navigate list even from input)
-        // Actually, if in input, Up/Down usually moves caret. Let's hijack if default behavior isn't critical?
-        // Better UX: If in input, Up/Down moves focus to list.
+        // Ignore inputs (except our own search input)
+        // This prevents hijacking Enter from other UI components (like Color Picker)
+        const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+        if (isInput && e.target !== this.searchInput) {
+            return;
+        }
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
@@ -117,17 +119,17 @@ export class SnapshotSidebar {
 
         // Search Input
         const searchContainer = createElement('div', 'p-2 border-b border-gray-700 bg-gray-800');
-        const searchInput = createElement('input', 'w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500', {
+        this.searchInput = createElement('input', 'w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500', {
             type: 'text',
             placeholder: 'Filter (Name, *Glob, n=4)...'
         });
 
-        searchInput.addEventListener('input', (e) => {
+        this.searchInput.addEventListener('input', (e) => {
             this.filterQuery = e.target.value;
             this.applyFilter();
         });
 
-        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(this.searchInput);
         wrapper.appendChild(searchContainer);
 
         // List Container

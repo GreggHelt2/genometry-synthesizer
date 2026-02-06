@@ -37,19 +37,21 @@ export class ParamGradient {
         this.editingStopIndex = -1;
         this.selectedStopIndex = 0;
 
-        // Picker instance
+        // Picker instance - Inline
         this.picker = new SimpleColorPicker({
             onChange: (hex, alpha) => this.handlePickerChange(hex, alpha),
-            onClose: () => this.handlePickerClose()
+            onClose: () => { }, // No close needed
+            inline: true
         });
 
         this.render({ label });
     }
 
     render({ label }) {
+        // Main Container for the whole component
         this.container = createElement('div', 'flex flex-col mb-4 gradient-param');
 
-        // --- Header ---
+        // --- Header (Label + Link) ---
         const header = createElement('div', 'flex justify-between items-center mb-1');
         const labelEl = createElement('span', 'text-xs text-gray-400 font-medium', { textContent: label });
 
@@ -63,13 +65,19 @@ export class ParamGradient {
         } else {
             this.linkBtn.classList.add('invisible');
         }
-
         header.appendChild(labelEl);
         header.appendChild(this.linkBtn);
         this.container.appendChild(header);
 
-        // --- Editor Visuals ---
-        this.editorEl = createElement('div', 'w-full h-12 relative select-none cursor-pointer mt-2');
+        // --- Editor Row (Track + Picker) ---
+        const editorRow = createElement('div', 'flex flex-row items-start gap-2');
+        this.container.appendChild(editorRow);
+
+        // Left Col: Track
+        // We'll give it flex-1 to take available space
+        const trackCol = createElement('div', 'flex-1 flex flex-col pt-2');
+
+        this.editorEl = createElement('div', 'w-full h-12 relative select-none cursor-pointer');
 
         // Background Checkerboard (Track only)
         this.trackBg = createElement('div', 'absolute left-0 right-0 h-4 top-4 rounded border border-gray-600');
@@ -87,13 +95,23 @@ export class ParamGradient {
         this.stopsLayer = createElement('div', 'absolute inset-0 w-full h-full pointer-events-none');
         this.editorEl.appendChild(this.stopsLayer);
 
-        this.container.appendChild(this.editorEl);
+        trackCol.appendChild(this.editorEl);
+        editorRow.appendChild(trackCol);
+
+        // Right Col: Picker
+        // We append the picker element directly
+        editorRow.appendChild(this.picker.getElement());
 
         // --- Events ---
         this.editorEl.addEventListener('mousedown', (e) => this.handleTrackMouseDown(e));
 
         // Initial selection setup
         this.updateVisuals();
+
+        // Sync picker to initial selection
+        if (this.state[0]) {
+            this.picker.setValues(this.state[0].color, this.state[0].alpha);
+        }
     }
 
     handleTrackMouseDown(e) {
@@ -117,23 +135,30 @@ export class ParamGradient {
 
         this.updateVisuals();
         this.emitChange();
-
-        // Open Picker for new stop
-        setTimeout(() => this.openPickerForIndex(index), 10);
     }
 
     removeStop(index) {
         if (this.state.length <= 2) return;
 
-        if (this.editingStopIndex === index) this.picker.close();
-
         this.state.splice(index, 1);
 
         // Adjust selection
         if (this.selectedStopIndex === index) {
-            this.selectStop(-1);
+            this.selectStop(Math.max(0, index - 1));
         } else if (this.selectedStopIndex > index) {
             this.selectedStopIndex--;
+        } else {
+            // If we removed a stop after selection, selection index stays same but points to same data
+            // except if we are at end? 
+            if (this.selectedStopIndex >= this.state.length) {
+                this.selectedStopIndex = this.state.length - 1;
+            }
+        }
+
+        // Update picker to new selection
+        const stop = this.state[this.selectedStopIndex];
+        if (stop) {
+            this.picker.setValues(stop.color, stop.alpha);
         }
 
         this.updateVisuals();
@@ -141,7 +166,15 @@ export class ParamGradient {
     }
 
     selectStop(index) {
+        if (index < 0) return;
         this.selectedStopIndex = index;
+
+        // Sync picker
+        const stop = this.state[index];
+        if (stop) {
+            this.picker.setValues(stop.color, stop.alpha);
+        }
+
         this.updateVisuals(false);
     }
 
@@ -182,11 +215,6 @@ export class ParamGradient {
 
         this.state[this.draggedStopIndex].position = pos;
 
-        if (this.editingStopIndex > -1) {
-            this.picker.close();
-            this.editingStopIndex = -1;
-        }
-
         this.updateVisuals(false);
         this.emitChange();
     }
@@ -194,36 +222,25 @@ export class ParamGradient {
     handleDragEnd(e, index) {
         this.isDragging = false;
 
-        if (!this.dragHasMoved) {
-            this.openPickerForIndex(index);
-        } else {
-            const selectedStopObj = this.state[this.selectedStopIndex];
-            this.sortStops();
-            this.selectedStopIndex = this.state.indexOf(selectedStopObj);
+        // Sorting might change indices
+        const selectedStopObj = this.state[this.selectedStopIndex];
+        this.sortStops();
+        this.selectedStopIndex = this.state.indexOf(selectedStopObj);
 
-            this.updateVisuals();
-            this.emitChange();
-        }
+        this.updateVisuals();
+        this.emitChange();
 
         this.draggedStopIndex = -1;
     }
 
-    openPickerForIndex(index) {
-        this.editingStopIndex = index;
-        const stop = this.state[index];
-
-        // Calculate Position relative to Handle
-        const trackRect = this.trackBg.getBoundingClientRect();
-        const x = trackRect.left + (trackRect.width * stop.position);
-        const y = trackRect.bottom + 5;
-
-        this.picker.show(x, y, stop.color, stop.alpha);
-        this.updateVisuals(false);
-    }
+    // openPickerForIndex is no longer needed in inline mode, 
+    // selectStop handles the sync. Kept for compatibility if called? 
+    // But we renamed it out of usage above.
+    // We can remove it or map it to selectStop.
 
     handlePickerChange(hex, alpha) {
-        if (this.editingStopIndex > -1 && this.state[this.editingStopIndex]) {
-            const stop = this.state[this.editingStopIndex];
+        if (this.selectedStopIndex > -1 && this.state[this.selectedStopIndex]) {
+            const stop = this.state[this.selectedStopIndex];
             stop.color = hex;
             stop.alpha = alpha;
             this.updateVisuals(false);
@@ -232,8 +249,7 @@ export class ParamGradient {
     }
 
     handlePickerClose() {
-        this.editingStopIndex = -1;
-        this.updateVisuals(false);
+        // No-op
     }
 
     sortStops() {
@@ -272,14 +288,13 @@ export class ParamGradient {
                         swatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
                     }
 
-                    const isEditing = (i === this.editingStopIndex);
                     const isSelected = (i === this.selectedStopIndex);
 
-                    child.classList.toggle('z-10', isSelected || isEditing);
+                    child.classList.toggle('z-10', isSelected);
                     const line = child.querySelector('.guideline');
                     if (line) {
-                        line.style.opacity = (isSelected || isEditing) ? '1' : '0.4';
-                        line.style.boxShadow = (isSelected || isEditing) ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
+                        line.style.opacity = isSelected ? '1' : '0.4';
+                        line.style.boxShadow = isSelected ? '0 0 4px white' : '0 0 2px rgba(0,0,0,0.5)';
                     }
                 }
             });
@@ -354,6 +369,13 @@ export class ParamGradient {
         }));
 
         if (this.selectedStopIndex >= this.state.length) this.selectedStopIndex = 0;
+
+        // Sync picker
+        const stop = this.state[this.selectedStopIndex];
+        if (stop) {
+            this.picker.setValues(stop.color, stop.alpha);
+        }
+
         this.updateVisuals();
     }
 

@@ -2,9 +2,10 @@ import { createElement } from '../utils/dom.js';
 import { ColorUtils } from '../../engine/math/ColorUtils.js';
 
 export class SimpleColorPicker {
-    constructor({ onChange, onClose }) {
+    constructor({ onChange, onClose, inline = false }) {
         this.onChange = onChange;
         this.onClose = onClose;
+        this.inline = inline;
         this.value = { h: 0, s: 1, v: 1, a: 1 };
 
         this.isDraggingSV = false;
@@ -16,13 +17,18 @@ export class SimpleColorPicker {
     }
 
     render() {
-        // Main Container (Fixed size popup)
-        this.container = createElement('div', 'fixed z-50 bg-gray-800 border border-gray-600 rounded shadow-2xl flex flex-col p-2 select-none w-48');
-        this.container.style.width = '200px';
-        // Positioning will be set via show()
+        // Main Container
+        if (this.inline) {
+            this.container = createElement('div', 'flex flex-col select-none w-40');
+            this.container.style.width = '160px'; // Compact width for inline
+        } else {
+            this.container = createElement('div', 'fixed z-50 bg-gray-800 border border-gray-600 rounded shadow-2xl flex flex-col p-2 select-none w-48');
+            this.container.style.width = '200px';
+        }
 
         // 1. Saturation/Value Area (Canvas)
-        this.svContainer = createElement('div', 'w-full h-32 relative mb-2 cursor-crosshair border border-gray-700 bg-white');
+        const svHeight = this.inline ? 'h-24' : 'h-32';
+        this.svContainer = createElement('div', `w-full ${svHeight} relative mb-2 cursor-crosshair border border-gray-700 bg-white`);
         this.svCanvas = createElement('canvas', 'w-full h-full block');
         this.svCanvas.width = 200; // logical resolution
         this.svCanvas.height = 128;
@@ -91,13 +97,17 @@ export class SimpleColorPicker {
         this.hexInput.addEventListener('change', (e) => this.setFromHex(e.target.value));
         this.alphaInput.addEventListener('change', (e) => this.setAlpha(parseFloat(e.target.value)));
 
-        // Global Mask (Click outside)
-        this.mask = createElement('div', 'fixed inset-0 z-40 bg-transparent');
-        this.mask.addEventListener('mousedown', (e) => {
-            // Close if clicking mask, unless we are dragging (though mask is behind container?)
-            // Actually z-50 vs z-40. Clicking mask means clicking outside.
-            this.close();
-        });
+        // Global Mask (Click outside) - Only for Popup mode
+        if (!this.inline) {
+            this.mask = createElement('div', 'fixed inset-0 z-40 bg-transparent');
+            this.mask.addEventListener('mousedown', (e) => {
+                this.close();
+            });
+        }
+    }
+
+    getElement() {
+        return this.container;
     }
 
     startDrag(e, mode) {
@@ -219,36 +229,42 @@ export class SimpleColorPicker {
 
     show(x, y, color, alpha) {
         if (!this.mounted) {
-            document.body.appendChild(this.mask);
-            document.body.appendChild(this.container);
+            if (!this.inline) {
+                document.body.appendChild(this.mask);
+                document.body.appendChild(this.container);
+            }
             this.mounted = true;
         }
 
-        // Initialize state
+        this.setValues(color, alpha);
+
+        if (!this.inline) {
+            // Position
+            // Ensure it doesn't go off screen bottom/right
+            const rect = this.container.getBoundingClientRect();
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+
+            let finalX = x;
+            let finalY = y;
+
+            if (finalX + rect.width > winW) finalX = winW - rect.width - 10;
+            if (finalY + rect.height > winH) finalY = winH - rect.height - 10;
+
+            this.container.style.left = `${finalX}px`;
+            this.container.style.top = `${finalY}px`;
+        }
+    }
+
+    setValues(color, alpha) {
         const hsv = ColorUtils.hexToHsv(color);
         this.value = { h: hsv.h, s: hsv.s, v: hsv.v, a: alpha };
-
         this.drawSV();
         this.updateColor();
-
-        // Position
-        // Ensure it doesn't go off screen bottom/right
-        const rect = this.container.getBoundingClientRect();
-        const winW = window.innerWidth;
-        const winH = window.innerHeight;
-
-        let finalX = x;
-        let finalY = y;
-
-        if (finalX + rect.width > winW) finalX = winW - rect.width - 10;
-        if (finalY + rect.height > winH) finalY = winH - rect.height - 10;
-
-        this.container.style.left = `${finalX}px`;
-        this.container.style.top = `${finalY}px`;
     }
 
     close() {
-        if (this.mounted) {
+        if (this.mounted && !this.inline) {
             document.body.removeChild(this.container);
             document.body.removeChild(this.mask);
             this.mounted = false;
