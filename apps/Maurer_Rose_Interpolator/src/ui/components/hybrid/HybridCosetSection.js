@@ -173,28 +173,8 @@ export class HybridCosetSection {
             this.distSelect.setValue(hybridParams.cosetDistribution || 'sequential');
         }
 
-        this.updateInfoHtml(state, kA, kB);
+
     }
 
-    updateInfoHtml(state, kA, kB) {
-        // Redundant info update logic removed from main panel, but kept here for 'Hybrid Info' accordion?
-        // Wait, InterpolationPanel has a SEPARATE 'Hybrid Info' accordion.
-        // This section's updateInfoHtml updates ITS OWN info content?
-        // No, the InterpolationPanel had `this.infoAccordion` at top.
-        // This section manages `Coset Visualization`.
-        // `render` created `this.cosetInfo`.
-        // The extensive HTML update in InterpolationPanel was for `this.infoContent` in `Hybrid Info`.
-        // This logic (segments count, etc.) belongs to 'Hybrid Info'.
-        // BUT, `HybridCosetSection` is about Cosets.
 
-        // I should probably NOT move the `Hybrid Info` logic here if it's separate.
-        // The implementation plan didn't explicitly mention `Hybrid Info`.
-        // I will assume `InterpolationPanel` keeps `Hybrid Info` OR I should make `HybridInfoSection`.
-        // Given scope, I'll leave `Hybrid Info` in Orchestrator for now, or...
-        // Wait, `HybridCosetSection` updates `this.cosetInfo`.
-        // `InterpolationPanel` updated `this.infoContent` (Top Info).
-
-        // Let's stick to `this.cosetInfo` which shows (k) match status.
-        // The logic for Segments/LCM/Resampling status was in `updateInfo` of InterpolationPanel.
-    }
 }

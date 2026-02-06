@@ -11,7 +11,7 @@ import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
-import { GlobalRenderingModule, LayerRenderingModule } from './modules/AppearanceModules.js'; // Keep for now in case
+
 import { HybridAnimationSection } from './hybrid/HybridAnimationSection.js';
 import { HybridCosetSection } from './hybrid/HybridCosetSection.js';
 import { HybridAppearanceSection } from './hybrid/HybridAppearanceSection.js';
@@ -118,7 +118,7 @@ export class InterpolationPanel extends Panel {
 
 
 
-        // this.element.appendChild(container); // Remove old container append
+
     }
 
     updateUI(state) {
