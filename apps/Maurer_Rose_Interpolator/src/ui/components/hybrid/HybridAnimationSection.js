@@ -43,6 +43,7 @@ export class HybridAnimationSection {
             max,
             step,
             value: 0,
+            hardLimits: (key === 'weight'), // Enforce strict limits for Morph Weight
             onChange: (val) => {
                 store.dispatch({
                     type: ACTIONS.UPDATE_HYBRID,
