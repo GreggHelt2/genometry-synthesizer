@@ -150,9 +150,11 @@ export class LayerRenderingModule {
         this.container.appendChild(this.controls.blendMode.getElement());
 
         // 6. Size (Line Width / Radius)
-        const sizeLabel = this.options.sizeLabel || 'Line Width';
-        this.controls.size = this.createSlider(this.keys.size, 0.1, 20, 0.1, sizeLabel);
-        this.container.appendChild(this.controls.size.container);
+        if (!this.options.hideSize) {
+            const sizeLabel = this.options.sizeLabel || 'Line Width';
+            this.controls.size = this.createSlider(this.keys.size, 0.1, 20, 0.1, sizeLabel);
+            this.container.appendChild(this.controls.size.container);
+        }
 
         // 7. Opacity
         this.controls.opacity = this.createSlider(this.keys.opacity, 0, 1, 0.01, 'Opacity');

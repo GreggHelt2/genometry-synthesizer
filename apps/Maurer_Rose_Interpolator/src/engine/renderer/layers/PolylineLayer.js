@@ -61,4 +61,22 @@ export class PolylineLayer {
         this.ctx.fill();
         this.ctx.globalAlpha = 1; // Reset
     }
+
+    fill(points, style) {
+        if (!points || points.length === 0) return;
+
+        // Support string color or CanvasGradient/Pattern
+        this.ctx.fillStyle = style.color || 'white';
+        this.ctx.globalAlpha = style.opacity ?? 1;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            this.ctx.lineTo(points[i].x, points[i].y);
+        }
+
+        // Use even-odd rule by default for complex polygons like roses
+        this.ctx.fill(style.rule || 'evenodd');
+        this.ctx.globalAlpha = 1; // Reset
+    }
 }

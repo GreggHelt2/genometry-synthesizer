@@ -258,6 +258,56 @@ export class CanvasRenderer {
 
         const effectiveWidth = (params.lineWidth || 2) * lineWidthScale;
 
+        // --- Fill Phase ---
+        if (params.fillOpacity > 0) {
+            let fillStyle = params.fillColor || defaultColor;
+
+            // Gradient Generation for Fill
+            if (params.fillColorMethod && params.fillColorMethod !== 'solid') {
+                // Calculate Max Radius from center (0,0)
+                let maxDistSq = 0;
+                points.forEach(p => {
+                    const x = p.x !== undefined ? p.x : p[0];
+                    const y = p.y !== undefined ? p.y : p[1];
+                    const dSq = x * x + y * y;
+                    if (dSq > maxDistSq) maxDistSq = dSq;
+                });
+                const maxRadius = Math.sqrt(maxDistSq);
+
+                // Default to Radial Gradient from center
+                if (maxRadius > 0) {
+                    const grad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
+
+                    if (params.fillGradientType === 'custom' && params.fillGradientStops && params.fillGradientStops.length > 0) {
+                        params.fillGradientStops.forEach(stop => {
+                            grad.addColorStop(stop.position, stop.color);
+                        });
+                    } else {
+                        // 2-point (fallback)
+                        grad.addColorStop(0, params.fillColor || defaultColor);
+                        grad.addColorStop(1, params.fillColorEnd || '#000000');
+                    }
+                    fillStyle = grad;
+                }
+            }
+
+            this.polylineLayer.fill(points, {
+                color: fillStyle,
+                opacity: params.fillOpacity,
+                rule: 'evenodd' // Could be param later
+            });
+
+            // Check fillBlendMode? PolylineLayer doesn't handle composite op in fill() yet, 
+            // but we can set it here if we want? 
+            // The fill() method I wrote uses globalAlpha but not globalCompositeOperation.
+            // Renderer.js sets composite op at start of drawRenderableRose if blendMode is set.
+            // But that's for the STROKE.
+            // Params has `fillBlendMode`. We should probably respect it.
+            // However, drawRenderableRose sets `this.ctx.globalCompositeOperation = blendMode` (the stroke blend mode) at line 257.
+            // We are inserting fill BEFORE stroke.
+            // We should use parameters.fillBlendMode for the fill.
+        }
+
         if (useSegments) {
             let colors;
             if (params.colorMethod && params.colorMethod !== 'solid') {

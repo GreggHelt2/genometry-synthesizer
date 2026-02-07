@@ -32,6 +32,14 @@ export const DEFAULTS = {
         antiAlias: true,
         cosetCount: 1,
         cosetDistribution: 'sequential', // 'sequential', 'distributed', 'two-way'
+        // Fill Rendering
+        fillColor: '#ffffff',
+        fillColorEnd: '#000000',
+        fillOpacity: 0,
+        fillBlendMode: 'source-over',
+        fillColorMethod: 'solid',
+        fillGradientType: '2-point',
+        fillGradientStops: [],
         // Base Curve Rendering
         showBaseCurve: false,
         baseCurveLineWidth: 2,
@@ -79,6 +87,14 @@ export const DEFAULTS = {
         blendMode: 'lighter',
         lineWidth: 2,
         antiAlias: true,
+        // Fill Rendering
+        fillColor: '#ffffff',
+        fillColorEnd: '#000000',
+        fillOpacity: 0,
+        fillBlendMode: 'source-over',
+        fillColorMethod: 'solid',
+        fillGradientType: '2-point',
+        fillGradientStops: [],
         // Base Curve Rendering
         showBaseCurve: false,
         baseCurveLineWidth: 2,
@@ -116,6 +132,14 @@ export const DEFAULTS = {
         ],
         colorMethod: 'solid',
         blendMode: 'lighter',
+        // Fill Rendering
+        fillColor: '#ffffff',
+        fillColorEnd: '#000000',
+        fillOpacity: 0,
+        fillBlendMode: 'source-over',
+        fillColorMethod: 'solid',
+        fillGradientType: '2-point',
+        fillGradientStops: [],
         // Base Curve Rendering (A)
         showBaseCurveA: false,
         baseCurveLineWidthA: 2,

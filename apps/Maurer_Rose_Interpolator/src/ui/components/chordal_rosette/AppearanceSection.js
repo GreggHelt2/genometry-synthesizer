@@ -117,6 +117,40 @@ export class AppearanceSection {
         this.baseCurveAccordion.append(this.baseCurveModule.container);
 
 
+        // 4. Fill Rendering Accordion
+        this.fillAccordion = new Accordion('Fill Rendering', false, (isOpen, id) => {
+            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
+        }, `${this.roseId}-fill-viz`);
+        this.register(this.fillAccordion, `${this.roseId}-fill-viz`);
+        this.element.appendChild(this.fillAccordion.element);
+
+        this.fillModule = new LayerRenderingModule(
+            this.orchestrator,
+            this.roseId,
+            this.orchestrator.actionType,
+            {
+                colorMethod: 'fillColorMethod',
+                gradientType: 'fillGradientType',
+                gradientPreset: 'fillGradientPreset',
+                gradientStops: 'fillGradientStops',
+                color: 'fillColor',
+                colorEnd: 'fillColorEnd',
+                blendMode: 'fillBlendMode',
+                opacity: 'fillOpacity'
+            },
+            {
+                hideSize: true, // Fill has no thickness
+                showToggle: { key: 'showFill', label: 'Show Fill', value: true } // Logic: Opacity > 0 is visibility
+                // Actually, defaults.js didn't have a 'showFill' boolean. 
+                // The implementation plan was to rely on Opacity > 0?
+                // But users like toggles. 
+                // Let's stick to the plan of relying on Opacity default 0, but provide the controls.
+                // If I omit showToggle, it won't show the toggle.
+            }
+        );
+        this.fillAccordion.append(this.fillModule.container);
+
+
         // General Rendering Settings Accordion - Use Module
         this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
             if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
@@ -168,6 +202,9 @@ export class AppearanceSection {
         if (this.baseCurveModule && this.baseCurveModule.updateLinkVisuals) {
             this.baseCurveModule.updateLinkVisuals();
         }
+        if (this.fillModule && this.fillModule.updateLinkVisuals) {
+            this.fillModule.updateLinkVisuals();
+        }
 
         // Base Curve Toggle (Now in module)
         // Module handles its own link visuals if updateLinkVisuals calls it.
@@ -191,6 +228,7 @@ export class AppearanceSection {
         if (this.chordalModule) this.chordalModule.update(params);
         if (this.vertexModule) this.vertexModule.update(params);
         if (this.baseCurveModule) this.baseCurveModule.update(params);
+        if (this.fillModule) this.fillModule.update(params);
 
         // Base Curve Toggle handled by module update now
 

@@ -24,9 +24,13 @@ export class HybridAppearanceSection {
         this.renderBaseChordal();
 
         // 4. Base Curve Rendering
+        // 4. Base Curve Rendering
         this.renderBaseCurve();
 
-        // 5. Vertex Rendering
+        // 5. Fill Rendering
+        this.renderFill();
+
+        // 6. Vertex Rendering
         this.renderVertexViz();
 
         // 6. General Rendering
@@ -202,6 +206,34 @@ export class HybridAppearanceSection {
         this.baseCurveVizAccordion.append(groupB);
     }
 
+    renderFill() {
+        this.fillAccordion = new Accordion('Fill Rendering', false, (isOpen, id) => {
+            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
+        }, 'hybrid-fill');
+        this.accordions.set('hybrid-fill', this.fillAccordion);
+        this.orchestrator.controlsContainer.appendChild(this.fillAccordion.element);
+
+        this.fillModule = new LayerRenderingModule(
+            this.orchestrator,
+            'hybrid',
+            ACTIONS.UPDATE_HYBRID,
+            {
+                colorMethod: 'fillColorMethod',
+                gradientType: 'fillGradientType',
+                gradientPreset: 'fillGradientPreset',
+                gradientStops: 'fillGradientStops',
+                color: 'fillColor',
+                colorEnd: 'fillColorEnd',
+                blendMode: 'fillBlendMode',
+                opacity: 'fillOpacity'
+            },
+            {
+                hideSize: true
+            }
+        );
+        this.fillAccordion.append(this.fillModule.container);
+    }
+
     renderVertexViz() {
         this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen, id) => {
             if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
@@ -286,7 +318,10 @@ export class HybridAppearanceSection {
         if (this.baseCurveModuleA) this.baseCurveModuleA.update(hybridParams);
         if (this.baseCurveModuleB) this.baseCurveModuleB.update(hybridParams);
 
-        // 5. Vertex
+        // 5. Fill
+        if (this.fillModule) this.fillModule.update(hybridParams);
+
+        // 6. Vertex
         if (this.vertexModule) this.vertexModule.update(hybridParams);
 
         // 6. General
