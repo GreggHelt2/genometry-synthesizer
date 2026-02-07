@@ -350,7 +350,10 @@ export class CanvasRenderer {
             splineTension: params.splineTension,
             splineBias: params.splineBias,
             splineContinuity: params.splineContinuity,
-            splineAlpha: params.splineAlpha
+            splineBias: params.splineBias,
+            splineContinuity: params.splineContinuity,
+            splineAlpha: params.splineAlpha,
+            bezierBulge: params.bezierBulge
         };
 
         if (useSegments) {

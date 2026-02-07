@@ -39,7 +39,8 @@ export class LayerRenderingModule {
             splineTension: 'splineTension',
             splineBias: 'splineBias',
             splineContinuity: 'splineContinuity',
-            splineAlpha: 'splineAlpha'
+            splineAlpha: 'splineAlpha',
+            bezierBulge: 'bezierBulge'
         }, keys);
 
         this.container = document.createElement('div');
@@ -69,8 +70,9 @@ export class LayerRenderingModule {
             const modeOptions = [
                 { value: 'straight', label: 'Straight' },
                 { value: 'sine', label: 'Sine Wave' },
-                { value: 'kb-spline', label: 'KB Spline' },
-                { value: 'catmull-rom', label: 'Catmull-Rom' },
+                { value: 'quadratic-bezier', label: 'Quadratic Bezier' },
+                { value: 'kb-spline', label: 'Kochanek-Bartels Spline' },
+                { value: 'catmull-rom', label: 'Catmull-Rom Spline' },
                 { value: 'circle-spline', label: 'Circle Spline' },
                 { value: 'arc', label: 'Arc' },
                 { value: 'arc-flipped', label: 'Arc Flipped' },
@@ -121,6 +123,10 @@ export class LayerRenderingModule {
             // Catmull-Rom Params
             this.controls.splineAlpha = this.createSlider(this.keys.splineAlpha, 0, 1, 0.1, 'Alpha');
             this.container.appendChild(this.controls.splineAlpha.container);
+
+            // Quadratic Bezier Params
+            this.controls.bezierBulge = this.createSlider(this.keys.bezierBulge, -2, 2, 0.1, 'Bulge');
+            this.container.appendChild(this.controls.bezierBulge.container);
         }
 
         // 2. Color Method
@@ -301,6 +307,9 @@ export class LayerRenderingModule {
         // Detail
         this.controls.connectDetail.container.style.display = !isStraight ? 'flex' : 'none';
 
+        // Quadratic Bezier
+        if (this.controls.bezierBulge) this.controls.bezierBulge.container.style.display = (mode === 'quadratic-bezier') ? 'flex' : 'none';
+
         // Wave Controls
         this.controls.waveAmplitude.container.style.display = isWave ? 'flex' : 'none';
         this.controls.waveFrequency.container.style.display = isWave ? 'flex' : 'none';
@@ -434,6 +443,11 @@ export class LayerRenderingModule {
         if (this.controls.splineTension) this.controls.splineTension.instance.setValue(params[this.keys.splineTension] ?? 0);
         if (this.controls.splineBias) this.controls.splineBias.instance.setValue(params[this.keys.splineBias] ?? 0);
         if (this.controls.splineContinuity) this.controls.splineContinuity.instance.setValue(params[this.keys.splineContinuity] ?? 0);
+        if (this.controls.splineAlpha) this.controls.splineAlpha.instance.setValue(params[this.keys.splineAlpha] ?? 0.5);
+        if (this.controls.bezierBulge) {
+            const val = params[this.keys.bezierBulge] ?? 0;
+            this.controls.bezierBulge.instance.setValue(val);
+        }
 
         if (this.controls.splineAlpha) this.controls.splineAlpha.instance.setValue(params[this.keys.splineAlpha] ?? 0.5);
     }

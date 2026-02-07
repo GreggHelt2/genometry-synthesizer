@@ -60,7 +60,7 @@ export const DEFAULTS = {
         autoScale: false,
         scaleLineWidth: true,
         // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
         connectDetail: 20,
         waveAmplitude: 10,
         waveFrequency: 5,
@@ -125,7 +125,7 @@ export const DEFAULTS = {
         autoScale: false,
         scaleLineWidth: true,
         // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
         connectDetail: 20,
         waveAmplitude: 10,
         waveFrequency: 5,
@@ -187,7 +187,7 @@ export const DEFAULTS = {
         autoScale: false,
         scaleLineWidth: true,
         // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
         connectDetail: 20,
         waveAmplitude: 10,
         waveFrequency: 5,

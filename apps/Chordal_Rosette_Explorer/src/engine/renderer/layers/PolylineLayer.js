@@ -88,10 +88,56 @@ export class PolylineLayer {
             this.drawArc(p1, p2, false);
         } else if (mode === 'arc-flipped') {
             this.drawArc(p1, p2, true);
+        } else if (mode === 'quadratic-bezier') {
+            this.drawQuadraticBezier(p1, p2, style.bezierBulge || 0, style.connectDetail || 20);
         } else if (mode === 'circle') {
             this.drawCircle(p1, p2);
         } else {
             this.ctx.lineTo(p2.x, p2.y);
+        }
+    }
+
+    drawQuadraticBezier(p1, p2, bulge, detail) {
+
+        if (bulge === 0) {
+            this.ctx.lineTo(p2.x, p2.y);
+            return;
+        }
+
+        // Calculate control point
+        // Midpoint
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+
+        // Vector from p1 to p2
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist === 0) {
+            this.ctx.lineTo(p2.x, p2.y);
+            return;
+        }
+
+        // Perpendicular vector (-dy, dx) normalized
+        const nx = -dy / dist;
+        const ny = dx / dist;
+
+        // Control point is shifted along normal by bulge * dist
+        // (Using distance scales the bulge with the segment length, keeping proportions)
+        const cx = mx + nx * bulge * dist;
+        const cy = my + ny * bulge * dist;
+
+        // Quadratic Bezier interpolation
+        for (let i = 1; i <= detail; i++) {
+            const t = i / detail;
+            const mt = 1 - t;
+
+            // B(t) = (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+            const x = (mt * mt * p1.x) + (2 * mt * t * cx) + (t * t * p2.x);
+            const y = (mt * mt * p1.y) + (2 * mt * t * cy) + (t * t * p2.y);
+
+            this.ctx.lineTo(x, y);
         }
     }
 
