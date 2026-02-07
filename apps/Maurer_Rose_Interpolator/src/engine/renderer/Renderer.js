@@ -205,8 +205,38 @@ export class CanvasRenderer {
         if (roseParams.showVertices) {
             this.ctx.globalCompositeOperation = roseParams.vertexBlendMode || 'source-over';
             renderables.filter(r => r.type === 'rose').forEach(item => {
+                let vertexColors = null;
+                if (roseParams.vertexColorMethod && roseParams.vertexColorMethod !== 'solid') {
+                    vertexColors = Colorizer.generateVertexColors(
+                        item.points,
+                        roseParams.vertexColorMethod,
+                        roseParams.vertexColor,
+                        {
+                            colorEnd: roseParams.vertexColorEnd || roseParams.colorEnd, // Fallback? No, separate param
+                            // Actually defaults.js doesn't have vertexColorEnd/gradientType yet.
+                            // We should probably rely on the main ones OR add them?
+                            // User request implies "like line rendering". 
+                            // Let's check params passed to Renderer. 
+                            // roseParams has everything.
+                            // But usually vertex colors are separate.
+                            // If explicit vertex params exist, use them.
+                            // Otherwise, fallback to main params?
+                            // Let's assume for now we use the main params if specific vertex ones aren't there?
+                            // No, `LayerRenderingModule` for vertex already maps to `vertexColor`, `vertexOpacity`.
+                            // It does NOT map `colorEnd`, `gradientType` currently in defaults.js!
+                            // I need to add them to defaults.js if I want full control.
+                            // FOR NOW: I will use the main rosette gradient settings if vertex-specific ones are missing.
+                            colorEnd: roseParams.vertexColorEnd || roseParams.colorEnd,
+                            gradientType: roseParams.vertexGradientType || roseParams.gradientType,
+                            gradientPreset: roseParams.vertexGradientPreset || roseParams.gradientPreset,
+                            gradientStops: roseParams.vertexGradientStops || roseParams.gradientStops
+                        }
+                    );
+                }
+
                 this.polylineLayer.drawVertices(item.points, {
                     color: roseParams.vertexColor,
+                    colors: vertexColors,
                     radius: roseParams.vertexRadius,
                     opacity: roseParams.vertexOpacity
                 });
@@ -259,7 +289,7 @@ export class CanvasRenderer {
         const effectiveWidth = (params.lineWidth || 2) * lineWidthScale;
 
         // --- Fill Phase ---
-        if (params.fillOpacity > 0) {
+        if (params.showFill !== false && params.fillOpacity > 0) {
             let fillStyle = params.fillColor || defaultColor;
 
             // Gradient Generation for Fill

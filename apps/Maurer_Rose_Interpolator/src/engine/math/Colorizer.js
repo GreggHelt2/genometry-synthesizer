@@ -122,4 +122,80 @@ export class Colorizer {
         }
         return tValues;
     }
+    static generateVertexColors(points, method, baseColor, options = {}) {
+        if (!points || points.length === 0) return [];
+
+        const startColor = baseColor || '#ffffff';
+        const endColor = options.colorEnd || '#000000';
+        const gradientType = options.gradientType || GradientType.TWO_POINT;
+
+        let tValues = [];
+
+        switch (method) {
+            case ColorMethod.LENGTH:
+                tValues = this.getVertexTByLength(points);
+                break;
+            case ColorMethod.ANGLE:
+                tValues = this.getVertexTByAngle(points);
+                break;
+            case ColorMethod.SEQUENCE:
+                tValues = this.getVertexTBySequence(points);
+                break;
+            default:
+                return []; // Solid fallback
+        }
+
+        return tValues.map(t => this.getGradientColor(t, startColor, endColor, gradientType, options));
+    }
+
+    static getVertexTByLength(points) {
+        if (points.length < 2) return [0];
+
+        // 1. Calculate segment lengths
+        const segLengths = [];
+        for (let i = 0; i < points.length - 1; i++) {
+            const dx = points[i + 1].x - points[i].x;
+            const dy = points[i + 1].y - points[i].y;
+            segLengths.push(Math.sqrt(dx * dx + dy * dy));
+        }
+
+        // 2. Calculate average length for each vertex
+        // Vertex 0: seg[0]
+        // Vertex i: (seg[i-1] + seg[i]) / 2
+        // Vertex last: seg[last]
+        const vertexLengths = [];
+        let minLen = Infinity;
+        let maxLen = -Infinity;
+
+        for (let i = 0; i < points.length; i++) {
+            let len;
+            if (i === 0) {
+                len = segLengths[0];
+            } else if (i === points.length - 1) {
+                len = segLengths[segLengths.length - 1];
+            } else {
+                len = (segLengths[i - 1] + segLengths[i]) / 2;
+            }
+            vertexLengths.push(len);
+            if (len < minLen) minLen = len;
+            if (len > maxLen) maxLen = len;
+        }
+
+        const range = maxLen - minLen || 1;
+        return vertexLengths.map(len => (len - minLen) / range);
+    }
+
+    static getVertexTByAngle(points) {
+        return points.map(p => {
+            const x = p.x !== undefined ? p.x : p[0];
+            const y = p.y !== undefined ? p.y : p[1];
+            const angle = Math.atan2(y, x) * (180 / Math.PI);
+            return (angle + 180) / 360;
+        });
+    }
+
+    static getVertexTBySequence(points) {
+        const total = points.length - 1;
+        return points.map((_, i) => i / (total || 1));
+    }
 }

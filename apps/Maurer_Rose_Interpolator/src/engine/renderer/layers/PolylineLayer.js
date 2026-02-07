@@ -52,13 +52,26 @@ export class PolylineLayer {
         this.ctx.globalAlpha = style.opacity ?? 1;
 
         const radius = style.radius || 2;
+        const colors = style.colors; // Array of color strings
 
         this.ctx.beginPath();
-        for (let i = 0; i < points.length; i++) {
-            this.ctx.moveTo(points[i].x + radius, points[i].y);
-            this.ctx.arc(points[i].x, points[i].y, radius, 0, Math.PI * 2);
+        if (colors && colors.length === points.length) {
+            // Per-vertex coloring
+            for (let i = 0; i < points.length; i++) {
+                this.ctx.beginPath(); // New path for each color change
+                this.ctx.fillStyle = colors[i];
+                this.ctx.moveTo(points[i].x + radius, points[i].y);
+                this.ctx.arc(points[i].x, points[i].y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        } else {
+            // Solid coloring (batch)
+            for (let i = 0; i < points.length; i++) {
+                this.ctx.moveTo(points[i].x + radius, points[i].y);
+                this.ctx.arc(points[i].x, points[i].y, radius, 0, Math.PI * 2);
+            }
+            this.ctx.fill();
         }
-        this.ctx.fill();
         this.ctx.globalAlpha = 1; // Reset
     }
 

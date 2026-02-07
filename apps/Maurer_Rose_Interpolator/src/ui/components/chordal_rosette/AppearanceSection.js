@@ -74,6 +74,10 @@ export class AppearanceSection {
                 // Rosette param 'colorMethod' is used for lines.
                 // We shouldn't share the same key for vertices!
                 colorMethod: 'vertexColorMethod',
+                gradientType: 'vertexGradientType',
+                gradientPreset: 'vertexGradientPreset',
+                gradientStops: 'vertexGradientStops',
+                colorEnd: 'vertexColorEnd',
                 antiAlias: 'vertexAntiAlias' // Not standard, but harmless
             },
             {
@@ -104,6 +108,10 @@ export class AppearanceSection {
             this.orchestrator.actionType,
             {
                 colorMethod: 'baseCurveColorMethod',
+                gradientType: 'baseCurveGradientType',
+                gradientPreset: 'baseCurveGradientPreset',
+                gradientStops: 'baseCurveGradientStops',
+                colorEnd: 'baseCurveColorEnd',
                 color: 'baseCurveColor',
                 blendMode: 'baseCurveBlendMode',
                 opacity: 'baseCurveOpacity',

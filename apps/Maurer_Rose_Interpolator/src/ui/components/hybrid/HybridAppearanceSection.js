@@ -228,7 +228,8 @@ export class HybridAppearanceSection {
                 opacity: 'fillOpacity'
             },
             {
-                hideSize: true
+                hideSize: true,
+                showToggle: { key: 'showFill', label: 'Show Fill' }
             }
         );
         this.fillAccordion.append(this.fillModule.container);
@@ -251,6 +252,10 @@ export class HybridAppearanceSection {
                 opacity: 'vertexOpacity',
                 blendMode: 'vertexBlendMode',
                 colorMethod: 'vertexColorMethod',
+                gradientType: 'vertexGradientType',
+                gradientPreset: 'vertexGradientPreset',
+                gradientStops: 'vertexGradientStops',
+                colorEnd: 'vertexColorEnd',
                 antiAlias: 'vertexAntiAlias'
             },
             {
