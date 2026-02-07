@@ -338,6 +338,21 @@ export class CanvasRenderer {
             // We should use parameters.fillBlendMode for the fill.
         }
 
+        // Prepare Style Object with Connection Params
+        const style = {
+            width: effectiveWidth,
+            opacity: baseOpacity,
+            connectMode: params.connectMode,
+            connectDetail: params.connectDetail,
+            waveAmplitude: params.waveAmplitude,
+            waveFrequency: params.waveFrequency,
+            waveAlternateFlip: params.waveAlternateFlip,
+            splineTension: params.splineTension,
+            splineBias: params.splineBias,
+            splineContinuity: params.splineContinuity,
+            splineAlpha: params.splineAlpha
+        };
+
         if (useSegments) {
             let colors;
             if (params.colorMethod && params.colorMethod !== 'solid') {
@@ -346,30 +361,11 @@ export class CanvasRenderer {
                 colors = [params.color || defaultColor];
             }
 
-            if (colors.length === 1 && blendMode === 'source-over') {
-                // Optimization: Use single path drawing if only one color (handles Opacity/Blend Mode correctly)
-                // Actually if baseOpacity < 1, drawColoredSegments is better for self-overlap?
-                // If opacity < 1, drawing a single path means NO self-overlap accumulation within the path.
-                // If we want self-overlap (rosette petals darkening each other), we MUST use segments.
-                // My previous logic: `if (opacity < 1 || blendMode !== 'source-over')` -> useSegments.
-                // So we are rightfully in this block.
-                this.polylineLayer.drawColoredSegments(points, colors, {
-                    width: effectiveWidth,
-                    opacity: baseOpacity
-                });
-            } else {
-                this.polylineLayer.drawColoredSegments(points, colors, {
-                    width: effectiveWidth,
-                    opacity: baseOpacity
-                });
-            }
+            this.polylineLayer.drawColoredSegments(points, colors, style);
         } else {
             // High performance single polyline for opaque solid colors (no self-overlap)
-            this.polylineLayer.draw(points, {
-                color: params.color || defaultColor,
-                width: effectiveWidth,
-                opacity: baseOpacity
-            });
+            style.color = params.color || defaultColor;
+            this.polylineLayer.draw(points, style);
         }
     }
 

@@ -41,7 +41,11 @@ export class AppearanceSection {
         this.chordalModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType
+            this.orchestrator.actionType,
+            {}, // Default keys
+            {
+                showConnectMode: true
+            }
         );
         this.chordalAccordion.append(this.chordalModule.container);
 

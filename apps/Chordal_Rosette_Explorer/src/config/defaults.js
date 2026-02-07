@@ -59,6 +59,16 @@ export const DEFAULTS = {
         backgroundOpacity: 0,
         autoScale: false,
         scaleLineWidth: true,
+        // Connection Style
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectDetail: 20,
+        waveAmplitude: 10,
+        waveFrequency: 5,
+        waveAlternateFlip: false,
+        splineTension: 0,
+        splineBias: 0,
+        splineContinuity: 0,
+        splineAlpha: 0.5,
     },
     rosetteB: {
         curveType: 'Rhodonea',
@@ -114,6 +124,16 @@ export const DEFAULTS = {
         backgroundOpacity: 0,
         autoScale: false,
         scaleLineWidth: true,
+        // Connection Style
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectDetail: 20,
+        waveAmplitude: 10,
+        waveFrequency: 5,
+        waveAlternateFlip: false,
+        splineTension: 0,
+        splineBias: 0,
+        splineContinuity: 0,
+        splineAlpha: 0.5,
     },
     hybrid: {
         weight: 0.0, // 0 to 1
@@ -166,6 +186,16 @@ export const DEFAULTS = {
         backgroundOpacity: 0,
         autoScale: false,
         scaleLineWidth: true,
+        // Connection Style
+        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom'
+        connectDetail: 20,
+        waveAmplitude: 10,
+        waveFrequency: 5,
+        waveAlternateFlip: false,
+        splineTension: 0,
+        splineBias: 0,
+        splineContinuity: 0,
+        splineAlpha: 0.5,
     },
     settings: {
         theme: 'dark',

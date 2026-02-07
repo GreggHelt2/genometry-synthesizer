@@ -29,7 +29,17 @@ export class LayerRenderingModule {
             blendMode: 'blendMode',
             opacity: 'opacity',
             size: 'lineWidth',
-            antiAlias: 'antiAlias'
+            antiAlias: 'antiAlias',
+            // Connection params
+            connectMode: 'connectMode',
+            connectDetail: 'connectDetail',
+            waveAmplitude: 'waveAmplitude',
+            waveFrequency: 'waveFrequency',
+            waveAlternateFlip: 'waveAlternateFlip',
+            splineTension: 'splineTension',
+            splineBias: 'splineBias',
+            splineContinuity: 'splineContinuity',
+            splineAlpha: 'splineAlpha'
         }, keys);
 
         this.container = document.createElement('div');
@@ -54,7 +64,66 @@ export class LayerRenderingModule {
             this.container.appendChild(this.controls.showToggle.getElement());
         }
 
-        // 1. Color Method
+        // 1. Connection Mode (Optional)
+        if (this.options.showConnectMode) {
+            const modeOptions = [
+                { value: 'straight', label: 'Straight' },
+                { value: 'sine', label: 'Sine Wave' },
+                { value: 'kb-spline', label: 'KB Spline' },
+                { value: 'catmull-rom', label: 'Catmull-Rom' },
+                { value: 'circle-spline', label: 'Circle Spline' },
+                { value: 'arc', label: 'Arc' },
+                { value: 'arc-flipped', label: 'Arc Flipped' },
+                { value: 'circle', label: 'Circle' }
+            ];
+
+            this.controls.connectMode = new ParamSelect({
+                key: this.keys.connectMode,
+                label: 'Connect Mode',
+                options: modeOptions,
+                value: 'straight',
+                onChange: (val) => {
+                    this.dispatch(this.keys.connectMode, val);
+                    this.updateConnectModeVisibility(val);
+                }
+            });
+            this.container.appendChild(this.controls.connectMode.getElement());
+
+            // Details (Shared)
+            this.controls.connectDetail = this.createSlider(this.keys.connectDetail, 2, 100, 1, 'Detail');
+            this.container.appendChild(this.controls.connectDetail.container);
+
+            // Wave Params
+            this.controls.waveAmplitude = this.createSlider(this.keys.waveAmplitude, 0, 100, 1, 'Amplitude');
+            this.container.appendChild(this.controls.waveAmplitude.container);
+
+            this.controls.waveFrequency = this.createSlider(this.keys.waveFrequency, 1, 50, 1, 'Frequency');
+            this.container.appendChild(this.controls.waveFrequency.container);
+
+            this.controls.waveAlternateFlip = new ParamToggle({
+                key: this.keys.waveAlternateFlip,
+                label: 'Alternate Wave Mirror',
+                value: false,
+                onChange: (val) => this.dispatch(this.keys.waveAlternateFlip, val)
+            });
+            this.container.appendChild(this.controls.waveAlternateFlip.getElement());
+
+            // KB Spline Params
+            this.controls.splineTension = this.createSlider(this.keys.splineTension, -1, 1, 0.1, 'Tension');
+            this.container.appendChild(this.controls.splineTension.container);
+
+            this.controls.splineBias = this.createSlider(this.keys.splineBias, -1, 1, 0.1, 'Bias');
+            this.container.appendChild(this.controls.splineBias.container);
+
+            this.controls.splineContinuity = this.createSlider(this.keys.splineContinuity, -1, 1, 0.1, 'Continuity');
+            this.container.appendChild(this.controls.splineContinuity.container);
+
+            // Catmull-Rom Params
+            this.controls.splineAlpha = this.createSlider(this.keys.splineAlpha, 0, 1, 0.1, 'Alpha');
+            this.container.appendChild(this.controls.splineAlpha.container);
+        }
+
+        // 2. Color Method
         const methodOptions = [
             { value: 'solid', label: 'Single Color' },
             { value: 'length', label: 'Length Gradient' },
@@ -214,6 +283,36 @@ export class LayerRenderingModule {
         if (colorLabel) {
             colorLabel.textContent = isGradient ? 'Start Color' : 'Color';
         }
+
+        // Update Connection Mode Controls Visibility
+        const connectMode = this.controls.connectMode ? this.controls.connectMode.lastValue : 'straight';
+        this.updateConnectModeVisibility(connectMode);
+    }
+
+    updateConnectModeVisibility(mode) {
+        if (!this.controls.connectDetail) return;
+
+        const isStraight = mode === 'straight';
+        const isWave = mode === 'sine' || mode === 'cosine';
+        const isKB = mode === 'kb-spline';
+        const isCatmull = mode === 'catmull-rom';
+        // Arc/Circle use detail? Maybe. Let's show detail for everything except straight.
+
+        // Detail
+        this.controls.connectDetail.container.style.display = !isStraight ? 'flex' : 'none';
+
+        // Wave Controls
+        this.controls.waveAmplitude.container.style.display = isWave ? 'flex' : 'none';
+        this.controls.waveFrequency.container.style.display = isWave ? 'flex' : 'none';
+        this.controls.waveAlternateFlip.getElement().style.display = isWave ? 'flex' : 'none';
+
+        // KB Spline Controls
+        this.controls.splineTension.container.style.display = isKB ? 'flex' : 'none';
+        this.controls.splineBias.container.style.display = isKB ? 'flex' : 'none';
+        this.controls.splineContinuity.container.style.display = isKB ? 'flex' : 'none';
+
+        // Catmull-Rom Controls
+        this.controls.splineAlpha.container.style.display = isCatmull ? 'flex' : 'none';
     }
 
     handleLinkToggle(key, isActive, control) {
@@ -318,5 +417,24 @@ export class LayerRenderingModule {
         if (this.controls.opacity) this.controls.opacity.instance.setValue(params[this.keys.opacity] ?? 1);
 
         if (this.controls.antiAlias) this.controls.antiAlias.setValue(params[this.keys.antiAlias] !== false);
+
+        // Update Connection Mode Controls
+        const connectMode = params[this.keys.connectMode] || 'straight';
+        if (this.controls.connectMode) {
+            this.controls.connectMode.setValue(connectMode);
+            this.updateConnectModeVisibility(connectMode);
+        }
+
+        if (this.controls.connectDetail) this.controls.connectDetail.instance.setValue(params[this.keys.connectDetail] ?? 20);
+
+        if (this.controls.waveAmplitude) this.controls.waveAmplitude.instance.setValue(params[this.keys.waveAmplitude] ?? 10);
+        if (this.controls.waveFrequency) this.controls.waveFrequency.instance.setValue(params[this.keys.waveFrequency] ?? 5);
+        if (this.controls.waveAlternateFlip) this.controls.waveAlternateFlip.setValue(params[this.keys.waveAlternateFlip] || false);
+
+        if (this.controls.splineTension) this.controls.splineTension.instance.setValue(params[this.keys.splineTension] ?? 0);
+        if (this.controls.splineBias) this.controls.splineBias.instance.setValue(params[this.keys.splineBias] ?? 0);
+        if (this.controls.splineContinuity) this.controls.splineContinuity.instance.setValue(params[this.keys.splineContinuity] ?? 0);
+
+        if (this.controls.splineAlpha) this.controls.splineAlpha.instance.setValue(params[this.keys.splineAlpha] ?? 0.5);
     }
 }

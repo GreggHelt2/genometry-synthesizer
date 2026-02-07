@@ -58,7 +58,8 @@ export class HybridAppearanceSection {
                 antiAlias: 'antiAlias' // New feature
             },
             {
-                sizeLabel: 'Line Width'
+                sizeLabel: 'Line Width',
+                showConnectMode: true
             }
         );
         this.vizAccordion.append(this.hybridVizModule.container);
