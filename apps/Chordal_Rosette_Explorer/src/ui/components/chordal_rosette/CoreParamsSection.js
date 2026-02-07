@@ -21,6 +21,9 @@ export class CoreParamsSection {
 
         // --- Init Controls Storage ---
         this.controls = {};
+        this.currentCurveType = null;
+        this.dynamicContainer = document.createElement('div');
+        this.dynamicContainer.className = 'flex flex-col gap-1';
 
         this.renderContent();
     }
@@ -40,7 +43,7 @@ export class CoreParamsSection {
         const curveOptions = Object.keys(CurveRegistry).map(k => ({ value: k, label: k }));
 
         this.curveTypeSelect = new ParamSelect({
-            key: 'curveType', // This key is essential for LinkManager to find it if we expose it
+            key: 'curveType',
             label: 'Curve Type',
             options: curveOptions,
             value: 'Rhodonea',
@@ -54,33 +57,48 @@ export class CoreParamsSection {
         this.accordion.append(this.curveTypeSelect.getElement());
         this.controls.curveType = this.curveTypeSelect;
 
-        // n, d, A, c, rot, radius
-        // using helper similar to original allowFloat/allowInt
-        // We can just construct ParamNumber directly.
+        // Dynamic Container for curve-specific sliders
+        this.accordion.append(this.dynamicContainer);
+    }
 
-        this.nSlider = this.createSlider('n', 0, 20, 1, 'n (Petals/Lobes)', false);
-        this.dSlider = this.createSlider('d', 1, 20, 1, 'd (Petal Width)', false);
-        this.ASlider = this.createSlider('A', 10, 300, 1, 'A (Amplitude)', false);
-        this.cSlider = this.createSlider('c', 0, 5, 0.01, 'c (Offset)', true);
-        this.rotSlider = this.createSlider('rot', 0, 360, 1, 'Rotation (deg)', false);
-        this.radiusSlider = this.createSlider('radius', 10, 300, 1, 'Radius (Circle)', false);
+    /**
+     * Rebuilds the dynamic sliders based on the curve schema
+     */
+    rebuildDynamicControls(curveType, params) {
+        if (this.currentCurveType === curveType) return;
+        this.currentCurveType = curveType;
 
-        // Append basic controls
-        this.accordion.append(this.nSlider.container);
-        this.accordion.append(this.dSlider.container);
-        this.accordion.append(this.ASlider.container);
-        this.accordion.append(this.cSlider.container);
-        this.accordion.append(this.rotSlider.container);
-        this.accordion.append(this.radiusSlider.container); // Display toggled in update()
+        // Clear existing dynamic controls
+        this.dynamicContainer.innerHTML = '';
 
-        // Store references for updates
-        Object.assign(this.controls, {
-            n: this.nSlider.instance,
-            d: this.dSlider.instance,
-            A: this.ASlider.instance,
-            c: this.cSlider.instance,
-            rot: this.rotSlider.instance,
-            radius: this.radiusSlider.instance
+        // Remove old dynamic controls from this.controls to avoid stale updates
+        // Keep curveType as it's static
+        const staticKeys = ['curveType'];
+        Object.keys(this.controls).forEach(key => {
+            if (!staticKeys.includes(key)) {
+                delete this.controls[key];
+            }
+        });
+
+        const CurveClass = CurveRegistry[curveType] || CurveRegistry['Rhodonea'];
+        const schema = CurveClass.getParamsSchema();
+
+        schema.forEach(item => {
+            const slider = this.createSlider(
+                item.key,
+                item.min,
+                item.max,
+                item.step,
+                item.label,
+                item.step < 1
+            );
+
+            this.dynamicContainer.appendChild(slider.container);
+            this.controls[item.key] = slider.instance;
+
+            // Set initial value from current state params or default
+            const val = params[item.key] !== undefined ? params[item.key] : item.default;
+            slider.instance.setValue(val);
         });
     }
 
@@ -139,11 +157,8 @@ export class CoreParamsSection {
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             Object.keys(this.controls).forEach(key => {
                 const control = this.controls[key];
-                // Check if control is a ParamNumber/ParamToggle (has setLinkActive)
                 if (control && typeof control.setLinkActive === 'function') {
-                    // Controls storage key matches param key for CoreParams
-                    const paramKey = key;
-                    const fullKey = `${this.roseId}.${paramKey}`;
+                    const fullKey = `${this.roseId}.${key}`;
                     const isLinked = linkManager.isLinked(fullKey);
                     control.setLinkActive(isLinked);
                 }
@@ -152,33 +167,18 @@ export class CoreParamsSection {
     }
 
     update(params) {
-        // Update Values
-        // Note: ParamNumber.setValue checks for document.activeElement to avoid typing interruption
-        // but explicit check here is safer if ParamNumber implementation changes.
-        // Assuming ParamNumber handles it.
+        const curveType = params.curveType || 'Rhodonea';
+        this.curveTypeSelect.setValue(curveType);
 
-        this.curveTypeSelect.setValue(params.curveType || 'Rhodonea');
+        // Rebuild if type changed
+        this.rebuildDynamicControls(curveType, params);
 
-        if (this.controls.n) this.controls.n.setValue(params.n);
-        if (this.controls.d) this.controls.d.setValue(params.d);
-        if (this.controls.A) this.controls.A.setValue(params.A);
-        if (this.controls.c) this.controls.c.setValue(params.c);
-        if (this.controls.rot) this.controls.rot.setValue(params.rot);
-        if (this.controls.radius) this.controls.radius.setValue(params.radius);
-
-        // Specific Visibility Logic
-        const isCircle = params.curveType === 'Circle';
-
-        // Helper to toggle visibility
-        const toggle = (wrapper, show) => {
-            if (wrapper) wrapper.style.display = show ? 'flex' : 'none';
-        }
-
-        toggle(this.nSlider.container, !isCircle);
-        toggle(this.dSlider.container, !isCircle);
-        toggle(this.ASlider.container, !isCircle);
-        toggle(this.cSlider.container, !isCircle);
-        toggle(this.rotSlider.container, !isCircle);
-        toggle(this.radiusSlider.container, isCircle);
+        // Update Values for all current controls
+        Object.keys(this.controls).forEach(key => {
+            if (key === 'curveType') return;
+            if (params[key] !== undefined) {
+                this.controls[key].setValue(params[key]);
+            }
+        });
     }
 }
