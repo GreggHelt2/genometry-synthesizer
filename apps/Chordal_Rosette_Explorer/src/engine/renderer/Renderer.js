@@ -1,6 +1,6 @@
 import { PolylineLayer } from './layers/PolylineLayer.js';
 import { CurveRegistry } from '../math/curves/CurveRegistry.js';
-import { generateMaurerPolyline } from '../math/maurer.js';
+import { generateChordalPolyline } from '../math/chordal_rosette.js';
 
 import { interpolateLinear, resamplePolyline, resamplePolylineApprox } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
@@ -151,7 +151,7 @@ export class CanvasRenderer {
             } else {
                 seed = idx;
             }
-            const points = generateMaurerPolyline(curve, sequencer, roseParams.totalDivs, seed, roseParams);
+            const points = generateChordalPolyline(curve, sequencer, roseParams.totalDivs, seed, roseParams);
 
             // Degeneracy Check
             const isDegenerate = points.length > 0 && points.every(p => {
@@ -442,7 +442,7 @@ export class CanvasRenderer {
                 const sub = (sequencer.getCosets && k > 1)
                     ? sequencer.getCosets(params.totalDivs, params)[idx % k]
                     : idx;
-                const points = generateMaurerPolyline(curve, sequencer, params.totalDivs, sub, params);
+                const points = generateChordalPolyline(curve, sequencer, params.totalDivs, sub, params);
 
                 renderables.push({
                     type: 'underlay',
@@ -508,8 +508,8 @@ export class CanvasRenderer {
         const isLCMMatch = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
         const collectHybrid = (subA, subB) => {
-            const pointsA = generateMaurerPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-            const pointsB = generateMaurerPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+            const pointsA = generateChordalPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
+            const pointsB = generateChordalPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
 
             // Interpolation Logic
             const segsA = pointsA.length > 0 ? pointsA.length - 1 : 0;

@@ -11,7 +11,7 @@ export const DEFAULTS = {
         c: 0,
         rot: 0,
         radius: 100, // For CircleCurve
-        // Maurer specific
+        // Sequencer specific
         totalDivs: 360,
         step: 29, // deg
         useCustomDivs: false,

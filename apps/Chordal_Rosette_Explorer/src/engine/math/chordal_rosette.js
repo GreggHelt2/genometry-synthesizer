@@ -2,7 +2,7 @@
 import { getLinesToClose } from './MathOps.js';
 
 /**
- * Generates the vertices for a Maurer Rose polyline using a pluggable sequencer.
+ * Generates the vertices for a Chordal Rosette polyline using a pluggable sequencer.
  * 
  * @param {import('./curves/Curve').Curve} curve - The parametric curve instance.
  * @param {import('./sequencers/Sequencer').Sequencer} sequencer - The sequencer instance.
@@ -11,7 +11,7 @@ import { getLinesToClose } from './MathOps.js';
  * @param {Object} params - Additional params for the sequencer (e.g. step, cycles).
  * @returns {Array<{x: number, y: number}>} Array of point objects.
  */
-export function generateMaurerPolyline(curve, sequencer, totalDivs, offset = 0, params = {}) {
+export function generateChordalPolyline(curve, sequencer, totalDivs, offset = 0, params = {}) {
     const points = [];
 
     // Get the sequence of integer inputs (0..n-1 domain, potentially cycled)

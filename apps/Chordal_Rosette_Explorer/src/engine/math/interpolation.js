@@ -1,5 +1,5 @@
 import { lcm } from './MathOps.js';
-import { generateMaurerPolyline } from './maurer.js';
+import { generateChordalPolyline } from './chordal_rosette.js';
 
 /**
  * Interpolates between two sets of points.
@@ -108,7 +108,7 @@ export function resamplePolylineApprox(points, targetSegmentCount) {
 }
 
 export function generateLcmPoints(curveA, curveB, totalDivs, stepA, stepB) {
-    const ptsA = generateMaurerPolyline(curveA, totalDivs, stepA);
-    const ptsB = generateMaurerPolyline(curveB, totalDivs, stepB);
+    const ptsA = generateChordalPolyline(curveA, totalDivs, stepA);
+    const ptsB = generateChordalPolyline(curveB, totalDivs, stepB);
     return { pointsA: ptsA, pointsB: ptsB };
 }

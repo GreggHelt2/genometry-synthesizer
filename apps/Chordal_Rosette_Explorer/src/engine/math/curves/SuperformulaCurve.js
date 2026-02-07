@@ -69,7 +69,7 @@ export class SuperformulaCurve extends Curve {
 
     getRadiansToClosure() {
         // Usually 2PI for integer m.
-        // If m is rational? The Maurer rose logic generally works in 2PI or multiple.
+        // If m is rational? The Chordal Rosette logic generally works in 2PI or multiple.
         // For general plotting, 2PI covers the basic shape for m integers.
         return 2 * Math.PI;
     }

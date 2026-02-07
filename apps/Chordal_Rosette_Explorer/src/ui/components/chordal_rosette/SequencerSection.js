@@ -15,9 +15,9 @@ export class SequencerSection {
         this.roseId = roseId;
 
         // Accordion Registration
-        this.accordion = new Accordion('Maurer Sequencer', true, this.handleToggle.bind(this), `${this.roseId}-maurer`);
+        this.accordion = new Accordion('Sequencer', true, this.handleToggle.bind(this), `${this.roseId}-sequencer`);
         if (orchestrator.registerAccordion) {
-            orchestrator.registerAccordion(`${this.roseId}-maurer`, this.accordion);
+            orchestrator.registerAccordion(`${this.roseId}-sequencer`, this.accordion);
         }
 
         // Init internals
@@ -63,7 +63,7 @@ export class SequencerSection {
         this.sequencerParamsContainer = createElement('div', 'flex flex-col');
         this.accordion.append(this.sequencerParamsContainer);
 
-        // Core Maurer Controls that are always present or standard?
+        // Core Sequencer Controls that are always present or standard?
         // Actually, 'totalDivs' (Points) is standard for all.
         // But 'step'/'generator' depends on schema.
         // Wait, original code had `updateSequencerControls` which wiped `sequencerParamsContainer`.

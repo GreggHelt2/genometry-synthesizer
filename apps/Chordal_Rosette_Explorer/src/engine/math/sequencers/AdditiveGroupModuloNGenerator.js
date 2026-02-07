@@ -2,19 +2,19 @@ import { Sequencer } from './Sequencer.js';
 import { gcd } from '../MathOps.js';
 
 /**
- * Standard Maurer Rose Logic.
+ * Standard Chordal Rosette Logic.
  * Sequence defined by the additive group Z_n with a generator (step).
  * val = (start + i * step) % n
  */
 export class AdditiveGroupModuloNGenerator extends Sequencer {
     generate(n, start, params) {
-        // Unpack params, defaulting to standard Maurer values if missing
+        // Unpack params, defaulting to standard Rosette values if missing
         const step = params.step || 1;
         const cyclesMultiplier = params.cyclesMultiplier || 1;
 
         // Calculate length based on closure
         // Total steps to return to start in modulo n is n / gcd(n, step)
-        // Note: maurer.js previously used getLinesToClose which is effectively LCD logic
+        // Note: chordal_rosette.js previously used getLinesToClose which is effectively LCD logic
         // We replicate that here to maintain exact behavior.
 
         // Lines to close = n / gcd(n, step) * (if we want full cycles?) 
@@ -26,9 +26,9 @@ export class AdditiveGroupModuloNGenerator extends Sequencer {
         const seq = [];
 
         // Generate the sequence of raw values (accumulating angle)
-        // Note: The original maurer.js pushed `k`. Here we return integer steps.
-        // maurer.js will convert these integers to angles.
-        // HOWEVER: maurer.js logic was: currentDiv = offset + (i * step)
+        // Note: The original chordal_rosette.js pushed `k`. Here we return integer steps.
+        // chordal_rosette.js will convert these integers to angles.
+        // HOWEVER: chordal_rosette.js logic was: currentDiv = offset + (i * step)
         // It did NOT modulo them immediately because it multiplied by radiansPerDiv later.
         // To support "multidirectional" or "random" sequences, we should probably output
         // the actual integer index.

@@ -46,7 +46,7 @@ export function getPrimeFactorsString(n) {
 }
 
 /**
- * Returns the number of lines required to close a Maurer Rose.
+ * Returns the number of lines required to close a Chordal Rosette.
  * formula: Z / gcd(D, Z) where Z is totalDivs and D is deg (step)
  */
 export function getLinesToClose(totalDivs, step) {

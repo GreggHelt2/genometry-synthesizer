@@ -7,7 +7,7 @@ import { store } from '../../../engine/state/Store.js';
 import { ACTIONS } from '../../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, lcm } from '../../../engine/math/MathOps.js';
-import { generateMaurerPolyline } from '../../../engine/math/maurer.js';
+import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 
 export class HybridCosetSection {

@@ -5,7 +5,7 @@ import { store } from '../../engine/state/Store.js';
 import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
-import { generateMaurerPolyline } from '../../engine/math/maurer.js';
+import { generateChordalPolyline } from '../../engine/math/chordal_rosette.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js'; // Needed if we generate points to count
 import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
@@ -161,7 +161,7 @@ export class InterpolationPanel extends Panel {
 
         const getSegs = (params, k) => {
             const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
-            // Mock curve instance just for getPoint (though generateMaurerPolyline needs it)
+            // Mock curve instance just for getPoint (though generateChordalPolyline needs it)
             // But we can just pass a dummy or reconstruct.
             // Reconstruct properly to be safe.
             const curve = (params.curveType === 'Rhodonea' || !params.curveType)
@@ -183,7 +183,7 @@ export class InterpolationPanel extends Panel {
                 start = params.cosetIndex || 0;
             }
 
-            const points = generateMaurerPolyline(curve, seq, params.totalDivs, start, params);
+            const points = generateChordalPolyline(curve, seq, params.totalDivs, start, params);
             return points.length > 0 ? points.length - 1 : 0;
         };
 

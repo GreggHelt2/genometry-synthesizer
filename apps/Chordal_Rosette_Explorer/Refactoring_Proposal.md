@@ -74,7 +74,7 @@ To guarantee 30fps+ animation and immediate UI feedback:
 ## 5. Directory Structure
 
 ```
-apps/Maurer_Rose_Interpolator/
+apps/Chordal_Rosette_Explorer/
 ├── index.html              # Entry point
 ├── vite.config.js          # Vite configuration
 ├── package.json            # Dependencies

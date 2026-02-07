@@ -1,6 +1,6 @@
 /**
  * Base class for all parametric curves.
- * Defines the interface that the CurveLayer and Maurer engine expect.
+ * Defines the interface that the CurveLayer and Chordal Rosette engine expect.
  */
 export class Curve {
     constructor() {

@@ -54,7 +54,7 @@ export class Recorder {
         });
     }
 
-    download(blob, filename = 'maurer-rose.webm') {
+    download(blob, filename = 'chordal-rosette.webm') {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         document.body.appendChild(a);

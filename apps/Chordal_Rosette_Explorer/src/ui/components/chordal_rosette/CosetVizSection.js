@@ -171,7 +171,7 @@ export class CosetVizSection {
         const SequencerClass = SequencerRegistry[seqType];
 
         // Default k for additive is gcd(n, s) if standard? No, additive is usually monolithic unless custom logic.
-        // Or wait, standard Maurer rose logic:
+        // Or wait, standard rosette logic:
         // k = gcd(totalDivs, step) is for closed loops.
         // But "Cosets" usually implies Multiplicative Group.
         // Additive group is 1 single orbit if coprime, or d orbits if gcd=d.
