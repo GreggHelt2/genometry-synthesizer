@@ -3,7 +3,7 @@ import { store } from './Store.js';
 import { linkManager } from '../logic/LinkManager.js';
 import { IndexedDBAdapter } from './IndexedDBAdapter.js';
 
-const STORAGE_KEY = 'chordal_rosette_state_v2_1';
+const STORAGE_KEY = 'chordal_rosette_state_v3_6';
 const DEBOUNCE_MS = 1000;
 
 export class PersistenceManager {
@@ -114,7 +114,7 @@ export class PersistenceManager {
         const links = linkManager.getLinks();
 
         const payload = {
-            version: '2.2',
+            version: '3.6',
             timestamp: Date.now(),
             state: currentState,
             links: links
