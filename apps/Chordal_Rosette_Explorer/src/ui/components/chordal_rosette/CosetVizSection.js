@@ -3,9 +3,9 @@ import { createElement } from '../../utils/dom.js';
 import { ParamNumber } from '../ParamNumber.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamSelect } from '../ParamSelect.js';
-import { store } from '../../../engine/state/Store.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd } from '../../../engine/math/MathOps.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class CosetVizSection {
     /**
@@ -106,9 +106,9 @@ export class CosetVizSection {
     }
 
     handleLinkToggle(key, isActive, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = `${otherRoseId}.${key}`;
+        const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             const linked = linkManager.toggleLink(myKey, otherKey);
@@ -119,7 +119,7 @@ export class CosetVizSection {
     }
 
     initLinkState(key, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             if (linkManager.isLinked(myKey)) {
                 control.setLinkActive(true);
@@ -128,30 +128,25 @@ export class CosetVizSection {
     }
 
     updateLinkVisuals() {
+        // Map control keys to their actual state keys for link lookup
+        const linkableControls = {
+            showAllCosets: { stateKey: 'showAllCosets', control: this.controls.showAllCosets },
+            cosetCount: { stateKey: 'cosetCount', control: this.controls.cosetCount?.instance },
+            cosetIndex: { stateKey: 'cosetIndex', control: this.controls.cosetIndex?.instance }
+        };
+
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.controls).forEach(key => {
-                const control = this.controls[key];
-                // control can be instance or wrapper?
-                // showAllCosets is instance. 
-                // sliders are wrappers { instance, container }
-
-                let instance = control;
-                if (control.instance) instance = control.instance;
-
-                if (instance && typeof instance.setLinkActive === 'function') {
-                    // key in controls matches param key here (e.g. 'showAllCosets', 'cosetCount')
-                    const fullKey = `${this.roseId}.${key}`;
-                    instance.setLinkActive(linkManager.isLinked(fullKey));
+            Object.values(linkableControls).forEach(({ stateKey, control }) => {
+                if (control && typeof control.setLinkActive === 'function') {
+                    const fullKey = getLinkKey(stateKey, this.roseId);
+                    control.setLinkActive(linkManager.isLinked(fullKey));
                 }
             });
         });
     }
 
     dispatch(key, val) {
-        store.dispatch({
-            type: this.orchestrator.actionType,
-            payload: { [key]: val }
-        });
+        dispatchDeep(key, val, this.roseId);
     }
 
     update(params) {
@@ -159,22 +154,8 @@ export class CosetVizSection {
         if (this.controls.showAllCosets) this.controls.showAllCosets.setValue(params.showAllCosets);
         if (this.controls.distSelect) this.controls.distSelect.setValue(params.cosetDistribution || 'sequential');
 
-        // Logic for Max Values depend on 'k' (Coset length)
-        // Similar to updateStats logic, we need to know k.
-        // We can replicate logic or perhaps statsSection calculated it?
-        // Let's recalculate k efficiently or assume orchestrator passes it?
-        // Orchestrator calculate 'k' in updateUI already for stats.
-        // But here we rely on passing params only?
-        // Let's recalc k locally, it's cheap enough.
-
         const seqType = params.sequencerType || 'Cyclic Additive Group Modulo N';
         const SequencerClass = SequencerRegistry[seqType];
-
-        // Default k for additive is gcd(n, s) if standard? No, additive is usually monolithic unless custom logic.
-        // Or wait, standard rosette logic:
-        // k = gcd(totalDivs, step) is for closed loops.
-        // But "Cosets" usually implies Multiplicative Group.
-        // Additive group is 1 single orbit if coprime, or d orbits if gcd=d.
 
         let k = 1;
         if (SequencerClass) {
@@ -183,7 +164,6 @@ export class CosetVizSection {
                 const cosets = seq.getCosets(params.totalDivs, params);
                 if (cosets) k = cosets.length;
             } else {
-                // Fallback for additive
                 k = gcd(params.step, params.totalDivs);
             }
         }
@@ -200,7 +180,6 @@ export class CosetVizSection {
             this.controls.cosetCount.instance.setMax(k);
             this.controls.cosetCount.instance.setValue(Math.min(params.cosetCount || 1, k));
 
-            // Disable if Show All is ON or k=1
             const disabled = showAll || !isMulti;
             this.controls.cosetCount.instance.setDisabled(disabled);
             if (this.controls.cosetCount.container) {
@@ -213,7 +192,6 @@ export class CosetVizSection {
             this.controls.cosetIndex.instance.setMax(Math.max(0, k - 1));
             this.controls.cosetIndex.instance.setValue((params.cosetIndex || 0) % k);
 
-            // Enabled if k > 1 (always valid to rotate start index even if ShowAll)
             const disabled = !isMulti;
             this.controls.cosetIndex.instance.setDisabled(disabled);
             if (this.controls.cosetIndex.container) {

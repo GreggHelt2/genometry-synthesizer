@@ -3,7 +3,7 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { createElement } from '../../utils/dom.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
-import { store } from '../../../engine/state/Store.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class SequencerSection {
     /**
@@ -50,10 +50,7 @@ export class SequencerSection {
             options: seqOptions,
             value: 'Cyclic Additive Group Modulo N',
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { sequencerType: val }
-                });
+                dispatchDeep('sequencerType', val, this.roseId);
             }
         });
         this.accordion.append(this.sequencerSelect.getElement());
@@ -62,12 +59,6 @@ export class SequencerSection {
         // Container for Dynamic Controls (e.g. Generator, Step, Multiplier)
         this.sequencerParamsContainer = createElement('div', 'flex flex-col');
         this.accordion.append(this.sequencerParamsContainer);
-
-        // Core Sequencer Controls that are always present or standard?
-        // Actually, 'totalDivs' (Points) is standard for all.
-        // But 'step'/'generator' depends on schema.
-        // Wait, original code had `updateSequencerControls` which wiped `sequencerParamsContainer`.
-        // We will replicate that logic in `update()`.
 
         // Total Divs (Points) - usually always present
         this.divsSlider = this.createSlider('totalDivs', 1, 3600, 1, 'Points to Connect');
@@ -87,15 +78,12 @@ export class SequencerSection {
             step: step,
             value: min, // initial
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, this.roseId);
             },
             onLinkToggle: (isActive) => {
-                const myKey = `${this.roseId}.${key}`;
+                const myKey = getLinkKey(key, this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-                const otherKey = `${otherRoseId}.${key}`;
+                const otherKey = getLinkKey(key, otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
                     const linked = linkManager.toggleLink(myKey, otherKey);
@@ -108,7 +96,7 @@ export class SequencerSection {
 
         // Initialize Link State
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = `${this.roseId}.${key}`;
+            const myKey = getLinkKey(key, this.roseId);
             if (linkManager.isLinked(myKey)) {
                 paramGui.setLinkActive(true);
             }
@@ -128,8 +116,7 @@ export class SequencerSection {
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             // Static controls
             if (this.controls.totalDivs) {
-                const key = 'totalDivs';
-                const fullKey = `${this.roseId}.${key}`;
+                const fullKey = getLinkKey('totalDivs', this.roseId);
                 this.controls.totalDivs.setLinkActive(linkManager.isLinked(fullKey));
             }
 
@@ -138,7 +125,7 @@ export class SequencerSection {
                 Object.keys(this.sequencerControls).forEach(key => {
                     const control = this.sequencerControls[key];
                     if (control && control.instance) {
-                        const fullKey = `${this.roseId}.${key}`;
+                        const fullKey = getLinkKey(key, this.roseId);
                         control.instance.setLinkActive(linkManager.isLinked(fullKey));
                     }
                 });
@@ -170,11 +157,7 @@ export class SequencerSection {
         });
     }
 
-    rebuildSequencerControls(type, params) { // params needed? Maybe for init values?
-        // Clear container
-        // Clean up old controls first (unregister if needed?)
-        // The orchestrator handles persistence on 'registerParam'. 
-        // If we remove them from DOM, we should arguably 'dispose' them to remove from Orchestrator tracking.
+    rebuildSequencerControls(type, params) {
         Object.values(this.sequencerControls).forEach(c => {
             if (c.instance.dispose) c.instance.dispose();
         });
@@ -193,9 +176,6 @@ export class SequencerSection {
             if (param.type === 'slider') {
                 const control = this.createSlider(param.key, param.min, param.max, param.step, param.label);
 
-                // Set initial value if available in params, else default
-                // Actually update() loop calls setValue right after this, so it's safer to wait.
-                // But for good measure we can set it if we have it.
                 if (params[param.key] !== undefined) {
                     control.instance.setValue(params[param.key]);
                 }

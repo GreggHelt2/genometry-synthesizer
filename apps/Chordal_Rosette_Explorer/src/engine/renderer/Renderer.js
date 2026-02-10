@@ -8,6 +8,252 @@ import { gcd, lcm } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
 import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModuloNGenerator.js';
 
+// ─── State Adapters ─────────────────────────────────────
+// These functions extract flat render-ready param objects from the
+// v3.0 nested state structure. This lets the rendering code remain
+// largely unchanged while the state shape evolves.
+
+/**
+ * Extract the active curve params (merging type-specific params with the type key).
+ * Returns { curveType, n, d, A, c, rot, ... } — i.e. the flat object createCurve expects.
+ */
+function getCurveParams(roseState) {
+    const curveType = roseState.curve?.type || 'Rhodonea';
+    const typeParams = roseState.curve?.params?.[curveType] || {};
+    return { curveType, ...typeParams };
+}
+
+/**
+ * Extract the active sequencer params.
+ * Returns { sequencerType, step, totalDivs, useCustomDivs, ... }
+ */
+function getSequencerParams(roseState) {
+    const seqType = roseState.sequencer?.type || 'Cyclic Additive Group Modulo N';
+    const typeParams = roseState.sequencer?.params?.[seqType] || {};
+    return { sequencerType: seqType, ...typeParams };
+}
+
+/**
+ * Build a flat render-params object from a v3.0 rosette state.
+ * This is the main adapter used by renderPreview / drawRenderableRose.
+ */
+function flattenRoseParams(roseState) {
+    const curve = getCurveParams(roseState);
+    const seq = getSequencerParams(roseState);
+    const stroke = roseState.stroke || {};
+    const fill = roseState.fill || {};
+    const baseCurve = roseState.baseCurve || {};
+    const verts = roseState.vertices || {};
+    const bg = roseState.background || {};
+    const rendering = roseState.rendering || {};
+    const coset = roseState.coset || {};
+
+    // Stroke coloring helpers
+    const sc = stroke.coloring || {};
+    const scp = sc.params || {};
+
+    // Fill coloring helpers
+    const fc = fill.coloring || {};
+    const fcp = fc.params || {};
+
+    // BaseCurve coloring helpers
+    const bcc = baseCurve.coloring || {};
+    const bccp = bcc.params || {};
+
+    // Vertex coloring helpers
+    const vc = verts.coloring || {};
+    const vcp = vc.params || {};
+
+    return {
+        // Curve
+        ...curve,
+
+        // Sequencer
+        ...seq,
+
+        // Coset
+        cosetIndex: coset.index ?? 0,
+        showAllCosets: coset.showAll ?? false,
+        cosetCount: coset.count ?? 1,
+        cosetDistribution: coset.distribution ?? 'sequential',
+
+        // Stroke
+        color: scp.solid?.color || '#ffffff',
+        colorEnd: scp['gradient-2point']?.colorEnd || '#FF00FF',
+        colorMethod: sc.type || 'solid',
+        gradientType: sc.type || 'solid',
+        gradientPreset: scp['gradient-preset']?.preset || 'rainbow',
+        gradientStops: scp['gradient-custom']?.stops || [],
+        opacity: stroke.opacity ?? 1,
+        blendMode: stroke.blendMode || 'source-over',
+        lineWidth: stroke.lineWidth ?? 2,
+        antiAlias: stroke.antiAlias !== false,
+
+        // Fill
+        showFill: fill.visible !== false,
+        fillColor: fcp.solid?.color || '#ffffff',
+        fillColorEnd: fcp['gradient-2point']?.colorEnd || '#000000',
+        fillOpacity: fill.opacity ?? 0,
+        fillBlendMode: fill.blendMode || 'source-over',
+        fillColorMethod: fc.type || 'solid',
+        fillGradientType: fc.type || 'solid',
+        fillGradientStops: fcp['gradient-custom']?.stops || [],
+
+        // Base Curve
+        showBaseCurve: baseCurve.visible === true,
+        baseCurveLineWidth: baseCurve.lineWidth ?? 2,
+        baseCurveColor: bccp.solid?.color || '#666666',
+        baseCurveOpacity: baseCurve.opacity ?? 1,
+        baseCurveBlendMode: baseCurve.blendMode || 'source-over',
+        baseCurveAntiAlias: baseCurve.antiAlias !== false,
+
+        // Vertices
+        showVertices: verts.visible === true,
+        vertexRadius: verts.radius ?? 2,
+        vertexColor: vcp.solid?.color || '#ffffff',
+        vertexOpacity: verts.opacity ?? 1,
+        vertexBlendMode: verts.blendMode || 'source-over',
+        vertexColorMethod: vc.type || 'solid',
+        vertexColorEnd: vcp['gradient-2point']?.colorEnd || '#ff0000',
+        vertexGradientType: vc.type || 'solid',
+        vertexGradientPreset: vcp['gradient-preset']?.preset || 'rainbow',
+        vertexGradientStops: vcp['gradient-custom']?.stops || [],
+
+        // Background
+        backgroundColor: bg.color || '#000000',
+        backgroundOpacity: bg.opacity ?? 0,
+
+        // Rendering
+        autoScale: rendering.autoScale ?? false,
+        scaleLineWidth: rendering.scaleLineWidth !== false,
+        connectMode: rendering.connectMode || 'straight',
+        connectDetail: rendering.connectDetail ?? 20,
+        waveAmplitude: rendering.waveAmplitude ?? 10,
+        waveFrequency: rendering.waveFrequency ?? 5,
+        waveAlternateFlip: rendering.waveAlternateFlip ?? false,
+        splineTension: rendering.splineTension ?? 0,
+        splineBias: rendering.splineBias ?? 0,
+        splineContinuity: rendering.splineContinuity ?? 0,
+        splineAlpha: rendering.splineAlpha ?? 0.5
+    };
+}
+
+/**
+ * Build flat render-params for the hybrid section from v3.0 state.
+ */
+function flattenHybridParams(hybridState) {
+    const mix = hybridState.mix || {};
+    const underlay = hybridState.underlay || {};
+    const stroke = hybridState.stroke || {};
+    const fill = hybridState.fill || {};
+    const verts = hybridState.vertices || {};
+    const bg = hybridState.background || {};
+    const rendering = hybridState.rendering || {};
+
+    const sc = stroke.coloring || {};
+    const scp = sc.params || {};
+    const fc = fill.coloring || {};
+    const fcp = fc.params || {};
+    const vc = verts.coloring || {};
+    const vcp = vc.params || {};
+
+    return {
+        // Mix
+        weight: mix.weight ?? 0,
+        method: mix.method || 'linear',
+        samples: mix.samples ?? 360,
+        resampleMethod: mix.resampleMethod || 'lcm',
+        approxResampleThreshold: mix.approxResampleThreshold ?? 20000,
+        mixType: mix.mixType || 'simple',
+
+        // Underlay
+        showRoseA: underlay.showRoseA ?? false,
+        showRoseB: underlay.showRoseB ?? false,
+        underlayOpacity: underlay.opacity ?? 0.15,
+
+        // Stroke
+        color: scp.solid?.color || '#a855f7',
+        colorEnd: scp['gradient-2point']?.colorEnd || '#ef4444',
+        colorMethod: sc.type || 'solid',
+        gradientType: sc.type || 'solid',
+        gradientPreset: scp['gradient-preset']?.preset || 'rainbow',
+        gradientStops: scp['gradient-custom']?.stops || [],
+        opacity: stroke.opacity ?? 0.5,
+        blendMode: stroke.blendMode || 'lighter',
+        lineWidth: stroke.lineWidth ?? 2,
+
+        // Fill
+        showFill: fill.visible !== false,
+        fillColor: fcp.solid?.color || '#ffffff',
+        fillColorEnd: fcp['gradient-2point']?.colorEnd || '#000000',
+        fillOpacity: fill.opacity ?? 0,
+        fillBlendMode: fill.blendMode || 'source-over',
+        fillColorMethod: fc.type || 'solid',
+        fillGradientStops: fcp['gradient-custom']?.stops || [],
+
+        // Vertices
+        showVertices: verts.visible === true,
+        vertexRadius: verts.radius ?? 2,
+        vertexColor: vcp.solid?.color || '#ffffff',
+        vertexOpacity: verts.opacity ?? 1,
+        vertexBlendMode: verts.blendMode || 'source-over',
+
+        // Background
+        backgroundColor: bg.color || '#000000',
+        backgroundOpacity: bg.opacity ?? 0,
+
+        // Rendering
+        autoScale: rendering.autoScale ?? false,
+        scaleLineWidth: rendering.scaleLineWidth !== false,
+        connectMode: rendering.connectMode || 'straight',
+        connectDetail: rendering.connectDetail ?? 20,
+        waveAmplitude: rendering.waveAmplitude ?? 10,
+        waveFrequency: rendering.waveFrequency ?? 5,
+        waveAlternateFlip: rendering.waveAlternateFlip ?? false,
+        splineTension: rendering.splineTension ?? 0,
+        splineBias: rendering.splineBias ?? 0,
+        splineContinuity: rendering.splineContinuity ?? 0,
+        splineAlpha: rendering.splineAlpha ?? 0.5,
+
+        // Base Curves (A/B specific)
+        showBaseCurveA: hybridState.baseCurveA?.visible ?? false,
+        baseCurveLineWidthA: hybridState.baseCurveA?.lineWidth ?? 1,
+        baseCurveColorA: hybridState.baseCurveA?.coloring?.params?.solid?.color || '#FF0000',
+        baseCurveOpacityA: hybridState.baseCurveA?.opacity ?? 0.3,
+        baseCurveBlendModeA: hybridState.baseCurveA?.blendMode || 'source-over',
+
+        showBaseCurveB: hybridState.baseCurveB?.visible ?? false,
+        baseCurveLineWidthB: hybridState.baseCurveB?.lineWidth ?? 1,
+        baseCurveColorB: hybridState.baseCurveB?.coloring?.params?.solid?.color || '#0000FF',
+        baseCurveOpacityB: hybridState.baseCurveB?.opacity ?? 0.3,
+        baseCurveBlendModeB: hybridState.baseCurveB?.blendMode || 'source-over',
+
+        // Source Underlays (A/B)
+        underlayColorA: hybridState.sourceA?.coloring?.params?.solid?.color || '#FF0000',
+        underlayColorMethodA: hybridState.sourceA?.coloring?.type || 'solid',
+        underlayLineWidthA: hybridState.sourceA?.lineWidth ?? 1,
+        underlayOpacityA: hybridState.sourceA?.opacity ?? 0.3,
+        underlayBlendModeA: hybridState.sourceA?.blendMode || 'source-over',
+        underlayAntiAliasA: true,
+
+        underlayColorB: hybridState.sourceB?.coloring?.params?.solid?.color || '#0000FF',
+        underlayColorMethodB: hybridState.sourceB?.coloring?.type || 'solid',
+        underlayLineWidthB: hybridState.sourceB?.lineWidth ?? 1,
+        underlayOpacityB: hybridState.sourceB?.opacity ?? 0.3,
+        underlayBlendModeB: hybridState.sourceB?.blendMode || 'source-over',
+        underlayAntiAliasB: true,
+
+        // Coset matching
+        matchCosetsByLCM: mix.matchCosetsByLCM ?? false,
+        cosetIndex: 0,
+        showAllCosets: false,
+        cosetCount: 1,
+        cosetDistribution: 'sequential'
+    };
+}
+
+// ─── Renderer ────────────────────────────────────────────
+
 export class CanvasRenderer {
 
     constructor(canvas) {
@@ -40,7 +286,6 @@ export class CanvasRenderer {
         return new SequencerClass();
     }
 
-    // Helper to calculate max extent (distance from origin) of multiple point arrays
     getMaxExtent(renderables) {
         let maxExtent = 0;
         let hasPoints = false;
@@ -61,34 +306,32 @@ export class CanvasRenderer {
     }
 
     setupCamera(maxExtent, autoScale) {
-        // Reset transform to identity first (clears DPR scaling)
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-        // Always center the origin using device pixels
         this.ctx.translate(Math.floor(this.width / 2), Math.floor(this.height / 2));
 
         let scale;
         if (autoScale && maxExtent !== null && maxExtent > 0) {
-            // Calculate scale to fit 10% padding (using device pixels)
             const canvasRadius = Math.min(this.width, this.height) / 2;
-            const targetRadius = canvasRadius * 0.9; // 10% padding
+            const targetRadius = canvasRadius * 0.9;
             scale = targetRadius / maxExtent;
-
             this.ctx.scale(scale, scale);
         } else {
-            // Standard fixed scale (legacy behavior)
-            // Previously: min(logical) / 500, with DPR scale applied.
-            // Now: min(physical) / 500 is equivalent.
             scale = Math.min(this.width, this.height) / 500;
         }
-
-
 
         return scale;
     }
 
-    renderPreview(roseParams, defaultColor = 'white') {
-        this.clear(); // Clears logic with identity
+    /**
+     * Render a single rosette preview.
+     * @param {object} roseState - v3.0 nested rosette state (e.g., state.rosetteA)
+     * @param {string} defaultColor
+     */
+    renderPreview(roseState, defaultColor = 'white') {
+        // Flatten the v3.0 state for rendering
+        const roseParams = flattenRoseParams(roseState);
+
+        this.clear();
         this.ctx.save();
 
         // Anti-aliasing
@@ -165,8 +408,8 @@ export class CanvasRenderer {
             renderables.push({
                 type: isDegenerate ? 'point' : 'rose',
                 points: points,
-                params: roseParams, // Pass full params for coloring logic
-                seed: seed, // Keep track of seed for coloring if needed
+                params: roseParams,
+                seed: seed,
                 isDegenerate: isDegenerate
             });
         });
@@ -174,8 +417,6 @@ export class CanvasRenderer {
 
         const maxExtent = this.getMaxExtent(renderables);
         const activeScale = this.setupCamera(maxExtent, roseParams.autoScale);
-
-        // Calculate Line Width Scale Factor
         const lineWidthScale = (roseParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
 
 
@@ -184,19 +425,16 @@ export class CanvasRenderer {
             if (item.type === 'baseCurve') {
                 this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
             } else if (item.type === 'point') {
-                // Draw degenerate point
                 const p0 = item.points[0];
                 const x0 = p0.x !== undefined ? p0.x : p0[0];
                 const y0 = p0.y !== undefined ? p0.y : p0[1];
                 this.ctx.fillStyle = item.params.color || defaultColor;
-                // Alpha handling for stacked points?
                 this.ctx.globalAlpha = (item.params.showAllCosets && k > 1) ? 0.8 : 1;
                 this.ctx.beginPath();
                 this.ctx.arc(x0, y0, 3 * lineWidthScale, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.globalAlpha = 1;
             } else {
-                // Draw Rose Polyline
                 this.drawRenderableRose(item.points, item.params, defaultColor, lineWidthScale);
             }
         });
@@ -212,24 +450,10 @@ export class CanvasRenderer {
                         roseParams.vertexColorMethod,
                         roseParams.vertexColor,
                         {
-                            colorEnd: roseParams.vertexColorEnd || roseParams.colorEnd, // Fallback? No, separate param
-                            // Actually defaults.js doesn't have vertexColorEnd/gradientType yet.
-                            // We should probably rely on the main ones OR add them?
-                            // User request implies "like line rendering". 
-                            // Let's check params passed to Renderer. 
-                            // roseParams has everything.
-                            // But usually vertex colors are separate.
-                            // If explicit vertex params exist, use them.
-                            // Otherwise, fallback to main params?
-                            // Let's assume for now we use the main params if specific vertex ones aren't there?
-                            // No, `LayerRenderingModule` for vertex already maps to `vertexColor`, `vertexOpacity`.
-                            // It does NOT map `colorEnd`, `gradientType` currently in defaults.js!
-                            // I need to add them to defaults.js if I want full control.
-                            // FOR NOW: I will use the main rosette gradient settings if vertex-specific ones are missing.
-                            colorEnd: roseParams.vertexColorEnd || roseParams.colorEnd,
-                            gradientType: roseParams.vertexGradientType || roseParams.gradientType,
-                            gradientPreset: roseParams.vertexGradientPreset || roseParams.gradientPreset,
-                            gradientStops: roseParams.vertexGradientStops || roseParams.gradientStops
+                            colorEnd: roseParams.vertexColorEnd,
+                            gradientType: roseParams.vertexGradientType,
+                            gradientPreset: roseParams.vertexGradientPreset,
+                            gradientStops: roseParams.vertexGradientStops
                         }
                     );
                 }
@@ -254,10 +478,8 @@ export class CanvasRenderer {
 
         this.ctx.globalCompositeOperation = blendMode;
 
-        // Apply scaling adjustment
         const effectiveWidth = width * lineWidthScale;
 
-        // Use segmented drawing if we need self-blending (opacity < 1 or blend mode active)
         if (opacity < 1 || blendMode !== 'source-over') {
             const colors = [color];
             this.polylineLayer.drawColoredSegments(points, colors, {
@@ -265,7 +487,6 @@ export class CanvasRenderer {
                 opacity: opacity
             });
         } else {
-            // Optimized single path for solid opaque lines
             this.polylineLayer.draw(points, {
                 color: color,
                 width: effectiveWidth,
@@ -277,13 +498,10 @@ export class CanvasRenderer {
     drawRenderableRose(points, params, defaultColor, lineWidthScale = 1) {
         if (!points || points.length === 0) return;
 
-        // Check for Advanced Coloring, Low Opacity, or Blend Modes (force segments for self-blending)
         const baseOpacity = params.opacity ?? 1;
         const blendMode = params.blendMode || 'source-over';
-        // Note: 'colorMethod' check assumes it exists in params. If undefined, treat as solid.
         const useSegments = (params.colorMethod && params.colorMethod !== 'solid') || baseOpacity < 1 || blendMode !== 'source-over';
 
-        // Apply Blend Mode
         this.ctx.globalCompositeOperation = blendMode;
 
         const effectiveWidth = (params.lineWidth || 2) * lineWidthScale;
@@ -292,9 +510,7 @@ export class CanvasRenderer {
         if (params.showFill !== false && params.fillOpacity > 0) {
             let fillStyle = params.fillColor || defaultColor;
 
-            // Gradient Generation for Fill
             if (params.fillColorMethod && params.fillColorMethod !== 'solid') {
-                // Calculate Max Radius from center (0,0)
                 let maxDistSq = 0;
                 points.forEach(p => {
                     const x = p.x !== undefined ? p.x : p[0];
@@ -304,7 +520,6 @@ export class CanvasRenderer {
                 });
                 const maxRadius = Math.sqrt(maxDistSq);
 
-                // Default to Radial Gradient from center
                 if (maxRadius > 0) {
                     const grad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
 
@@ -313,7 +528,6 @@ export class CanvasRenderer {
                             grad.addColorStop(stop.position, stop.color);
                         });
                     } else {
-                        // 2-point (fallback)
                         grad.addColorStop(0, params.fillColor || defaultColor);
                         grad.addColorStop(1, params.fillColorEnd || '#000000');
                     }
@@ -324,18 +538,8 @@ export class CanvasRenderer {
             this.polylineLayer.fill(points, {
                 color: fillStyle,
                 opacity: params.fillOpacity,
-                rule: 'evenodd' // Could be param later
+                rule: 'evenodd'
             });
-
-            // Check fillBlendMode? PolylineLayer doesn't handle composite op in fill() yet, 
-            // but we can set it here if we want? 
-            // The fill() method I wrote uses globalAlpha but not globalCompositeOperation.
-            // Renderer.js sets composite op at start of drawRenderableRose if blendMode is set.
-            // But that's for the STROKE.
-            // Params has `fillBlendMode`. We should probably respect it.
-            // However, drawRenderableRose sets `this.ctx.globalCompositeOperation = blendMode` (the stroke blend mode) at line 257.
-            // We are inserting fill BEFORE stroke.
-            // We should use parameters.fillBlendMode for the fill.
         }
 
         // Prepare Style Object with Connection Params
@@ -348,8 +552,6 @@ export class CanvasRenderer {
             waveFrequency: params.waveFrequency,
             waveAlternateFlip: params.waveAlternateFlip,
             splineTension: params.splineTension,
-            splineBias: params.splineBias,
-            splineContinuity: params.splineContinuity,
             splineBias: params.splineBias,
             splineContinuity: params.splineContinuity,
             splineAlpha: params.splineAlpha,
@@ -366,26 +568,34 @@ export class CanvasRenderer {
 
             this.polylineLayer.drawColoredSegments(points, colors, style);
         } else {
-            // High performance single polyline for opaque solid colors (no self-overlap)
             style.color = params.color || defaultColor;
             this.polylineLayer.draw(points, style);
         }
     }
 
+    /**
+     * Render the hybrid interpolation view.
+     * @param {object} state - full v3.0 application state
+     */
     renderInterpolation(state) {
+        // Flatten params for each section
+        const roseParamsA = flattenRoseParams(state.rosetteA);
+        const roseParamsB = flattenRoseParams(state.rosetteB);
+        const hybridParams = flattenHybridParams(state.hybrid);
+
         this.clear();
         this.ctx.save();
 
         // --- Background Rendering ---
-        if (state.hybrid && state.hybrid.backgroundOpacity > 0) {
+        if (hybridParams.backgroundOpacity > 0) {
             this.ctx.save();
-            this.ctx.globalAlpha = state.hybrid.backgroundOpacity;
-            this.ctx.fillStyle = state.hybrid.backgroundColor || '#000000';
+            this.ctx.globalAlpha = hybridParams.backgroundOpacity;
+            this.ctx.fillStyle = hybridParams.backgroundColor || '#000000';
             this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
             this.ctx.restore();
         }
 
-        const aa = state.rosetteA.antiAlias !== false;
+        const aa = roseParamsA.antiAlias !== false;
         this.ctx.imageSmoothingEnabled = aa;
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
 
@@ -401,8 +611,8 @@ export class CanvasRenderer {
         const renderables = [];
 
         // Helper to generate base curve points for collection
-        const collectBaseCurve = (params, hybridConfig, suffix) => {
-            const curve = this.createCurve(params);
+        const collectBaseCurve = (roseFlat, hybridFlat, suffix) => {
+            const curve = this.createCurve(roseFlat);
             if (!curve) return;
             const totalRad = curve.getRadiansToClosure();
             const sampleCount = Math.min(50000, Math.ceil(totalRad * 100));
@@ -414,110 +624,104 @@ export class CanvasRenderer {
                 type: 'baseCurve',
                 points: points,
                 options: {
-                    color: hybridConfig[`baseCurveColor${suffix}`],
-                    width: hybridConfig[`baseCurveLineWidth${suffix}`],
-                    opacity: hybridConfig[`baseCurveOpacity${suffix}`],
-                    blendMode: hybridConfig[`baseCurveBlendMode${suffix}`]
+                    color: hybridFlat[`baseCurveColor${suffix}`],
+                    width: hybridFlat[`baseCurveLineWidth${suffix}`],
+                    opacity: hybridFlat[`baseCurveOpacity${suffix}`],
+                    blendMode: hybridFlat[`baseCurveBlendMode${suffix}`]
                 }
             });
         };
 
-        if (state.hybrid.showBaseCurveA) collectBaseCurve(state.rosetteA, state.hybrid, 'A');
-        if (state.hybrid.showBaseCurveB) collectBaseCurve(state.rosetteB, state.hybrid, 'B');
+        if (hybridParams.showBaseCurveA) collectBaseCurve(roseParamsA, hybridParams, 'A');
+        if (hybridParams.showBaseCurveB) collectBaseCurve(roseParamsB, hybridParams, 'B');
 
         // Underlays (Base Chordal Rendering)
-        const collectUnderlay = (params, options) => {
-            const curve = this.createCurve(params);
-            const sequencer = this.getSequencer(params.sequencerType);
+        const collectUnderlay = (roseFlat, options) => {
+            const curve = this.createCurve(roseFlat);
+            const sequencer = this.getSequencer(roseFlat.sequencerType);
             let k;
             if (sequencer.getCosets) {
-                const cosets = sequencer.getCosets(params.totalDivs, params);
-                k = cosets ? cosets.length : gcd(params.step, params.totalDivs);
+                const cosets = sequencer.getCosets(roseFlat.totalDivs, roseFlat);
+                k = cosets ? cosets.length : gcd(roseFlat.step, roseFlat.totalDivs);
             } else {
-                k = gcd(params.step, params.totalDivs);
+                k = gcd(roseFlat.step, roseFlat.totalDivs);
             }
-            const indices = this.getDrawIndices(k, params);
+            const indices = this.getDrawIndices(k, roseFlat);
             indices.forEach(idx => {
                 const sub = (sequencer.getCosets && k > 1)
-                    ? sequencer.getCosets(params.totalDivs, params)[idx % k]
+                    ? sequencer.getCosets(roseFlat.totalDivs, roseFlat)[idx % k]
                     : idx;
-                const points = generateChordalPolyline(curve, sequencer, params.totalDivs, sub, params);
+                const points = generateChordalPolyline(curve, sequencer, roseFlat.totalDivs, sub, roseFlat);
 
                 renderables.push({
                     type: 'underlay',
                     points: points,
-                    options: options, // Pass full options (color, width, opacity, blend, method)
-                    params: params,    // Pass source params for potential sequence coloring reference if needed
+                    options: options,
+                    params: roseFlat,
                     seed: sub
                 });
             });
         };
 
-        if (state.hybrid.showRoseA) {
-            collectUnderlay(state.rosetteA, {
-                color: state.hybrid.underlayColorA || state.rosetteA.color,
-                colorMethod: state.hybrid.underlayColorMethodA || 'solid', // Default to source or solid? Source panel has method... let's default to solid override unless specified
-                // Actually, if we want it to look like the source, we might default to source params?
-                // But the UI has its own controls now. If they are unset, what happens?
-                // They default to defaults in LayerRenderingModule.
-                // In Renderer, if key is missing, we use fallback.
-
-                width: state.hybrid.underlayLineWidthA,
-                opacity: state.hybrid.underlayOpacityA,
-                blendMode: state.hybrid.underlayBlendModeA,
-                antiAlias: state.hybrid.underlayAntiAliasA
+        if (hybridParams.showRoseA) {
+            collectUnderlay(roseParamsA, {
+                color: hybridParams.underlayColorA || roseParamsA.color,
+                colorMethod: hybridParams.underlayColorMethodA || 'solid',
+                width: hybridParams.underlayLineWidthA,
+                opacity: hybridParams.underlayOpacityA,
+                blendMode: hybridParams.underlayBlendModeA,
+                antiAlias: hybridParams.underlayAntiAliasA
             });
         }
-        if (state.hybrid.showRoseB) {
-            collectUnderlay(state.rosetteB, {
-                color: state.hybrid.underlayColorB || state.rosetteB.color,
-                colorMethod: state.hybrid.underlayColorMethodB || 'solid',
-                width: state.hybrid.underlayLineWidthB,
-                opacity: state.hybrid.underlayOpacityB,
-                blendMode: state.hybrid.underlayBlendModeB,
-                antiAlias: state.hybrid.underlayAntiAliasB
+        if (hybridParams.showRoseB) {
+            collectUnderlay(roseParamsB, {
+                color: hybridParams.underlayColorB || roseParamsB.color,
+                colorMethod: hybridParams.underlayColorMethodB || 'solid',
+                width: hybridParams.underlayLineWidthB,
+                opacity: hybridParams.underlayOpacityB,
+                blendMode: hybridParams.underlayBlendModeB,
+                antiAlias: hybridParams.underlayAntiAliasB
             });
         }
 
 
         // Interpolated Curve
-        const curveA = this.createCurve(state.rosetteA);
-        const curveB = this.createCurve(state.rosetteB);
-        const sequencerA = this.getSequencer(state.rosetteA.sequencerType);
-        const sequencerB = this.getSequencer(state.rosetteB.sequencerType);
+        const curveA = this.createCurve(roseParamsA);
+        const curveB = this.createCurve(roseParamsB);
+        const sequencerA = this.getSequencer(roseParamsA.sequencerType);
+        const sequencerB = this.getSequencer(roseParamsB.sequencerType);
 
         let kA, cosetsA = null;
         if (sequencerA.getCosets) {
-            cosetsA = sequencerA.getCosets(state.rosetteA.totalDivs, state.rosetteA);
-            kA = cosetsA ? cosetsA.length : gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            cosetsA = sequencerA.getCosets(roseParamsA.totalDivs, roseParamsA);
+            kA = cosetsA ? cosetsA.length : gcd(roseParamsA.step, roseParamsA.totalDivs);
         } else {
-            kA = gcd(state.rosetteA.step, state.rosetteA.totalDivs);
+            kA = gcd(roseParamsA.step, roseParamsA.totalDivs);
         }
         let kB, cosetsB = null;
         if (sequencerB.getCosets) {
-            cosetsB = sequencerB.getCosets(state.rosetteB.totalDivs, state.rosetteB);
-            kB = cosetsB ? cosetsB.length : gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+            cosetsB = sequencerB.getCosets(roseParamsB.totalDivs, roseParamsB);
+            kB = cosetsB ? cosetsB.length : gcd(roseParamsB.step, roseParamsB.totalDivs);
         } else {
-            kB = gcd(state.rosetteB.step, state.rosetteB.totalDivs);
+            kB = gcd(roseParamsB.step, roseParamsB.totalDivs);
         }
 
-        const useLCM = state.hybrid.matchCosetsByLCM;
+        const useLCM = hybridParams.matchCosetsByLCM;
         const ringsLCM = lcm(kA, kB);
         const isExactMatch = (kA === kB && kA > 1);
         const isLCMMatch = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
 
         const collectHybrid = (subA, subB) => {
-            const pointsA = generateChordalPolyline(curveA, sequencerA, state.rosetteA.totalDivs, subA, state.rosetteA);
-            const pointsB = generateChordalPolyline(curveB, sequencerB, state.rosetteB.totalDivs, subB, state.rosetteB);
+            const pointsA = generateChordalPolyline(curveA, sequencerA, roseParamsA.totalDivs, subA, roseParamsA);
+            const pointsB = generateChordalPolyline(curveB, sequencerB, roseParamsB.totalDivs, subB, roseParamsB);
 
-            // Interpolation Logic
             const segsA = pointsA.length > 0 ? pointsA.length - 1 : 0;
             const segsB = pointsB.length > 0 ? pointsB.length - 1 : 0;
             let finalPtsA = pointsA, finalPtsB = pointsB;
 
             if (segsA > 0 && segsB > 0 && segsA !== segsB) {
                 const targetSegs = lcm(segsA, segsB);
-                const threshold = state.hybrid.approxResampleThreshold ?? 20000;
+                const threshold = hybridParams.approxResampleThreshold ?? 20000;
                 const useApprox = (threshold === 0) || (targetSegs > threshold);
                 if (useApprox) {
                     const cnt = (threshold === 0) ? 20000 : threshold;
@@ -529,7 +733,7 @@ export class CanvasRenderer {
                 }
             }
 
-            const weight = state.hybrid.weight;
+            const weight = hybridParams.weight;
             const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
 
             renderables.push({
@@ -540,60 +744,50 @@ export class CanvasRenderer {
 
         if (isExactMatch || isLCMMatch) {
             const targetK = isExactMatch ? kA : ringsLCM;
-            const indices = this.getDrawIndices(targetK, state.hybrid);
+            const indices = this.getDrawIndices(targetK, hybridParams);
             indices.forEach(idx => {
                 const subA = (cosetsA) ? cosetsA[idx % kA] : idx % kA;
                 const subB = (cosetsB) ? cosetsB[idx % kB] : idx % kB;
                 collectHybrid(subA, subB);
             });
         } else {
-            const subA = (cosetsA && kA > 1) ? cosetsA[(state.rosetteA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? state.rosetteA.cosetIndex : 0);
-            const subB = (cosetsB && kB > 1) ? cosetsB[(state.rosetteB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? state.rosetteB.cosetIndex : 0);
+            const subA = (cosetsA && kA > 1) ? cosetsA[(roseParamsA.cosetIndex || 0) % cosetsA.length] : ((kA > 1) ? roseParamsA.cosetIndex : 0);
+            const subB = (cosetsB && kB > 1) ? cosetsB[(roseParamsB.cosetIndex || 0) % cosetsB.length] : ((kB > 1) ? roseParamsB.cosetIndex : 0);
             collectHybrid(subA, subB);
         }
 
         // --- 2. Camera Phase ---
         const maxExtent = this.getMaxExtent(renderables);
-        const activeScale = this.setupCamera(maxExtent, state.hybrid.autoScale);
-
-        // Calculate Line Width Scale Factor
-        const lineWidthScale = (state.hybrid.scaleLineWidth !== false) ? 1 : (1 / activeScale);
+        const activeScale = this.setupCamera(maxExtent, hybridParams.autoScale);
+        const lineWidthScale = (hybridParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
 
         // --- 3. Draw Phase ---
         renderables.forEach(item => {
             if (item.type === 'baseCurve') {
                 this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
             } else if (item.type === 'underlay') {
-                // Use full rose rendering logic
-                // Construct a params object that mimics what drawRenderableRose expects
                 const drawParams = {
                     color: item.options.color,
                     colorMethod: item.options.colorMethod,
-                    lineWidth: item.options.width, // Map 'width' option to 'lineWidth' param
+                    lineWidth: item.options.width,
                     opacity: item.options.opacity,
                     blendMode: item.options.blendMode,
                     antiAlias: item.options.antiAlias
                 };
-                // Fallback for colorMethod='sequence' might need seed
-                if (item.options.colorMethod === 'sequence') {
-                    // We might need to handle this if we want sequence coloring on underlays
-                }
-
                 this.drawRenderableRose(item.points, drawParams, 'white', lineWidthScale);
             } else if (item.type === 'hybrid') {
-                // Hybrid styling
-                this.drawRenderableRose(item.points, state.hybrid, state.hybrid.color || 'white', lineWidthScale);
+                this.drawRenderableRose(item.points, hybridParams, hybridParams.color || 'white', lineWidthScale);
             }
         });
 
         // Hybrid Vertices
-        if (state.hybrid.showVertices) {
-            this.ctx.globalCompositeOperation = state.hybrid.vertexBlendMode || 'source-over';
+        if (hybridParams.showVertices) {
+            this.ctx.globalCompositeOperation = hybridParams.vertexBlendMode || 'source-over';
             renderables.filter(r => r.type === 'hybrid').forEach(item => {
                 this.polylineLayer.drawVertices(item.points, {
-                    color: state.hybrid.vertexColor,
-                    radius: state.hybrid.vertexRadius,
-                    opacity: state.hybrid.vertexOpacity
+                    color: hybridParams.vertexColor,
+                    radius: hybridParams.vertexRadius,
+                    opacity: hybridParams.vertexOpacity
                 });
             });
             this.ctx.globalCompositeOperation = 'source-over';
@@ -603,15 +797,8 @@ export class CanvasRenderer {
     }
 
     createCurve(params) {
-        // Look up class in registry using curveType (default to Rhodonea if missing)
         const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
 
-        // Pass the entire params object. 
-        // RhodoneaCurve currently expects specific args, but we can conform to "constructor(params)" pattern 
-        // OR map them here. For now, let's keep the mapping for Rhodonea for safety if constructor didn't change,
-        // but CircleCurve handles object. Ideally all curves should take a config object.
-
-        // Check if it's Rhodonea to maintain legacy arg order (if we didn't refactor Rhodonea ctor)
         if (params.curveType === 'Rhodonea' || !params.curveType) {
             return new CurveClass(
                 params.n,
@@ -622,12 +809,10 @@ export class CanvasRenderer {
             );
         }
 
-        // For Circle (and future others), pass the params object directly? 
-        // CircleCurve checks for object.
         return new CurveClass(params);
     }
+
     getDrawIndices(k, params) {
-        // If "Show All" toggle is active, override count to k
         const count = params.showAllCosets ? k : Math.min(params.cosetCount || 1, k);
         const dist = params.cosetDistribution || 'sequential';
         const startOffset = params.cosetIndex || 0;

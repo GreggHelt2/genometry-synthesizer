@@ -8,12 +8,11 @@ import { AppearanceSection } from './chordal_rosette/AppearanceSection.js';
 import { CosetVizSection } from './chordal_rosette/CosetVizSection.js';
 
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
-
+import { flattenRoseParams } from '../../engine/state/stateAdapters.js';
 
 import { Panel } from './Panel.js';
 import { createElement, $id } from '../utils/dom.js';
 import { store } from '../../engine/state/Store.js';
-import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd } from '../../engine/math/MathOps.js';
 
@@ -21,7 +20,6 @@ export class ChordalRosettePanel extends Panel {
     constructor(id, title, roseId) {
         super(id, title);
         this.roseId = roseId; // 'rosetteA' or 'rosetteB'
-        this.actionType = roseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B;
 
         // UI State Tracking
         this.uiState = {
@@ -143,248 +141,9 @@ export class ChordalRosettePanel extends Panel {
 
 
 
-    createCurveTypeSelector(parent) {
-        const options = Object.keys(CurveRegistry);
-
-        this.curveTypeSelect = new ParamSelect({
-            key: 'curveType',
-            label: 'Curve Type',
-            options: options,
-            value: 'Rhodonea', // Default
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { curveType: val }
-                });
-            }
-        });
-
-        // Insert at top? parent is Core Accordion
-        // Accordion append adds to content
-        parent.append(this.curveTypeSelect.getElement());
-    }
-
-    renderCoreParams(curveType, params) {
-        // Cleanup old controls
-        if (this.paramControls) {
-            Object.values(this.paramControls).forEach(wrapper => {
-                if (wrapper.instance && wrapper.instance.dispose) {
-                    wrapper.instance.dispose();
-                }
-            });
-        }
-
-        this.dynamicParamsContainer.innerHTML = '';
-        this.paramControls = {};
-
-        const CurveClass = CurveRegistry[curveType] || CurveRegistry['Rhodonea'];
-        const schema = CurveClass.getParamsSchema();
-
-        schema.forEach(item => {
-            const control = this.createSlider(item.key, item.min, item.max, item.step, item.label);
-            this.paramControls[item.key] = control;
-            this.dynamicParamsContainer.appendChild(control.container);
-
-            const val = params[item.key] ?? item.default;
-            this.updateControl(control, val);
-        });
-
-        // Align labels in this container
-        // Use double RAF to ensure layout is fully stable
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                this.alignLabels(this.dynamicParamsContainer);
-            });
-        });
-    }
-
-    createSequencerTypeSelector(containerAccordion) {
-        const options = Object.keys(SequencerRegistry);
-
-        this.sequencerSelector = new ParamSelect({
-            key: 'sequencerType',
-            label: 'Sequence Generator',
-            options: options,
-            value: 'Cyclic Additive Group Modulo N', // Default
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { sequencerType: val }
-                });
-            }
-        });
-
-        const container = this.sequencerSelector.getElement();
-
-        // Insert at top of accordion
-        if (containerAccordion.content.firstChild) {
-            containerAccordion.content.insertBefore(container, containerAccordion.content.firstChild);
-        } else {
-            containerAccordion.append(container);
-        }
-    }
-
-    updateSequencerParams(state) {
-        // Clear existing dynamic params
-        if (this.sequencerControls) {
-            Object.values(this.sequencerControls).forEach(wrapper => {
-                if (wrapper.instance && wrapper.instance.dispose) {
-                    wrapper.instance.dispose();
-                }
-            });
-        }
-        this.sequencerParamsContainer.innerHTML = '';
-        this.sequencerControls = {};
-
-        const sequencerType = state[this.roseId].sequencerType || 'Cyclic Additive Group Modulo N';
-        const SequencerClass = SequencerRegistry[sequencerType];
-
-        if (!SequencerClass) return;
-
-        // Instantiate temporarily to get schema (ideally schema is static, but pattern is instance method for now)
-        const sequencerInstance = new SequencerClass();
-        const schema = sequencerInstance.getParamsSchema();
-
-        schema.forEach(param => {
-            if (param.type === 'slider') {
-                // Use existing createSlider helper
-                // Map the param key to a top-level state key (assuming flat state for now as per plan)
-                // Note: sliders expect 'stateKey' to dispatch payload { [key]: val }
-                const control = this.createSlider(param.key, param.min, param.max, param.step, param.label);
-
-                // Manually set value since createSlider inits to 0 and relies on updateUI loop
-                // But updateUI loop might not have found this control yet if we just created it.
-                // We will let the main updateUI loop handle value setting.
-
-                this.sequencerControls[param.key] = control;
-                this.sequencerParamsContainer.appendChild(control.container);
-            }
-        });
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                this.alignLabels(this.sequencerParamsContainer);
-            });
-        });
-    }
-
-    createCheckbox(key, label) {
-        const paramToggle = new ParamToggle({
-            key,
-            label,
-            value: false, // Default, updated by updateUI
-            onChange: (val) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { [key]: val }
-                });
-            },
-            onLinkToggle: (isActive) => {
-                const myKey = `${this.roseId}.${key}`;
-                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-                const otherKey = `${otherRoseId}.${key}`;
-
-                import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        paramToggle.setLinkActive(linked);
-                    }
-                });
-            }
-        });
-
-        // Initialize Link State
-        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = `${this.roseId}.${key}`;
-            if (linkManager.isLinked(myKey)) {
-                paramToggle.setLinkActive(true);
-            }
-        });
-
-        return {
-            container: paramToggle.getElement(),
-            instance: paramToggle
-        };
-    }
-
-    createColorInput(key, label) {
-        const container = createElement('div', 'flex items-center justify-between mb-2 p-2');
-        const labelEl = createElement('label', 'text-sm text-gray-300', { textContent: label });
-        const input = createElement('input', 'w-8 h-8 rounded cursor-pointer border-0', { type: 'color' });
-
-        input.addEventListener('input', (e) => {
-            store.dispatch({
-                type: this.actionType,
-                payload: { [key]: e.target.value }
-            });
-        });
-
-        container.appendChild(labelEl);
-        container.appendChild(input);
-        return { container, input };
-    }
-
-    createSlider(key, min, max, step, label) {
-        // Use ParamNumber
-        const paramGui = new ParamNumber({
-            key,
-            label,
-            min,
-            max,
-            step,
-            value: 0, // Default, will be updated by updateUI
-            onChange: (val, meta) => {
-                store.dispatch({
-                    type: this.actionType,
-                    payload: { [key]: val },
-                    meta: meta
-                });
-            },
-            onLinkToggle: (isActive) => {
-                const myKey = `${this.roseId}.${key}`;
-                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-                const otherKey = `${otherRoseId}.${key}`;
-
-                // Toggle link in manager
-                import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        paramGui.setLinkActive(linked);
-                    }
-                });
-            }
-        });
-
-        // Initialize Link State
-        // We need to check if this param is ALREADY linked (e.g. from persistence)
-        // Since LinkManager might not be loaded yet if we rely on the constructor import,
-        // we'll do a quick import here or rely on the fact that by the time this runs, 
-        // main.js has likely initialized things. 
-        // Ideally, we import linkManager statically at the top of this file to avoid this async mess.
-        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = `${this.roseId}.${key}`;
-            if (linkManager.isLinked(myKey)) {
-                paramGui.setLinkActive(true);
-            }
-        });
-
-        // Track for Animation Persistence
-        // Use central register method now
-        this.registerParam(paramGui);
-
-        // Hook dispose to cleanup - handled by registerParam now
-        // But wait, createSlider returns { instance: paramGui }
-        // The cleanup wrapper is inside registerParam.
-        // We don't need to manually add to set or hook dispose here if we use registerParam.
-        // However, we need to be careful not to double-wrap if registerParam already wraps.
-        // Let's rely on registerParam completely.
-
-        return {
-            container: paramGui.getElement(),
-            instance: paramGui,
-            input: paramGui.slider
-        };
-    }
+    // Legacy createCurveTypeSelector, renderCoreParams, createSequencerTypeSelector,
+    // updateSequencerParams, createCheckbox, createColorInput, createSlider
+    // have been removed — all sub-sections now dispatch via stateAdapters.dispatchDeep().
 
     getAnimationState() {
         const state = {};
@@ -421,7 +180,11 @@ export class ChordalRosettePanel extends Panel {
     }
 
     updateUI(state) {
-        const params = state[this.roseId];
+        const roseState = state[this.roseId];
+        if (!roseState) return;
+
+        // Flatten nested v3.0 state → flat params for sub-sections
+        const params = flattenRoseParams(roseState);
 
         // Sync visuals if subscribed
         this.updateLinkVisuals();

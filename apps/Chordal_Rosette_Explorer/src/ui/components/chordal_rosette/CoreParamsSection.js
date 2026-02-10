@@ -2,7 +2,7 @@ import { Accordion } from '../Accordion.js';
 import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
-import { store } from '../../../engine/state/Store.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class CoreParamsSection {
     /**
@@ -48,10 +48,7 @@ export class CoreParamsSection {
             options: curveOptions,
             value: 'Rhodonea',
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { curveType: val }
-                });
+                dispatchDeep('curveType', val, this.roseId);
             }
         });
         this.accordion.append(this.curveTypeSelect.getElement());
@@ -72,7 +69,6 @@ export class CoreParamsSection {
         this.dynamicContainer.innerHTML = '';
 
         // Remove old dynamic controls from this.controls to avoid stale updates
-        // Keep curveType as it's static
         const staticKeys = ['curveType'];
         Object.keys(this.controls).forEach(key => {
             if (!staticKeys.includes(key)) {
@@ -114,15 +110,12 @@ export class CoreParamsSection {
             step: step,
             value: min, // initial, will be updated
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, this.roseId);
             },
             onLinkToggle: (isActive) => {
-                const myKey = `${this.roseId}.${key}`;
+                const myKey = getLinkKey(key, this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-                const otherKey = `${otherRoseId}.${key}`;
+                const otherKey = getLinkKey(key, otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
                     const linked = linkManager.toggleLink(myKey, otherKey);
@@ -136,7 +129,7 @@ export class CoreParamsSection {
 
         // Initialize Link State
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = `${this.roseId}.${key}`;
+            const myKey = getLinkKey(key, this.roseId);
             if (linkManager.isLinked(myKey)) {
                 paramGui.setLinkActive(true);
             }
@@ -158,7 +151,7 @@ export class CoreParamsSection {
             Object.keys(this.controls).forEach(key => {
                 const control = this.controls[key];
                 if (control && typeof control.setLinkActive === 'function') {
-                    const fullKey = `${this.roseId}.${key}`;
+                    const fullKey = getLinkKey(key, this.roseId);
                     const isLinked = linkManager.isLinked(fullKey);
                     control.setLinkActive(isLinked);
                 }

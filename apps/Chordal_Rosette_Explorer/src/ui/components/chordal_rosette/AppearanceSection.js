@@ -4,8 +4,8 @@ import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
-import { store } from '../../../engine/state/Store.js';
 import { createElement } from '../../utils/dom.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class AppearanceSection {
     /**
@@ -18,7 +18,6 @@ export class AppearanceSection {
 
         // Container for multiple accordions
         this.element = document.createElement('div');
-        // Removed 'flex flex-col gap-1' to allow standard margin collapse (matching Hybrid panel)
         this.element.className = '';
 
         this.modules = {};
@@ -41,7 +40,7 @@ export class AppearanceSection {
         this.chordalModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType,
+            null, // actionType no longer used
             {}, // Default keys
             {
                 showConnectMode: true
@@ -64,25 +63,19 @@ export class AppearanceSection {
         this.vertexModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType,
+            null, // actionType no longer used
             {
-                showVertices: 'showVertices', // Mapped below in options.showToggle
-                // size mapped below
+                showVertices: 'showVertices',
                 size: 'vertexRadius',
                 color: 'vertexColor',
                 opacity: 'vertexOpacity',
                 blendMode: 'vertexBlendMode',
-                // Vertex renderer doesn't use colorMethod yet, but module has it. 
-                // We'll leave it mapped to something safe or unmapped?
-                // If unmapped, keys.colorMethod will be 'colorMethod' (default).
-                // Rosette param 'colorMethod' is used for lines.
-                // We shouldn't share the same key for vertices!
                 colorMethod: 'vertexColorMethod',
                 gradientType: 'vertexGradientType',
                 gradientPreset: 'vertexGradientPreset',
                 gradientStops: 'vertexGradientStops',
                 colorEnd: 'vertexColorEnd',
-                antiAlias: 'vertexAntiAlias' // Not standard, but harmless
+                antiAlias: 'vertexAntiAlias'
             },
             {
                 showToggle: { key: 'showVertices', label: 'Show Vertices', value: false },
@@ -92,24 +85,17 @@ export class AppearanceSection {
         this.vertexAccordion.append(this.vertexModule.container);
 
 
-        this.vertexAccordion.append(this.vertexModule.container);
-
-
-        // 3. Base Curve Rendering Accordion (New for V3)
+        // 3. Base Curve Rendering Accordion
         this.baseCurveAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
             if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
         }, `${this.roseId}-base-viz`);
         this.register(this.baseCurveAccordion, `${this.roseId}-base-viz`);
         this.element.appendChild(this.baseCurveAccordion.element);
 
-        // 3a. Show Toggle (Managed by Module now)
-        // this.baseCurveControls was removed in favor of module.
-
-        // 3b. Rendering Controls Module (Strict Parity with Chordal Viz)
         this.baseCurveModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType,
+            null, // actionType no longer used
             {
                 colorMethod: 'baseCurveColorMethod',
                 gradientType: 'baseCurveGradientType',
@@ -139,7 +125,7 @@ export class AppearanceSection {
         this.fillModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType,
+            null, // actionType no longer used
             {
                 colorMethod: 'fillColorMethod',
                 gradientType: 'fillGradientType',
@@ -151,13 +137,8 @@ export class AppearanceSection {
                 opacity: 'fillOpacity'
             },
             {
-                hideSize: true, // Fill has no thickness
-                showToggle: { key: 'showFill', label: 'Show Fill', value: true } // Logic: Opacity > 0 is visibility
-                // Actually, defaults.js didn't have a 'showFill' boolean. 
-                // The implementation plan was to rely on Opacity > 0?
-                // But users like toggles. 
-                // Let's stick to the plan of relying on Opacity default 0, but provide the controls.
-                // If I omit showToggle, it won't show the toggle.
+                hideSize: true,
+                showToggle: { key: 'showFill', label: 'Show Fill', value: true }
             }
         );
         this.fillAccordion.append(this.fillModule.container);
@@ -176,15 +157,15 @@ export class AppearanceSection {
         this.generalModule = new GlobalRenderingModule(
             this.orchestrator,
             this.roseId,
-            this.orchestrator.actionType
+            null // actionType no longer used
         );
         this.generalAccordion.append(this.generalModule.container);
     }
 
     handleLinkToggle(key, isActive, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = `${otherRoseId}.${key}`;
+        const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             const linked = linkManager.toggleLink(myKey, otherKey);
@@ -195,7 +176,7 @@ export class AppearanceSection {
     }
 
     initLinkState(key, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             if (linkManager.isLinked(myKey)) {
                 control.setLinkActive(true);
@@ -218,16 +199,9 @@ export class AppearanceSection {
             this.fillModule.updateLinkVisuals();
         }
 
-        // Base Curve Toggle (Now in module)
-        // Module handles its own link visuals if updateLinkVisuals calls it.
-        // We just need to ensure baseCurveModule.updateLinkVisuals() is called, which it is below.
-
-        // Update own controls
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (this.generalModule && this.generalModule.updateLinkVisuals) {
-                this.generalModule.updateLinkVisuals();
-            }
-        });
+        if (this.generalModule && this.generalModule.updateLinkVisuals) {
+            this.generalModule.updateLinkVisuals();
+        }
     }
 
     register(accordion, id) {
@@ -242,8 +216,6 @@ export class AppearanceSection {
         if (this.baseCurveModule) this.baseCurveModule.update(params);
         if (this.fillModule) this.fillModule.update(params);
 
-        // Base Curve Toggle handled by module update now
-
         if (this.generalModule) this.generalModule.update(params);
     }
 
@@ -256,10 +228,7 @@ export class AppearanceSection {
             step: step,
             value: 0,
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, this.roseId);
             },
             onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, control)
         });
@@ -278,21 +247,14 @@ export class AppearanceSection {
             label: label,
             value: '#000000',
             onChange: (val) => {
-                store.dispatch({
-                    type: this.orchestrator.actionType,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, this.roseId);
             }
         });
 
-        // ParamColor doesn't support linking natively in this codebase version usually,
-        // but let's check if we want to add it. For now, just basic support.
-
         return {
             container: control.getElement(),
-            input: control.input, // ParamColor exposes input? standard is .input or we need to check
+            input: control.input,
             instance: control
         };
     }
 }
-

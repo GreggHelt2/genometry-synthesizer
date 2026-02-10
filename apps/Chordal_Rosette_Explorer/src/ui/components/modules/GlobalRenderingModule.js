@@ -2,13 +2,12 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamToggle } from '../ParamToggle.js';
-import { store } from '../../../engine/state/Store.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class GlobalRenderingModule {
     constructor(orchestrator, roseId, actionType, keys = {}) {
         this.orchestrator = orchestrator;
         this.roseId = roseId;
-        this.actionType = actionType;
         this.keys = Object.assign({
             autoScale: 'autoScale',
             scaleLineWidth: 'scaleLineWidth',
@@ -84,9 +83,9 @@ export class GlobalRenderingModule {
     }
 
     handleLinkToggle(key, isActive, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = `${otherRoseId}.${key}`;
+        const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             const linked = linkManager.toggleLink(myKey, otherKey);
@@ -97,7 +96,7 @@ export class GlobalRenderingModule {
     }
 
     initLinkState(key, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             if (linkManager.isLinked(myKey)) {
                 control.setLinkActive(true);
@@ -115,7 +114,7 @@ export class GlobalRenderingModule {
                 if (instance && typeof instance.setLinkActive === 'function') {
                     const paramKey = this.keys[k];
                     if (paramKey) {
-                        const fullKey = `${this.roseId}.${paramKey}`;
+                        const fullKey = getLinkKey(paramKey, this.roseId);
                         instance.setLinkActive(linkManager.isLinked(fullKey));
                     }
                 }
@@ -124,10 +123,7 @@ export class GlobalRenderingModule {
     }
 
     dispatch(key, val) {
-        store.dispatch({
-            type: this.actionType,
-            payload: { [key]: val }
-        });
+        dispatchDeep(key, val, this.roseId);
     }
 
     update(params) {

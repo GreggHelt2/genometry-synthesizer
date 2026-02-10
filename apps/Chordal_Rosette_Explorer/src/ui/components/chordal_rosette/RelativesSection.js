@@ -2,10 +2,11 @@ import { Accordion } from '../Accordion.js';
 import { createElement } from '../../utils/dom.js';
 import { RelativesFinder } from '../../../engine/math/RelativesFinder.js';
 import { store } from '../../../engine/state/Store.js';
+import { dispatchDeep, flattenRoseParams } from '../../../engine/state/stateAdapters.js';
 
 export class RelativesSection {
     /**
-     * @param {Object} orchestrator - The parent panel (must provide .roseId, .actionType, .registerAccordion)
+     * @param {Object} orchestrator - The parent panel (must provide .roseId, .registerAccordion)
      */
     constructor(orchestrator) {
         this.orchestrator = orchestrator;
@@ -73,21 +74,16 @@ export class RelativesSection {
      */
     handleRelativesNav(direction) {
         const type = this.relativesTypeSelect.value;
-        const state = store.getState()[this.roseId];
+        const roseState = store.getState()[this.roseId];
+        const params = flattenRoseParams(roseState);
 
-        // 'Generator' slider/param usually maps to 'step' in the data model
-        const currentGen = state.step;
-        const totalDivs = state.totalDivs; // Modulo
+        const currentGen = params.step;
+        const totalDivs = params.totalDivs;
 
-        // Relatives Finder logic
-        // Note: RelativesFinder import path needs to be correct relative to this file
         const newVal = RelativesFinder.findRelative(currentGen, type, direction, totalDivs);
 
         if (newVal !== null && newVal !== currentGen) {
-            store.dispatch({
-                type: this.orchestrator.actionType,
-                payload: { step: newVal }
-            });
+            dispatchDeep('step', newVal, this.roseId);
         }
     }
 

@@ -3,21 +3,20 @@ import { ParamSelect } from '../ParamSelect.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamGradient } from '../ParamGradient.js';
-import { store } from '../../../engine/state/Store.js';
+import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 
 export class LayerRenderingModule {
     /**
      * Creates standard rendering controls: Color Method, Color, Blend Mode, Opacity, Size, Anti-Alias
      * @param {Object} orchestrator - Parent panel implementation
      * @param {string} roseId - ID prefix for persistence keys if needed
-     * @param {string} actionType - Redux action type to dispatch
-     * @param {Object} keys - Map of internal param keys to state keys
+     * @param {string} actionType - (LEGACY, unused) Redux action type
+     * @param {Object} keys - Map of internal param keys to flat state keys
      * @param {Object} options - Configuration options { showToggle: { key, label, value? }, sizeLabel: string }
      */
     constructor(orchestrator, roseId, actionType, keys = {}, options = {}) {
         this.orchestrator = orchestrator;
         this.roseId = roseId;
-        this.actionType = actionType;
         this.options = options;
         this.keys = Object.assign({
             colorMethod: 'colorMethod',
@@ -154,7 +153,7 @@ export class LayerRenderingModule {
             { value: '2-point', label: '2-Point Interpolation' },
             { value: 'cyclic', label: 'Cyclic (Start-End-Start)' },
             { value: 'custom', label: 'Custom' },
-            { value: 'preset', label: 'Preset (Rainbow)' } // Placeholder
+            { value: 'preset', label: 'Preset (Rainbow)' }
         ];
 
         this.controls.gradientType = new ParamSelect({
@@ -169,7 +168,7 @@ export class LayerRenderingModule {
         // 3. Start Color
         this.controls.color = new ParamColor({
             key: this.keys.color,
-            label: 'Color', // Label updated dynamically
+            label: 'Color',
             value: '#ffffff',
             onChange: (val) => this.dispatch(this.keys.color, val)
         });
@@ -253,44 +252,24 @@ export class LayerRenderingModule {
     updateVisibility(method) {
         const isGradient = method !== 'solid';
 
-        // Toggle Gradient Controls
         this.controls.gradientType.getElement().style.display = isGradient ? 'flex' : 'none';
 
-        // Get current gradient type to decide between 2-point controls and custom
-        // We need access to current state? Or pass it in?
-        // updateVisibility is usually called with just method, but we need type too.
-        // We can check the control value if it exists or define a separate update method.
-        // Let's grab value from control if possible or default to 2-point.
         const type = this.controls.gradientType.lastValue || '2-point';
-
         const isCustom = type === 'custom';
 
-        // 2-Point / Cyclic Controls
         this.controls.colorEnd.getElement().style.display = (isGradient && !isCustom) ? 'flex' : 'none';
 
-        // Custom Controls
         if (this.controls.gradientStops) {
             this.controls.gradientStops.getElement().style.display = (isGradient && isCustom) ? 'flex' : 'none';
         }
 
-        // Start Color visibility?
-        // In Custom mode, start/end are defined in stops. So hide standard color picker too?
-        // Yes, likely hide "Start Color" if using custom editor.
         this.controls.color.getElement().style.display = (isCustom && isGradient) ? 'none' : 'flex';
 
-        // Update Start Color Label
-        // Accessed via private property or just assume ParamColor structure?
-        // ParamColor has setLabel method? Let's check or just re-render.
-        // Assuming strict component interface, we might not have setLabel.
-        // But for CSS Grid layout in ParamColor, changing label text content might be enough?
-        // Let's rely on standard ParamColor: it renders title.
-        // We can access DOM directly if needed.
-        const colorLabel = this.controls.color.getElement().querySelector('span'); // Simple heuristic
+        const colorLabel = this.controls.color.getElement().querySelector('span');
         if (colorLabel) {
             colorLabel.textContent = isGradient ? 'Start Color' : 'Color';
         }
 
-        // Update Connection Mode Controls Visibility
         const connectMode = this.controls.connectMode ? this.controls.connectMode.lastValue : 'straight';
         this.updateConnectModeVisibility(connectMode);
     }
@@ -302,32 +281,26 @@ export class LayerRenderingModule {
         const isWave = mode === 'sine' || mode === 'cosine';
         const isKB = mode === 'kb-spline';
         const isCatmull = mode === 'catmull-rom';
-        // Arc/Circle use detail? Maybe. Let's show detail for everything except straight.
 
-        // Detail
         this.controls.connectDetail.container.style.display = !isStraight ? 'flex' : 'none';
 
-        // Quadratic Bezier
         if (this.controls.bezierBulge) this.controls.bezierBulge.container.style.display = (mode === 'quadratic-bezier') ? 'flex' : 'none';
 
-        // Wave Controls
         this.controls.waveAmplitude.container.style.display = isWave ? 'flex' : 'none';
         this.controls.waveFrequency.container.style.display = isWave ? 'flex' : 'none';
         this.controls.waveAlternateFlip.getElement().style.display = isWave ? 'flex' : 'none';
 
-        // KB Spline Controls
         this.controls.splineTension.container.style.display = isKB ? 'flex' : 'none';
         this.controls.splineBias.container.style.display = isKB ? 'flex' : 'none';
         this.controls.splineContinuity.container.style.display = isKB ? 'flex' : 'none';
 
-        // Catmull-Rom Controls
         this.controls.splineAlpha.container.style.display = isCatmull ? 'flex' : 'none';
     }
 
     handleLinkToggle(key, isActive, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = `${otherRoseId}.${key}`;
+        const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             const linked = linkManager.toggleLink(myKey, otherKey);
@@ -338,7 +311,7 @@ export class LayerRenderingModule {
     }
 
     initLinkState(key, control) {
-        const myKey = `${this.roseId}.${key}`;
+        const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             if (linkManager.isLinked(myKey)) {
                 control.setLinkActive(true);
@@ -380,7 +353,7 @@ export class LayerRenderingModule {
                 if (instance && typeof instance.setLinkActive === 'function') {
                     const paramKey = this.keys[k];
                     if (paramKey) {
-                        const fullKey = `${this.roseId}.${paramKey}`;
+                        const fullKey = getLinkKey(paramKey, this.roseId);
                         instance.setLinkActive(linkManager.isLinked(fullKey));
                     }
                 }
@@ -389,10 +362,7 @@ export class LayerRenderingModule {
     }
 
     dispatch(key, val) {
-        store.dispatch({
-            type: this.actionType,
-            payload: { [key]: val }
-        });
+        dispatchDeep(key, val, this.roseId);
     }
 
     update(params) {
@@ -412,7 +382,6 @@ export class LayerRenderingModule {
         const gradType = params[this.keys.gradientType] || '2-point';
         if (this.controls.gradientType) {
             this.controls.gradientType.setValue(gradType);
-            // Re-run visibility check because type might have changed which affects sub-controls
             this.updateVisibility(method);
         }
 
@@ -448,7 +417,5 @@ export class LayerRenderingModule {
             const val = params[this.keys.bezierBulge] ?? 0;
             this.controls.bezierBulge.instance.setValue(val);
         }
-
-        if (this.controls.splineAlpha) this.controls.splineAlpha.instance.setValue(params[this.keys.splineAlpha] ?? 0.5);
     }
 }

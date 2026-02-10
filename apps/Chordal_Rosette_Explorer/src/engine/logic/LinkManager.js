@@ -1,6 +1,36 @@
 import { store } from '../state/Store.js';
 import { ACTIONS } from '../state/Actions.js';
 
+/**
+ * Safely get a value at a deep path in an object.
+ * @param {object} obj
+ * @param {string[]} path - e.g. ['stroke', 'opacity']
+ * @returns {*}
+ */
+function getDeep(obj, path) {
+    let current = obj;
+    for (const key of path) {
+        if (current == null || typeof current !== 'object') return undefined;
+        current = current[key];
+    }
+    return current;
+}
+
+/**
+ * Deep-equal check for two values (handles primitives and nested objects/arrays).
+ */
+function deepEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+    if (typeof a !== 'object') return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    return keysA.every(k => deepEqual(a[k], b[k]));
+}
+
 export class LinkManager {
     constructor() {
         this.links = new Map(); // key -> Set<key> (adjacency list)
@@ -14,16 +44,15 @@ export class LinkManager {
             this.lastKnownState = {};
         }
 
+        this.pendingUpdates = new Map();
+
         // Listen to store changes to propagate updates
         store.subscribe(this.handleStoreUpdate.bind(this));
     }
 
     /**
      * Toggles a link between two parameters.
-     * Currently assumes specific pairing logic (A.n <-> B.n), 
-     * but this method allows registering generic links.
-     * @param {string} keyA 
-     * @param {string} keyB 
+     * Keys are full dot-paths, e.g. 'rosetteA.stroke.opacity'
      */
     toggleLink(keyA, keyB) {
         if (this.areLinked(keyA, keyB)) {
@@ -31,7 +60,6 @@ export class LinkManager {
             return false;
         } else {
             this.addLink(keyA, keyB);
-            // Sync immediately: A -> B (Arbitrary choice, or could rely on next update)
             this.sync(keyA, keyB);
             return true;
         }
@@ -43,14 +71,12 @@ export class LinkManager {
 
         this.links.get(keyA).add(keyB);
         this.links.get(keyB).add(keyA);
-        // console.log(`[LinkManager] Linked ${keyA} <-> ${keyB}`);
         this.notifyListeners();
     }
 
     removeLink(keyA, keyB) {
         if (this.links.has(keyA)) this.links.get(keyA).delete(keyB);
         if (this.links.has(keyB)) this.links.get(keyB).delete(keyA);
-        // console.log(`[LinkManager] Unlinked ${keyA} <-> ${keyB}`);
         this.notifyListeners();
     }
 
@@ -61,7 +87,6 @@ export class LinkManager {
     subscribe(callback) {
         if (!this.listeners) this.listeners = new Set();
         this.listeners.add(callback);
-        // Return unsubscribe
         return () => this.listeners.delete(callback);
     }
 
@@ -72,36 +97,43 @@ export class LinkManager {
     }
 
     /**
-     * Manually sync Source -> Target
+     * Parse a full dot-path key into [rootSlice, ...deepPath].
+     * e.g. 'rosetteA.stroke.opacity' -> ['rosetteA', 'stroke', 'opacity']
+     * e.g. 'rosetteA.curve.params.Rhodonea.n' -> ['rosetteA', 'curve', 'params', 'Rhodonea', 'n']
+     */
+    parseKey(key) {
+        return key.split('.');
+    }
+
+    /**
+     * Manually sync Source -> Target using SET_DEEP
      */
     sync(sourceKey, targetKey) {
         const state = store.getState();
-        const [sourceRoseId, sourceParam] = this.parseKey(sourceKey);
-        const [targetRoseId, targetParam] = this.parseKey(targetKey);
+        const sourcePath = this.parseKey(sourceKey);
+        const targetPath = this.parseKey(targetKey);
 
-        if (!state[sourceRoseId] || !state[targetRoseId]) return;
+        const sourceVal = getDeep(state, sourcePath);
+        const targetVal = getDeep(state, targetPath);
 
-        const sourceVal = state[sourceRoseId][sourceParam];
-        const targetVal = state[targetRoseId][targetParam];
-
-        if (sourceVal !== targetVal) {
-            // console.log(`[LinkManager] Syncing ${sourceKey} (${sourceVal}) -> ${targetKey}`);
+        if (!deepEqual(sourceVal, targetVal)) {
             store.dispatch({
-                type: targetRoseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B,
-                payload: { [targetParam]: sourceVal }
+                type: ACTIONS.SET_DEEP,
+                path: targetPath,
+                value: sourceVal
             });
         }
     }
 
     handleStoreUpdate(state) {
-        // We do NOT use a recursion guard (isProcessing) here.
-        // We rely on 'pendingUpdates' to prevent infinite loops when we dispatch our own updates.
-        // If we blocked recursion, we would miss the immediate echo of our dispatch, 
-        // leading to stale pendingUpdates and state desync.
         this.checkDiffAndPropagate(state);
     }
 
     checkDiffAndPropagate(newState) {
+        // Re-entrancy guard: prevent infinite loop when our own dispatches
+        // trigger another store notification that calls us back
+        if (this._propagating) return;
+
         if (!this.lastKnownState) {
             this.lastKnownState = JSON.parse(JSON.stringify(newState));
             this.pendingUpdates = new Map();
@@ -110,71 +142,63 @@ export class LinkManager {
 
         if (!this.pendingUpdates) this.pendingUpdates = new Map();
 
+        // Collect all changed linked keys
         const changes = [];
-        // Helper to find changes in Rosette A or B
-        ['rosetteA', 'rosetteB'].forEach(roseId => {
-            const oldR = this.lastKnownState[roseId];
-            const newR = newState[roseId];
-            if (!oldR || !newR) return;
 
-            Object.keys(newR).forEach(param => {
-                const newVal = newR[param];
-                if (newVal !== oldR[param]) {
-                    // Check for echo of our own update
-                    const key = `${roseId}.${param}`;
+        this.links.forEach((targets, sourceKey) => {
+            const path = this.parseKey(sourceKey);
+            const newVal = getDeep(newState, path);
+            const oldVal = getDeep(this.lastKnownState, path);
 
-                    if (this.pendingUpdates.has(key)) {
-                        const expectedVal = this.pendingUpdates.get(key);
-                        // Tolerant equality check
-                        if (Math.abs(Number(newVal) - Number(expectedVal)) < 0.000001) {
-                            // This is our echo. Ignore.
-                            this.pendingUpdates.delete(key);
+            if (!deepEqual(newVal, oldVal)) {
+                // Check for echo of our own update
+                if (this.pendingUpdates.has(sourceKey)) {
+                    const expectedVal = this.pendingUpdates.get(sourceKey);
+                    if (typeof newVal === 'number' && typeof expectedVal === 'number') {
+                        if (Math.abs(newVal - expectedVal) < 0.000001) {
+                            this.pendingUpdates.delete(sourceKey);
                             return;
-                        } else {
-                            // Value mismatch (user override/race?). Treat as new change.
-                            // console.warn(`[LinkManager] Value mismatch for pending ${key}: got ${newVal}, expected ${expectedVal}`);
-                            this.pendingUpdates.delete(key);
                         }
+                    } else if (deepEqual(newVal, expectedVal)) {
+                        this.pendingUpdates.delete(sourceKey);
+                        return;
                     }
-                    changes.push({ roseId, param, val: newVal });
+                    this.pendingUpdates.delete(sourceKey);
                 }
-            });
+                changes.push({ sourceKey, val: newVal });
+            }
         });
 
-        // Propagate changes unique links
-        changes.forEach(change => {
-            const sourceKey = `${change.roseId}.${change.param}`;
-            if (this.links.has(sourceKey)) {
-                const targets = this.links.get(sourceKey);
-                targets.forEach(targetKey => {
-                    // Propagate to target
-                    const [targetRoseId, targetParam] = this.parseKey(targetKey);
-                    const currentTargetVal = newState[targetRoseId][targetParam];
+        // Propagate changes to linked targets (with guard)
+        this._propagating = true;
+        try {
+            changes.forEach(change => {
+                const targets = this.links.get(change.sourceKey);
+                if (!targets) return;
 
-                    if (currentTargetVal !== change.val) {
-                        // Expect this update to come back
+                targets.forEach(targetKey => {
+                    const targetPath = this.parseKey(targetKey);
+                    const currentTargetVal = getDeep(newState, targetPath);
+
+                    if (!deepEqual(currentTargetVal, change.val)) {
                         this.pendingUpdates.set(targetKey, change.val);
 
                         store.dispatch({
-                            type: targetRoseId === 'rosetteA' ? ACTIONS.UPDATE_ROSETTE_A : ACTIONS.UPDATE_ROSETTE_B,
-                            payload: { [targetParam]: change.val }
+                            type: ACTIONS.SET_DEEP,
+                            path: targetPath,
+                            value: change.val
                         });
                     }
                 });
-            }
-        });
+            });
+        } finally {
+            this._propagating = false;
+        }
 
         // Update local cache to the LATEST store state
         this.lastKnownState = JSON.parse(JSON.stringify(store.getState()));
     }
 
-    /**
-     * Heloer: 'rosetteA.n' -> ['rosetteA', 'n']
-     */
-    parseKey(key) {
-        const parts = key.split('.');
-        return [parts[0], parts.slice(1).join('.')];
-    }
     isLinked(key) {
         return this.links.has(key) && this.links.get(key).size > 0;
     }
@@ -183,8 +207,7 @@ export class LinkManager {
 
     /**
      * Returns an array of link pairs for saving.
-     * Format: [['rosetteA.n', 'rosetteB.n'], ...]
-     * We need to avoid duplicates (A-B and B-A).
+     * Format: [['rosetteA.stroke.opacity', 'rosetteB.stroke.opacity'], ...]
      */
     getLinks() {
         const uniqueLinks = new Set();
@@ -192,7 +215,6 @@ export class LinkManager {
 
         this.links.forEach((neighbors, keyA) => {
             neighbors.forEach(keyB => {
-                // Create a canonical string for the pair to check uniqueness
                 const pair = [keyA, keyB].sort().join('<->');
                 if (!uniqueLinks.has(pair)) {
                     uniqueLinks.add(pair);
@@ -210,8 +232,6 @@ export class LinkManager {
     restoreLinks(linksArray) {
         if (!Array.isArray(linksArray)) return;
 
-        // Clear existing? Or just add?
-        // Let's clear to be safe implies a full restore.
         this.links.clear();
 
         linksArray.forEach(pair => {
@@ -219,10 +239,6 @@ export class LinkManager {
                 this.addLink(pair[0], pair[1]);
             }
         });
-
-        // After restoring, we should probably sync values to ensure consistency?
-        // Or assume the saved state already has consistent values.
-        // Let's assume saved state is consistent.
     }
 }
 

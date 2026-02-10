@@ -1,211 +1,251 @@
 /**
- * Default configuration for the application.
+ * Default configuration for the application — v3.0 Hierarchical Scoped Parameters.
+ *
+ * This is the canonical data structure used for:
+ *   - Application defaults (initial state)
+ *   - localStorage auto-save
+ *   - IndexedDB snapshot persistence
+ *
+ * All curve-specific and sequencer-specific params live under their
+ * respective type keys (e.g., curve.params.Rhodonea.n) to avoid
+ * namespace clashes.
  */
+
+// ─── helpers ────────────────────────────────────────────────
+const DEFAULT_GRADIENT_STOPS = [
+    { color: '#ffffff', position: 0, alpha: 1 },
+    { color: '#ff0000', position: 1, alpha: 1 }
+];
+
+function makeColoringDefaults(solidColor, startColor, endColor) {
+    return {
+        type: 'solid',
+        source: 'length',
+        params: {
+            'solid': { color: solidColor },
+            'gradient-2point': { colorStart: startColor || solidColor, colorEnd: endColor || '#FF00FF' },
+            'gradient-custom': { stops: [...DEFAULT_GRADIENT_STOPS.map(s => ({ ...s }))] },
+            'gradient-preset': { preset: 'rainbow' }
+        }
+    };
+}
+
+function makeRenderingDefaults() {
+    return {
+        autoScale: false,
+        scaleLineWidth: true,
+        connectMode: 'straight',
+        connectDetail: 20,
+        waveAmplitude: 10,
+        waveFrequency: 5,
+        waveAlternateFlip: false,
+        splineTension: 0,
+        splineBias: 0,
+        splineContinuity: 0,
+        splineAlpha: 0.5
+    };
+}
+
+function makeCurveDefaults() {
+    return {
+        type: 'Rhodonea',
+        params: {
+            'Rhodonea': { n: 3, d: 4, A: 200, c: 0, rot: 0 },
+            'Circle': { radius: 100, rot: 0 },
+            'Epitrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
+            'Hypotrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
+            'Lissajous': { a: 3, b: 2, delta: 90, A: 100, rot: 0 },
+            'Superformula': { m: 6, n1: 1, n2: 1, n3: 1, a: 1, b: 1, A: 100, rot: 0 },
+            'Farris Mystery': { r1: 100, k1: 1, r2: 50, k2: 7, r3: 25, k3: -17, A: 100, rot: 0 },
+            'Regular N-Sided Polygon': { n: 5, A: 100, rot: 0 }
+        }
+    };
+}
+
+function makeSequencerDefaults(stepDefault = 29) {
+    return {
+        type: 'Cyclic Additive Group Modulo N',
+        params: {
+            'Cyclic Additive Group Modulo N': { step: stepDefault, totalDivs: 360, useCustomDivs: false },
+            'Multiplicative Group Modulo N': { generator: 2, totalDivs: 500 },
+            'Alternating Increment Sequencer': { incrementA: 1, incrementB: 2, totalDivs: 360 },
+            '3-Cycle Increment Sequencer': { incrementA: 1, incrementB: 2, incrementC: 3, totalDivs: 360 },
+            '4-Cycle Increment Sequencer': { incrementA: 1, incrementB: 2, incrementC: 3, incrementD: 4, totalDivs: 360 }
+        }
+    };
+}
+
+// ─── main DEFAULTS ──────────────────────────────────────────
 export const DEFAULTS = {
     rosetteA: {
-        curveType: 'Rhodonea',
-        sequencerType: 'Cyclic Additive Group Modulo N',
-        n: 3,
-        d: 4,
-        A: 200,
-        c: 0,
-        rot: 0,
-        radius: 100, // For CircleCurve
-        // Sequencer specific
-        totalDivs: 360,
-        step: 29, // deg
-        useCustomDivs: false,
-        cosetIndex: 0,
-        showAllCosets: false,
-        color: '#00FFFF', // Cyan
-        colorEnd: '#FF00FF', // Magenta (Gradient End)
-        gradientType: '2-point', // '2-point', 'cyclic', 'preset'
-        gradientPreset: 'rainbow',
-        gradientStops: [
-            { color: '#ffffff', position: 0 },
-            { color: '#ff0000', position: 1 }
-        ],
-        colorMethod: 'solid',
-        opacity: 0.5,
-        blendMode: 'lighter',
-        lineWidth: 2,
-        antiAlias: true,
-        cosetCount: 1,
-        cosetDistribution: 'sequential', // 'sequential', 'distributed', 'two-way'
-        // Fill Rendering
-        fillColor: '#ffffff',
-        fillColorEnd: '#000000',
-        fillOpacity: 0,
-        fillBlendMode: 'source-over',
-        fillColorMethod: 'solid',
-        fillGradientType: '2-point',
-        fillGradientStops: [],
-        // Base Curve Rendering
-        showBaseCurve: false,
-        baseCurveLineWidth: 2,
-        baseCurveColor: '#666666',
-        baseCurveOpacity: 1,
-        baseCurveBlendMode: 'source-over',
-        baseCurveColorMethod: 'solid',
-        baseCurveAntiAlias: true,
-        // Vertex Rendering
-        showVertices: false,
-        vertexRadius: 2,
-        vertexColor: '#ffffff',
-        vertexOpacity: 1,
-        vertexBlendMode: 'source-over',
-        // General Rendering
-        backgroundColor: '#000000',
-        backgroundOpacity: 0,
-        autoScale: false,
-        scaleLineWidth: true,
-        // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
-        connectDetail: 20,
-        waveAmplitude: 10,
-        waveFrequency: 5,
-        waveAlternateFlip: false,
-        splineTension: 0,
-        splineBias: 0,
-        splineContinuity: 0,
-        splineAlpha: 0.5,
+        curve: makeCurveDefaults(),
+        sequencer: makeSequencerDefaults(29),
+        coset: {
+            index: 0,
+            showAll: false,
+            count: 1,
+            distribution: 'sequential'
+        },
+        stroke: {
+            visible: true,
+            opacity: 0.5,
+            lineWidth: 2,
+            blendMode: 'lighter',
+            antiAlias: true,
+            coloring: makeColoringDefaults('#00FFFF', '#00FFFF', '#FF00FF')
+        },
+        fill: {
+            visible: true,
+            opacity: 0,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#000000')
+        },
+        baseCurve: {
+            visible: false,
+            opacity: 1,
+            lineWidth: 2,
+            blendMode: 'source-over',
+            antiAlias: true,
+            coloring: makeColoringDefaults('#666666', '#666666', '#ffffff')
+        },
+        vertices: {
+            visible: false,
+            opacity: 1,
+            radius: 2,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#ff0000')
+        },
+        background: {
+            color: '#000000',
+            opacity: 0
+        },
+        rendering: makeRenderingDefaults()
     },
+
     rosetteB: {
-        curveType: 'Rhodonea',
-        sequencerType: 'Cyclic Additive Group Modulo N',
-        n: 3,
-        d: 4,
-        A: 200,
-        c: 0,
-        rot: 0,
-        radius: 100, // For CircleCurve
-        totalDivs: 360,
-        step: 47,
-        useCustomDivs: false,
-        cosetIndex: 0,
-        showAllCosets: false,
-        color: '#FF0000', // Red
-        colorEnd: '#0000FF', // Blue (Gradient End)
-        gradientType: '2-point',
-        gradientPreset: 'rainbow',
-        gradientStops: [
-            { color: '#ffffff', position: 0 },
-            { color: '#0000ff', position: 1 }
-        ],
-        colorMethod: 'solid',
-        opacity: 0.5,
-        blendMode: 'lighter',
-        lineWidth: 2,
-        antiAlias: true,
-        // Fill Rendering
-        fillColor: '#ffffff',
-        fillColorEnd: '#000000',
-        fillOpacity: 0,
-        fillBlendMode: 'source-over',
-        fillColorMethod: 'solid',
-        fillGradientType: '2-point',
-        fillGradientStops: [],
-        // Base Curve Rendering
-        showBaseCurve: false,
-        baseCurveLineWidth: 2,
-        baseCurveColor: '#666666',
-        baseCurveOpacity: 1,
-        baseCurveBlendMode: 'source-over',
-        baseCurveColorMethod: 'solid',
-        baseCurveAntiAlias: true,
-        // Vertex Rendering
-        showVertices: false,
-        vertexRadius: 2,
-        vertexColor: '#ffffff',
-        vertexOpacity: 1,
-        vertexBlendMode: 'source-over',
-        // General Rendering
-        backgroundColor: '#000000',
-        backgroundOpacity: 0,
-        autoScale: false,
-        scaleLineWidth: true,
-        // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
-        connectDetail: 20,
-        waveAmplitude: 10,
-        waveFrequency: 5,
-        waveAlternateFlip: false,
-        splineTension: 0,
-        splineBias: 0,
-        splineContinuity: 0,
-        splineAlpha: 0.5,
+        curve: makeCurveDefaults(),
+        sequencer: makeSequencerDefaults(47),
+        coset: {
+            index: 0,
+            showAll: false,
+            count: 1,
+            distribution: 'sequential'
+        },
+        stroke: {
+            visible: true,
+            opacity: 0.5,
+            lineWidth: 2,
+            blendMode: 'lighter',
+            antiAlias: true,
+            coloring: makeColoringDefaults('#FF0000', '#FF0000', '#0000FF')
+        },
+        fill: {
+            visible: true,
+            opacity: 0,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#000000')
+        },
+        baseCurve: {
+            visible: false,
+            opacity: 1,
+            lineWidth: 2,
+            blendMode: 'source-over',
+            antiAlias: true,
+            coloring: makeColoringDefaults('#666666', '#666666', '#ffffff')
+        },
+        vertices: {
+            visible: false,
+            opacity: 1,
+            radius: 2,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#ff0000')
+        },
+        background: {
+            color: '#000000',
+            opacity: 0
+        },
+        rendering: makeRenderingDefaults()
     },
+
     hybrid: {
-        weight: 0.0, // 0 to 1
-        method: 'linear', // 'linear', 'lcm', etc.
-        showRoseA: false,
-        showRoseB: false,
-        underlayOpacity: 0.15,
-        opacity: 0.5,
-        color: '#a855f7',
-        colorEnd: '#ef4444',
-        gradientType: '2-point',
-        gradientPreset: 'rainbow',
-        gradientStops: [
-            { color: '#ffffff', position: 0 },
-            { color: '#00ff00', position: 1 }
-        ],
-        colorMethod: 'solid',
-        blendMode: 'lighter',
-        // Fill Rendering
-        fillColor: '#ffffff',
-        fillColorEnd: '#000000',
-        fillOpacity: 0,
-        fillBlendMode: 'source-over',
-        fillColorMethod: 'solid',
-        fillGradientType: '2-point',
-        fillGradientStops: [],
-        // Base Curve Rendering (A)
-        showBaseCurveA: false,
-        baseCurveLineWidthA: 2,
-        baseCurveColorA: '#666666',
-        baseCurveOpacityA: 1,
-        baseCurveBlendModeA: 'source-over',
-        // Base Curve Rendering (B)
-        showBaseCurveB: false,
-        baseCurveLineWidthB: 2,
-        baseCurveColorB: '#666666',
-        baseCurveOpacityB: 1,
-        baseCurveBlendModeB: 'source-over',
-        // Vertex Rendering (Hybrid - specific to A/B not usually needed unless overriding, 
-        // but let's see. Plan said "Update renderInterpolation to call polylineLayer.drawVertices".
-        // Usually Hybrid inherits from Rosette A/B or has its own overrides?
-        // Let's add them to hybrid for consistency if we want to override in hybrid view.)
-        showVertices: false,
-        vertexRadius: 2,
-        vertexColor: '#ffffff',
-        vertexOpacity: 1,
-        vertexBlendMode: 'source-over',
-        // General Rendering
-        backgroundColor: '#000000',
-        backgroundOpacity: 0,
-        autoScale: false,
-        scaleLineWidth: true,
-        // Connection Style
-        connectMode: 'straight', // 'straight', 'arc', 'arc-flipped', 'circle', 'sine', 'kb-spline', 'catmull-rom', 'quadratic-bezier'
-        connectDetail: 20,
-        waveAmplitude: 10,
-        waveFrequency: 5,
-        waveAlternateFlip: false,
-        splineTension: 0,
-        splineBias: 0,
-        splineContinuity: 0,
-        splineAlpha: 0.5,
+        mix: {
+            weight: 0.0,
+            method: 'linear',
+            samples: 360,
+            resampleMethod: 'lcm',
+            approxResampleThreshold: 20000,
+            mixType: 'simple'
+        },
+        underlay: {
+            showRoseA: false,
+            showRoseB: false,
+            opacity: 0.15
+        },
+        stroke: {
+            visible: true,
+            opacity: 0.5,
+            lineWidth: 2,
+            blendMode: 'lighter',
+            antiAlias: true,
+            coloring: makeColoringDefaults('#a855f7', '#a855f7', '#ef4444')
+        },
+        fill: {
+            visible: false,
+            opacity: 0,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#000000')
+        },
+        vertices: {
+            visible: false,
+            opacity: 1,
+            radius: 2,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#ffffff', '#ffffff', '#ff0000')
+        },
+        sourceA: {
+            visible: false,
+            opacity: 0.3,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#FF0000', '#FF0000', '#ffffff')
+        },
+        sourceB: {
+            visible: false,
+            opacity: 0.3,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#0000FF', '#0000FF', '#ffffff')
+        },
+        baseCurveA: {
+            visible: false,
+            opacity: 0.3,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#FF0000', '#FF0000', '#ffffff')
+        },
+        baseCurveB: {
+            visible: false,
+            opacity: 0.3,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            coloring: makeColoringDefaults('#0000FF', '#0000FF', '#ffffff')
+        },
+        background: {
+            color: '#000000',
+            opacity: 0
+        },
+        rendering: {
+            ...makeRenderingDefaults(),
+            autoScale: false,
+            scaleLineWidth: true
+        }
     },
+
     settings: {
-        theme: 'dark',
-        showPoints: false,
-        showRhodonea: false,
-        lineThickness: 1,
-        opacity: 0.6,
-        renderStyle: 'straight', // straight, arc, etc.
+        theme: 'dark'
     },
+
     app: {
-        isRecording: false,
+        isRecording: false
     }
 };
