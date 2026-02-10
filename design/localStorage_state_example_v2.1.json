@@ -1,0 +1,1417 @@
+{
+  "version": "2.2",
+  "timestamp": 1770726515712,
+  "state": {
+    "rosetteA": {
+      "curveType": "Rhodonea",
+      "sequencerType": "Cyclic Additive Group Modulo N",
+      "n": 3,
+      "d": 4,
+      "A": 200,
+      "c": 0,
+      "rot": 0,
+      "radius": 100,
+      "totalDivs": 60,
+      "step": 29,
+      "useCustomDivs": false,
+      "cosetIndex": 0,
+      "showAllCosets": false,
+      "color": "#19c8c8",
+      "colorEnd": "#FF00FF",
+      "gradientType": "custom",
+      "gradientPreset": "rainbow",
+      "gradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "colorMethod": "length",
+      "opacity": 0.56,
+      "blendMode": "lighter",
+      "lineWidth": 2,
+      "antiAlias": true,
+      "cosetCount": 1,
+      "cosetDistribution": "sequential",
+      "fillColor": "#ffffff",
+      "fillColorEnd": "#000000",
+      "fillOpacity": 0,
+      "fillBlendMode": "source-over",
+      "fillColorMethod": "solid",
+      "fillGradientType": "2-point",
+      "fillGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "showBaseCurve": false,
+      "baseCurveLineWidth": 2,
+      "baseCurveColor": "#666666",
+      "baseCurveOpacity": 1,
+      "baseCurveBlendMode": "source-over",
+      "baseCurveColorMethod": "solid",
+      "baseCurveAntiAlias": true,
+      "showVertices": false,
+      "vertexRadius": 2,
+      "vertexColor": "#ffffff",
+      "vertexOpacity": 1,
+      "vertexBlendMode": "source-over",
+      "backgroundColor": "#000000",
+      "backgroundOpacity": 0,
+      "autoScale": true,
+      "scaleLineWidth": true,
+      "connectMode": "straight",
+      "connectDetail": 20,
+      "waveAmplitude": 10,
+      "waveFrequency": 5,
+      "waveAlternateFlip": false,
+      "splineTension": 0,
+      "splineBias": 0,
+      "splineContinuity": 0,
+      "splineAlpha": 0.5,
+      "curve": {
+        "type": "Rhodonea",
+        "params": {
+          "Rhodonea": {
+            "n": 3,
+            "d": 29,
+            "A": 200,
+            "c": 0,
+            "rot": 0
+          },
+          "Circle": {
+            "radius": 100,
+            "rot": 0
+          },
+          "Epitrochoid": {
+            "R": 100,
+            "r": 20,
+            "d": 50,
+            "A": 100,
+            "rot": 0
+          },
+          "Lissajous": {
+            "a": 3,
+            "b": 2,
+            "delta": 90,
+            "A": 100,
+            "rot": 0
+          },
+          "Hypotrochoid": {
+            "R": 100,
+            "r": 20,
+            "d": 50,
+            "A": 100,
+            "rot": 0
+          },
+          "Regular N-Sided Polygon": {
+            "n": 5,
+            "A": 100,
+            "rot": 0
+          },
+          "Superformula": {},
+          "Farris Mystery": {}
+        }
+      },
+      "sequencer": {
+        "type": "Cyclic Additive Group Modulo N",
+        "params": {
+          "Cyclic Additive Group Modulo N": {
+            "step": 29,
+            "totalDivs": 360,
+            "useCustomDivs": false
+          },
+          "Multiplicative Group Modulo N": {},
+          "Alternating Increment Sequencer": {}
+        }
+      },
+      "coset": {
+        "index": 0,
+        "showAll": false,
+        "count": 1,
+        "distribution": "sequential"
+      },
+      "stroke": {
+        "visible": true,
+        "opacity": 0.5,
+        "lineWidth": 2,
+        "blendMode": "lighter",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#00FFFF"
+            },
+            "gradient-2point": {
+              "colorStart": "#00FFFF",
+              "colorEnd": "#FF00FF"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            },
+            "gradient-preset": {
+              "preset": "rainbow"
+            }
+          }
+        }
+      },
+      "fill": {
+        "visible": true,
+        "opacity": 0.05,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-2point": {
+              "colorStart": "#ffffff",
+              "colorEnd": "#000000"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            },
+            "gradient-preset": {
+              "preset": "rainbow"
+            }
+          }
+        }
+      },
+      "baseCurve": {
+        "visible": false,
+        "opacity": 1,
+        "lineWidth": 2,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#666666"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "vertices": {
+        "visible": false,
+        "opacity": 1,
+        "radius": 2,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "vertexGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "baseCurveGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ]
+    },
+    "rosetteB": {
+      "curveType": "Rhodonea",
+      "sequencerType": "Cyclic Additive Group Modulo N",
+      "n": 3,
+      "d": 4,
+      "A": 200,
+      "c": 0,
+      "rot": 0,
+      "radius": 100,
+      "totalDivs": 60,
+      "step": 83,
+      "useCustomDivs": false,
+      "cosetIndex": 0,
+      "showAllCosets": false,
+      "color": "#19c8c8",
+      "colorEnd": "#0000FF",
+      "gradientType": "custom",
+      "gradientPreset": "rainbow",
+      "gradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "colorMethod": "length",
+      "opacity": 0.56,
+      "blendMode": "lighter",
+      "lineWidth": 2,
+      "antiAlias": true,
+      "fillColor": "#ffffff",
+      "fillColorEnd": "#000000",
+      "fillOpacity": 0,
+      "fillBlendMode": "source-over",
+      "fillColorMethod": "solid",
+      "fillGradientType": "2-point",
+      "fillGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "showBaseCurve": false,
+      "baseCurveLineWidth": 2,
+      "baseCurveColor": "#666666",
+      "baseCurveOpacity": 1,
+      "baseCurveBlendMode": "source-over",
+      "baseCurveColorMethod": "solid",
+      "baseCurveAntiAlias": true,
+      "showVertices": false,
+      "vertexRadius": 2,
+      "vertexColor": "#ffffff",
+      "vertexOpacity": 1,
+      "vertexBlendMode": "source-over",
+      "backgroundColor": "#000000",
+      "backgroundOpacity": 0,
+      "autoScale": true,
+      "scaleLineWidth": true,
+      "connectMode": "straight",
+      "connectDetail": 20,
+      "waveAmplitude": 10,
+      "waveFrequency": 5,
+      "waveAlternateFlip": false,
+      "splineTension": 0,
+      "splineBias": 0,
+      "splineContinuity": 0,
+      "splineAlpha": 0.5,
+      "curve": {
+        "type": "Rhodonea",
+        "params": {
+          "Rhodonea": {
+            "n": 4,
+            "d": 35,
+            "A": 200,
+            "c": 0,
+            "rot": 0
+          },
+          "Circle": {
+            "radius": 100,
+            "rot": 0
+          },
+          "Epitrochoid": {
+            "R": 100,
+            "r": 20,
+            "d": 50,
+            "A": 100,
+            "rot": 0
+          },
+          "Lissajous": {
+            "a": 3,
+            "b": 2,
+            "delta": 90,
+            "A": 100,
+            "rot": 0
+          },
+          "Hypotrochoid": {
+            "R": 100,
+            "r": 20,
+            "d": 50,
+            "A": 100,
+            "rot": 0
+          },
+          "Regular N-Sided Polygon": {
+            "n": 5,
+            "A": 100,
+            "rot": 0
+          },
+          "Superformula": {},
+          "Farris Mystery": {}
+        }
+      },
+      "sequencer": {
+        "type": "Cyclic Additive Group Modulo N",
+        "params": {
+          "Cyclic Additive Group Modulo N": {
+            "step": 35,
+            "totalDivs": 360,
+            "useCustomDivs": false
+          },
+          "Multiplicative Group Modulo N": {},
+          "Alternating Increment Sequencer": {}
+        }
+      },
+      "coset": {
+        "index": 0,
+        "showAll": false,
+        "count": 1,
+        "distribution": "sequential"
+      },
+      "stroke": {
+        "visible": true,
+        "opacity": 0.5,
+        "lineWidth": 2,
+        "blendMode": "lighter",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#FF00FF"
+            },
+            "gradient-2point": {
+              "colorStart": "#FF00FF",
+              "colorEnd": "#FFFF00"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            },
+            "gradient-preset": {
+              "preset": "rainbow"
+            }
+          }
+        }
+      },
+      "fill": {
+        "visible": true,
+        "opacity": 0.05,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-2point": {
+              "colorStart": "#ffffff",
+              "colorEnd": "#000000"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            },
+            "gradient-preset": {
+              "preset": "rainbow"
+            }
+          }
+        }
+      },
+      "baseCurve": {
+        "visible": false,
+        "opacity": 1,
+        "lineWidth": 2,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#666666"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "vertices": {
+        "visible": false,
+        "opacity": 1,
+        "radius": 2,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "vertexGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "baseCurveGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ]
+    },
+    "hybrid": {
+      "weight": 0.5,
+      "method": "linear",
+      "showRoseA": false,
+      "showRoseB": false,
+      "underlayOpacity": 0.13,
+      "opacity": 0.56,
+      "color": "#19c8c8",
+      "colorEnd": "#ef4444",
+      "gradientType": "custom",
+      "gradientPreset": "rainbow",
+      "gradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "colorMethod": "length",
+      "blendMode": "lighter",
+      "fillColor": "#ffffff",
+      "fillColorEnd": "#000000",
+      "fillOpacity": 1,
+      "fillBlendMode": "source-over",
+      "fillColorMethod": "solid",
+      "fillGradientType": "2-point",
+      "fillGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "showBaseCurveA": false,
+      "baseCurveLineWidthA": 2,
+      "baseCurveColorA": "#666666",
+      "baseCurveOpacityA": 1,
+      "baseCurveBlendModeA": "source-over",
+      "showBaseCurveB": false,
+      "baseCurveLineWidthB": 2,
+      "baseCurveColorB": "#666666",
+      "baseCurveOpacityB": 1,
+      "baseCurveBlendModeB": "source-over",
+      "showVertices": true,
+      "vertexRadius": 5.7,
+      "vertexColor": "#0bf972",
+      "vertexOpacity": 0.52,
+      "vertexBlendMode": "source-over",
+      "backgroundColor": "#000000",
+      "backgroundOpacity": 0,
+      "autoScale": true,
+      "scaleLineWidth": false,
+      "connectMode": "straight",
+      "connectDetail": 20,
+      "waveAmplitude": 10,
+      "waveFrequency": 5,
+      "waveAlternateFlip": false,
+      "splineTension": 0,
+      "splineBias": 0,
+      "splineContinuity": 0,
+      "splineAlpha": 0.5,
+      "params": {
+        "mixType": "simple",
+        "samples": 360,
+        "weight": 0.5,
+        "resampleMethod": "lcm",
+        "approxResampleThreshold": 20000
+      },
+      "stroke": {
+        "visible": true,
+        "opacity": 0.8,
+        "lineWidth": 3,
+        "blendMode": "lighter",
+        "coloring": {
+          "type": "gradient-2point",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffff00"
+            },
+            "gradient-2point": {
+              "colorStart": "#00FFFF",
+              "colorEnd": "#FF00FF"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            },
+            "gradient-preset": {
+              "preset": "rainbow"
+            }
+          }
+        }
+      },
+      "fill": {
+        "visible": false,
+        "opacity": 0.1,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-2point": {
+              "colorStart": "#ffffff",
+              "colorEnd": "#000000"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "vertices": {
+        "visible": false,
+        "opacity": 1,
+        "radius": 2,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#ffffff"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "sourceA": {
+        "visible": false,
+        "opacity": 0.3,
+        "lineWidth": 1,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#FF0000"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "sourceB": {
+        "visible": false,
+        "opacity": 0.3,
+        "lineWidth": 1,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#0000FF"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "baseCurveA": {
+        "visible": false,
+        "opacity": 0.3,
+        "lineWidth": 1,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#FF0000"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "baseCurveB": {
+        "visible": false,
+        "opacity": 0.3,
+        "lineWidth": 1,
+        "blendMode": "source-over",
+        "coloring": {
+          "type": "solid",
+          "source": "length",
+          "params": {
+            "solid": {
+              "color": "#0000FF"
+            },
+            "gradient-custom": {
+              "stops": [
+                {
+                  "color": "#ffffff",
+                  "position": 0,
+                  "alpha": 1
+                },
+                {
+                  "color": "#ff0000",
+                  "position": 1,
+                  "alpha": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "baseCurveColorMethodA": "length",
+      "lineWidth": 3,
+      "antiAlias": true,
+      "vertexGradientStops": [
+        {
+          "color": "#ffffff",
+          "position": 0,
+          "alpha": 1
+        },
+        {
+          "color": "#ff0000",
+          "position": 1,
+          "alpha": 1
+        }
+      ],
+      "showFill": false
+    },
+    "settings": {
+      "theme": "dark",
+      "showPoints": false,
+      "showRhodonea": false,
+      "lineThickness": 1,
+      "opacity": 0.6,
+      "renderStyle": "straight",
+      "backgroundColor": "#000000",
+      "lineThicknessScale": false
+    },
+    "app": {
+      "isRecording": false
+    }
+  },
+  "links": [
+    [
+      "rosetteA.lineWidth",
+      "rosetteB.lineWidth"
+    ],
+    [
+      "rosetteA.opacity",
+      "rosetteB.opacity"
+    ],
+    [
+      "rosetteA.A",
+      "rosetteB.A"
+    ]
+  ],
+  "animations": {
+    "rosetteA": {
+      "totalDivs": {
+        "min": 1,
+        "max": 3600,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "connectDetail": {
+        "min": 2,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "waveAmplitude": {
+        "min": 0,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "waveFrequency": {
+        "min": 1,
+        "max": 50,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineTension": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineBias": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineContinuity": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineAlpha": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "bezierBulge": {
+        "min": -2,
+        "max": 2,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "lineWidth": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "opacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "vertexRadius": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "vertexOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "baseCurveLineWidth": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "baseCurveOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "fillOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "backgroundOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "cosetCount": {
+        "min": 1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "cosetIndex": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "n": {
+        "min": 1,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "d": {
+        "min": 1,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "A": {
+        "min": 10,
+        "max": 300,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "c": {
+        "min": 0,
+        "max": 200,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "rot": {
+        "min": 0,
+        "max": 360,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "step": {
+        "min": 1,
+        "max": 360,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      }
+    },
+    "rosetteB": {
+      "totalDivs": {
+        "min": 1,
+        "max": 3600,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "connectDetail": {
+        "min": 2,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "waveAmplitude": {
+        "min": 0,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "waveFrequency": {
+        "min": 1,
+        "max": 50,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineTension": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineBias": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineContinuity": {
+        "min": -1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "splineAlpha": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "bezierBulge": {
+        "min": -2,
+        "max": 2,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "lineWidth": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "opacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "vertexRadius": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "vertexOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "baseCurveLineWidth": {
+        "min": 0.1,
+        "max": 20,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "baseCurveOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "fillOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "backgroundOpacity": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "cosetCount": {
+        "min": 1,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "cosetIndex": {
+        "min": 0,
+        "max": 1,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "n": {
+        "min": 1,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "d": {
+        "min": 1,
+        "max": 100,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "A": {
+        "min": 10,
+        "max": 300,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "c": {
+        "min": 0,
+        "max": 200,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "rot": {
+        "min": 0,
+        "max": 360,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      },
+      "step": {
+        "min": 1,
+        "max": 360,
+        "period": 10,
+        "type": "InOut",
+        "shape": "Sine",
+        "isPlaying": false,
+        "isOpen": false
+      }
+    },
+    "interpolation": {}
+  },
+  "ui": {
+    "rosetteA": {
+      "accordions": {
+        "rosetteA-base-viz": false,
+        "rosetteA-appearance-general": false,
+        "rosetteA-relatives": false,
+        "rosetteA-maurer": false,
+        "rosetteA-core": true,
+        "rosetteA-sequencer": true
+      }
+    },
+    "rosetteB": {
+      "accordions": {
+        "rosetteB-appearance-general": false,
+        "rosetteB-core": true,
+        "rosetteB-maurer": true,
+        "rosetteB-relatives": true,
+        "rosetteB-sequencer": true
+      }
+    },
+    "interpolation": {
+      "accordions": {
+        "hybrid-base-curve": false,
+        "hybrid-vertex": true,
+        "hybrid-general": true,
+        "hybrid-anim": true
+      }
+    }
+  }
+}
