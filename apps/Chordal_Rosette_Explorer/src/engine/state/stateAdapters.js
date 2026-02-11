@@ -4,14 +4,17 @@
  * Bi-directional adapters between the v3.0 nested state and
  * the flat property format the UI components and renderer expect.
  * 
- * flattenRoseParams(roseState)   → flat object for rendering / UI reads
- * getFlatKeyDeepPath(flatKey, roseState) → path array for SET_DEEP dispatch
+ * flattenRoseParams(roseState)      → flat object for rosette rendering / UI reads
+ * flattenHybridParams(hybridState)  → flat object for hybrid rendering / UI reads
+ * getFlatKeyDeepPath(flatKey, roseId, roseState) → path array for SET_DEEP dispatch
+ * dispatchDeep(flatKey, value, roseId) → dispatch SET_DEEP action
+ * getLinkKey(flatKey, roseId)        → dot-separated link key for LinkManager
  */
 
 import { ACTIONS } from './Actions.js';
 import { store } from './Store.js';
 
-// ─── Flatten (nested → flat) ────────────────────────────
+// ─── Flatten rosette (nested → flat) ────────────────────
 
 /**
  * Build a flat params object from a v3.0 rosette state slice.
@@ -67,8 +70,8 @@ export function flattenRoseParams(roseState) {
         // Stroke
         color: scp.solid?.color || '#ffffff',
         colorEnd: scp['gradient-2point']?.colorEnd || '#FF00FF',
-        colorMethod: sc.type || 'solid',
-        gradientType: sc.type || 'solid',
+        colorMethod: sc.method || 'solid',
+        gradientType: sc.type || '2-point',
         gradientPreset: scp['gradient-preset']?.preset || 'rainbow',
         gradientStops: scp['gradient-custom']?.stops || [],
         opacity: stroke.opacity ?? 1,
@@ -82,8 +85,8 @@ export function flattenRoseParams(roseState) {
         fillColorEnd: fcp['gradient-2point']?.colorEnd || '#000000',
         fillOpacity: fill.opacity ?? 0,
         fillBlendMode: fill.blendMode || 'source-over',
-        fillColorMethod: fc.type || 'solid',
-        fillGradientType: fc.type || 'solid',
+        fillColorMethod: fc.method || 'solid',
+        fillGradientType: fc.type || '2-point',
         fillGradientPreset: fcp['gradient-preset']?.preset || 'rainbow',
         fillGradientStops: fcp['gradient-custom']?.stops || [],
 
@@ -95,8 +98,8 @@ export function flattenRoseParams(roseState) {
         baseCurveOpacity: baseCurve.opacity ?? 1,
         baseCurveBlendMode: baseCurve.blendMode || 'source-over',
         baseCurveAntiAlias: baseCurve.antiAlias !== false,
-        baseCurveColorMethod: bcc.type || 'solid',
-        baseCurveGradientType: bcc.type || 'solid',
+        baseCurveColorMethod: bcc.method || 'solid',
+        baseCurveGradientType: bcc.type || '2-point',
         baseCurveGradientPreset: bccp['gradient-preset']?.preset || 'rainbow',
         baseCurveGradientStops: bccp['gradient-custom']?.stops || [],
 
@@ -106,11 +109,160 @@ export function flattenRoseParams(roseState) {
         vertexColor: vcp.solid?.color || '#ffffff',
         vertexOpacity: verts.opacity ?? 1,
         vertexBlendMode: verts.blendMode || 'source-over',
-        vertexColorMethod: vc.type || 'solid',
+        vertexColorMethod: vc.method || 'solid',
         vertexColorEnd: vcp['gradient-2point']?.colorEnd || '#ff0000',
-        vertexGradientType: vc.type || 'solid',
+        vertexGradientType: vc.type || '2-point',
         vertexGradientPreset: vcp['gradient-preset']?.preset || 'rainbow',
         vertexGradientStops: vcp['gradient-custom']?.stops || [],
+
+        // Background
+        backgroundColor: bg.color || '#000000',
+        backgroundOpacity: bg.opacity ?? 0,
+
+        // Rendering
+        autoScale: rendering.autoScale ?? false,
+        scaleLineWidth: rendering.scaleLineWidth !== false,
+        connectMode: rendering.connectMode || 'straight',
+        connectDetail: rendering.connectDetail ?? 20,
+        waveAmplitude: rendering.waveAmplitude ?? 10,
+        waveFrequency: rendering.waveFrequency ?? 5,
+        waveAlternateFlip: rendering.waveAlternateFlip ?? false,
+        splineTension: rendering.splineTension ?? 0,
+        splineBias: rendering.splineBias ?? 0,
+        splineContinuity: rendering.splineContinuity ?? 0,
+        splineAlpha: rendering.splineAlpha ?? 0.5,
+        bezierBulge: rendering.bezierBulge ?? 0
+    };
+}
+
+// ─── Flatten hybrid (nested → flat) ─────────────────────
+
+/**
+ * Build a flat params object from a v3.0 hybrid state slice.
+ * Used by both the Renderer and all hybrid UI sections.
+ */
+export function flattenHybridParams(hybridState) {
+    if (!hybridState) return {};
+
+    const mix = hybridState.mix || {};
+    const underlay = hybridState.underlay || {};
+    const stroke = hybridState.stroke || {};
+    const fill = hybridState.fill || {};
+    const verts = hybridState.vertices || {};
+    const bg = hybridState.background || {};
+    const rendering = hybridState.rendering || {};
+    const coset = hybridState.coset || {};
+
+    const sc = stroke.coloring || {};
+    const scp = sc.params || {};
+    const fc = fill.coloring || {};
+    const fcp = fc.params || {};
+    const vc = verts.coloring || {};
+    const vcp = vc.params || {};
+
+    // Source A/B coloring
+    const srcA = hybridState.sourceA || {};
+    const srcAc = srcA.coloring || {};
+    const srcAcp = srcAc.params || {};
+    const srcB = hybridState.sourceB || {};
+    const srcBc = srcB.coloring || {};
+    const srcBcp = srcBc.params || {};
+
+    // Base curve A/B coloring
+    const bcA = hybridState.baseCurveA || {};
+    const bcAc = bcA.coloring || {};
+    const bcAcp = bcAc.params || {};
+    const bcB = hybridState.baseCurveB || {};
+    const bcBc = bcB.coloring || {};
+    const bcBcp = bcBc.params || {};
+
+    return {
+        // Mix
+        weight: mix.weight ?? 0,
+        method: mix.method || 'linear',
+        samples: mix.samples ?? 360,
+        resampleMethod: mix.resampleMethod || 'lcm',
+        approxResampleThreshold: mix.approxResampleThreshold ?? 20000,
+        mixType: mix.mixType || 'simple',
+
+        // Underlay
+        showRoseA: underlay.showRoseA ?? false,
+        showRoseB: underlay.showRoseB ?? false,
+        underlayOpacity: underlay.opacity ?? 0.15,
+
+        // Stroke
+        color: scp.solid?.color || '#a855f7',
+        colorEnd: scp['gradient-2point']?.colorEnd || '#ef4444',
+        colorMethod: sc.method || 'solid',
+        gradientType: sc.type || '2-point',
+        gradientPreset: scp['gradient-preset']?.preset || 'rainbow',
+        gradientStops: scp['gradient-custom']?.stops || [],
+        opacity: stroke.opacity ?? 0.5,
+        blendMode: stroke.blendMode || 'lighter',
+        lineWidth: stroke.lineWidth ?? 2,
+        antiAlias: stroke.antiAlias !== false,
+
+        // Fill
+        showFill: fill.visible !== false,
+        fillColor: fcp.solid?.color || '#ffffff',
+        fillColorEnd: fcp['gradient-2point']?.colorEnd || '#000000',
+        fillOpacity: fill.opacity ?? 0,
+        fillBlendMode: fill.blendMode || 'source-over',
+        fillColorMethod: fc.method || 'solid',
+        fillGradientType: fc.type || '2-point',
+        fillGradientPreset: fcp['gradient-preset']?.preset || 'rainbow',
+        fillGradientStops: fcp['gradient-custom']?.stops || [],
+
+        // Vertices
+        showVertices: verts.visible === true,
+        vertexRadius: verts.radius ?? 2,
+        vertexColor: vcp.solid?.color || '#ffffff',
+        vertexOpacity: verts.opacity ?? 1,
+        vertexBlendMode: verts.blendMode || 'source-over',
+        vertexColorMethod: vc.method || 'solid',
+        vertexColorEnd: vcp['gradient-2point']?.colorEnd || '#ff0000',
+        vertexGradientType: vc.type || '2-point',
+        vertexGradientPreset: vcp['gradient-preset']?.preset || 'rainbow',
+        vertexGradientStops: vcp['gradient-custom']?.stops || [],
+        vertexAntiAlias: verts.antiAlias !== false,
+
+        // Source Underlays (A/B)
+        underlayColorA: srcAcp.solid?.color || '#FF0000',
+        underlayColorMethodA: srcAc.method || 'solid',
+        underlayLineWidthA: srcA.lineWidth ?? 1,
+        underlayOpacityA: srcA.opacity ?? 0.3,
+        underlayBlendModeA: srcA.blendMode || 'source-over',
+        underlayAntiAliasA: srcA.antiAlias !== false,
+
+        underlayColorB: srcBcp.solid?.color || '#0000FF',
+        underlayColorMethodB: srcBc.method || 'solid',
+        underlayLineWidthB: srcB.lineWidth ?? 1,
+        underlayOpacityB: srcB.opacity ?? 0.3,
+        underlayBlendModeB: srcB.blendMode || 'source-over',
+        underlayAntiAliasB: srcB.antiAlias !== false,
+
+        // Base Curves (A/B)
+        showBaseCurveA: bcA.visible ?? false,
+        baseCurveLineWidthA: bcA.lineWidth ?? 1,
+        baseCurveColorA: bcAcp.solid?.color || '#FF0000',
+        baseCurveOpacityA: bcA.opacity ?? 0.3,
+        baseCurveBlendModeA: bcA.blendMode || 'source-over',
+        baseCurveAntiAliasA: bcA.antiAlias !== false,
+        baseCurveColorMethodA: bcAc.method || 'solid',
+
+        showBaseCurveB: bcB.visible ?? false,
+        baseCurveLineWidthB: bcB.lineWidth ?? 1,
+        baseCurveColorB: bcBcp.solid?.color || '#0000FF',
+        baseCurveOpacityB: bcB.opacity ?? 0.3,
+        baseCurveBlendModeB: bcB.blendMode || 'source-over',
+        baseCurveAntiAliasB: bcB.antiAlias !== false,
+        baseCurveColorMethodB: bcBc.method || 'solid',
+
+        // Coset
+        matchCosetsByLCM: coset.matchCosetsByLCM ?? false,
+        cosetIndex: coset.index ?? 0,
+        cosetCount: coset.count ?? 1,
+        cosetDistribution: coset.distribution || 'sequential',
 
         // Background
         backgroundColor: bg.color || '#000000',
@@ -142,8 +294,8 @@ const FLAT_KEY_TO_PATH = {
     // Stroke
     color: ['stroke', 'coloring', 'params', 'solid', 'color'],
     colorEnd: ['stroke', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
-    colorMethod: ['stroke', 'coloring', 'type'],
-    gradientType: ['stroke', 'coloring', 'type'], // alias — same deep path
+    colorMethod: ['stroke', 'coloring', 'method'],
+    gradientType: ['stroke', 'coloring', 'type'],
     gradientPreset: ['stroke', 'coloring', 'params', 'gradient-preset', 'preset'],
     gradientStops: ['stroke', 'coloring', 'params', 'gradient-custom', 'stops'],
     opacity: ['stroke', 'opacity'],
@@ -155,7 +307,7 @@ const FLAT_KEY_TO_PATH = {
     showFill: ['fill', 'visible'],
     fillColor: ['fill', 'coloring', 'params', 'solid', 'color'],
     fillColorEnd: ['fill', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
-    fillColorMethod: ['fill', 'coloring', 'type'],
+    fillColorMethod: ['fill', 'coloring', 'method'],
     fillGradientType: ['fill', 'coloring', 'type'],
     fillGradientPreset: ['fill', 'coloring', 'params', 'gradient-preset', 'preset'],
     fillGradientStops: ['fill', 'coloring', 'params', 'gradient-custom', 'stops'],
@@ -169,7 +321,7 @@ const FLAT_KEY_TO_PATH = {
     baseCurveOpacity: ['baseCurve', 'opacity'],
     baseCurveBlendMode: ['baseCurve', 'blendMode'],
     baseCurveAntiAlias: ['baseCurve', 'antiAlias'],
-    baseCurveColorMethod: ['baseCurve', 'coloring', 'type'],
+    baseCurveColorMethod: ['baseCurve', 'coloring', 'method'],
     baseCurveGradientType: ['baseCurve', 'coloring', 'type'],
     baseCurveGradientPreset: ['baseCurve', 'coloring', 'params', 'gradient-preset', 'preset'],
     baseCurveGradientStops: ['baseCurve', 'coloring', 'params', 'gradient-custom', 'stops'],
@@ -181,7 +333,7 @@ const FLAT_KEY_TO_PATH = {
     vertexColor: ['vertices', 'coloring', 'params', 'solid', 'color'],
     vertexOpacity: ['vertices', 'opacity'],
     vertexBlendMode: ['vertices', 'blendMode'],
-    vertexColorMethod: ['vertices', 'coloring', 'type'],
+    vertexColorMethod: ['vertices', 'coloring', 'method'],
     vertexGradientType: ['vertices', 'coloring', 'type'],
     vertexGradientPreset: ['vertices', 'coloring', 'params', 'gradient-preset', 'preset'],
     vertexGradientStops: ['vertices', 'coloring', 'params', 'gradient-custom', 'stops'],
@@ -206,7 +358,7 @@ const FLAT_KEY_TO_PATH = {
     splineAlpha: ['rendering', 'splineAlpha'],
     bezierBulge: ['rendering', 'bezierBulge'],
 
-    // Coset
+    // Coset (rosette)
     cosetIndex: ['coset', 'index'],
     showAllCosets: ['coset', 'showAll'],
     cosetCount: ['coset', 'count'],
@@ -218,15 +370,139 @@ const FLAT_KEY_TO_PATH = {
 };
 
 /**
+ * Map of flat UI key → deep state path segments for hybrid state.
+ * Hybrid has a different nested structure than rosettes (no curve/sequencer,
+ * but has sourceA/B, baseCurveA/B, coset, mix sub-objects).
+ */
+const HYBRID_FLAT_KEY_TO_PATH = {
+    // Mix
+    weight: ['mix', 'weight'],
+    method: ['mix', 'method'],
+    samples: ['mix', 'samples'],
+    resampleMethod: ['mix', 'resampleMethod'],
+    approxResampleThreshold: ['mix', 'approxResampleThreshold'],
+    mixType: ['mix', 'mixType'],
+
+    // Underlay toggles
+    showRoseA: ['underlay', 'showRoseA'],
+    showRoseB: ['underlay', 'showRoseB'],
+    underlayOpacity: ['underlay', 'opacity'],
+
+    // Stroke (hybrid main curve)
+    color: ['stroke', 'coloring', 'params', 'solid', 'color'],
+    colorEnd: ['stroke', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
+    colorMethod: ['stroke', 'coloring', 'method'],
+    gradientType: ['stroke', 'coloring', 'type'],
+    gradientPreset: ['stroke', 'coloring', 'params', 'gradient-preset', 'preset'],
+    gradientStops: ['stroke', 'coloring', 'params', 'gradient-custom', 'stops'],
+    opacity: ['stroke', 'opacity'],
+    blendMode: ['stroke', 'blendMode'],
+    lineWidth: ['stroke', 'lineWidth'],
+    antiAlias: ['stroke', 'antiAlias'],
+
+    // Fill
+    showFill: ['fill', 'visible'],
+    fillColor: ['fill', 'coloring', 'params', 'solid', 'color'],
+    fillColorEnd: ['fill', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
+    fillColorMethod: ['fill', 'coloring', 'method'],
+    fillGradientType: ['fill', 'coloring', 'type'],
+    fillGradientPreset: ['fill', 'coloring', 'params', 'gradient-preset', 'preset'],
+    fillGradientStops: ['fill', 'coloring', 'params', 'gradient-custom', 'stops'],
+    fillOpacity: ['fill', 'opacity'],
+    fillBlendMode: ['fill', 'blendMode'],
+
+    // Vertices
+    showVertices: ['vertices', 'visible'],
+    vertexRadius: ['vertices', 'radius'],
+    vertexColor: ['vertices', 'coloring', 'params', 'solid', 'color'],
+    vertexOpacity: ['vertices', 'opacity'],
+    vertexBlendMode: ['vertices', 'blendMode'],
+    vertexColorMethod: ['vertices', 'coloring', 'method'],
+    vertexGradientType: ['vertices', 'coloring', 'type'],
+    vertexGradientPreset: ['vertices', 'coloring', 'params', 'gradient-preset', 'preset'],
+    vertexGradientStops: ['vertices', 'coloring', 'params', 'gradient-custom', 'stops'],
+    vertexColorEnd: ['vertices', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
+    vertexAntiAlias: ['vertices', 'antiAlias'],
+
+    // Source A underlay appearance
+    underlayColorA: ['sourceA', 'coloring', 'params', 'solid', 'color'],
+    underlayColorMethodA: ['sourceA', 'coloring', 'method'],
+    underlayLineWidthA: ['sourceA', 'lineWidth'],
+    underlayOpacityA: ['sourceA', 'opacity'],
+    underlayBlendModeA: ['sourceA', 'blendMode'],
+    underlayAntiAliasA: ['sourceA', 'antiAlias'],
+
+    // Source B underlay appearance
+    underlayColorB: ['sourceB', 'coloring', 'params', 'solid', 'color'],
+    underlayColorMethodB: ['sourceB', 'coloring', 'method'],
+    underlayLineWidthB: ['sourceB', 'lineWidth'],
+    underlayOpacityB: ['sourceB', 'opacity'],
+    underlayBlendModeB: ['sourceB', 'blendMode'],
+    underlayAntiAliasB: ['sourceB', 'antiAlias'],
+
+    // Base Curve A
+    showBaseCurveA: ['baseCurveA', 'visible'],
+    baseCurveLineWidthA: ['baseCurveA', 'lineWidth'],
+    baseCurveColorA: ['baseCurveA', 'coloring', 'params', 'solid', 'color'],
+    baseCurveColorMethodA: ['baseCurveA', 'coloring', 'method'],
+    baseCurveOpacityA: ['baseCurveA', 'opacity'],
+    baseCurveBlendModeA: ['baseCurveA', 'blendMode'],
+    baseCurveAntiAliasA: ['baseCurveA', 'antiAlias'],
+
+    // Base Curve B
+    showBaseCurveB: ['baseCurveB', 'visible'],
+    baseCurveLineWidthB: ['baseCurveB', 'lineWidth'],
+    baseCurveColorB: ['baseCurveB', 'coloring', 'params', 'solid', 'color'],
+    baseCurveColorMethodB: ['baseCurveB', 'coloring', 'method'],
+    baseCurveOpacityB: ['baseCurveB', 'opacity'],
+    baseCurveBlendModeB: ['baseCurveB', 'blendMode'],
+    baseCurveAntiAliasB: ['baseCurveB', 'antiAlias'],
+
+    // Coset
+    matchCosetsByLCM: ['coset', 'matchCosetsByLCM'],
+    cosetIndex: ['coset', 'index'],
+    cosetCount: ['coset', 'count'],
+    cosetDistribution: ['coset', 'distribution'],
+
+    // Background
+    backgroundColor: ['background', 'color'],
+    backgroundOpacity: ['background', 'opacity'],
+
+    // Rendering
+    autoScale: ['rendering', 'autoScale'],
+    scaleLineWidth: ['rendering', 'scaleLineWidth'],
+    connectMode: ['rendering', 'connectMode'],
+    connectDetail: ['rendering', 'connectDetail'],
+    waveAmplitude: ['rendering', 'waveAmplitude'],
+    waveFrequency: ['rendering', 'waveFrequency'],
+    waveAlternateFlip: ['rendering', 'waveAlternateFlip'],
+    splineTension: ['rendering', 'splineTension'],
+    splineBias: ['rendering', 'splineBias'],
+    splineContinuity: ['rendering', 'splineContinuity'],
+    splineAlpha: ['rendering', 'splineAlpha'],
+    bezierBulge: ['rendering', 'bezierBulge']
+};
+
+/**
  * Convert a flat UI key to a full deep path array for SET_DEEP dispatch.
  * 
  * @param {string} flatKey - e.g. 'color', 'n', 'totalDivs', 'showBaseCurve'
- * @param {string} roseId  - e.g. 'rosetteA'
- * @param {object} roseState - the current nested state for this rosette (needed for dynamic curve/seq type)
+ * @param {string} roseId  - e.g. 'rosetteA', 'rosetteB', or 'hybrid'
+ * @param {object} roseState - the current nested state for this rosette/hybrid
  * @returns {string[]} path array for SET_DEEP, e.g. ['rosetteA', 'stroke', 'opacity']
  */
 export function getFlatKeyDeepPath(flatKey, roseId, roseState) {
-    // 1. Check static mapping
+    // Use hybrid-specific mapping for hybrid roseId
+    if (roseId === 'hybrid') {
+        const hybridPath = HYBRID_FLAT_KEY_TO_PATH[flatKey];
+        if (hybridPath) {
+            return ['hybrid', ...hybridPath];
+        }
+        console.warn(`[stateAdapters] No hybrid path mapping for flat key '${flatKey}'. Falling back to top-level.`);
+        return ['hybrid', flatKey];
+    }
+
+    // 1. Check static mapping (rosette)
     const staticPath = FLAT_KEY_TO_PATH[flatKey];
     if (staticPath) {
         return [roseId, ...staticPath];
@@ -252,8 +528,8 @@ export function getFlatKeyDeepPath(flatKey, roseId, roseState) {
 }
 
 /**
- * Dispatch a SET_DEEP action for a given flat key on a rosette.
- * This is the primary dispatch helper for all rosette UI components.
+ * Dispatch a SET_DEEP action for a given flat key on a rosette or hybrid.
+ * This is the primary dispatch helper for all UI components.
  */
 export function dispatchDeep(flatKey, value, roseId) {
     const state = store.getState();
@@ -272,7 +548,7 @@ export function dispatchDeep(flatKey, value, roseId) {
  * Used by LinkManager for linking parameters between rosettes.
  * 
  * @param {string} flatKey - e.g. 'n', 'color', 'opacity'
- * @param {string} roseId  - e.g. 'rosetteA'
+ * @param {string} roseId  - e.g. 'rosetteA', 'rosetteB', or 'hybrid'
  * @returns {string} dot-separated path, e.g. 'rosetteA.stroke.opacity'
  */
 export function getLinkKey(flatKey, roseId) {

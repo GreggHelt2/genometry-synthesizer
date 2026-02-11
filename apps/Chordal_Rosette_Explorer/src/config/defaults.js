@@ -19,7 +19,8 @@ const DEFAULT_GRADIENT_STOPS = [
 
 function makeColoringDefaults(solidColor, startColor, endColor) {
     return {
-        type: 'solid',
+        method: 'solid',        // colorMethod: 'solid' | 'length' | 'angle' | 'sequence'
+        type: '2-point',        // gradientType: '2-point' | 'cyclic' | 'custom' | 'preset'
         source: 'length',
         params: {
             'solid': { color: solidColor },
@@ -229,6 +230,12 @@ export const DEFAULTS = {
             lineWidth: 1,
             blendMode: 'source-over',
             coloring: makeColoringDefaults('#0000FF', '#0000FF', '#ffffff')
+        },
+        coset: {
+            matchCosetsByLCM: false,
+            index: 0,
+            count: 1,
+            distribution: 'sequential'
         },
         background: {
             color: '#000000',

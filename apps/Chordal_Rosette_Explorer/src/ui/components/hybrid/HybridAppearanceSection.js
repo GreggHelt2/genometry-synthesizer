@@ -3,8 +3,7 @@ import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
 import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { createElement } from '../../utils/dom.js';
 import { ParamNumber } from '../ParamNumber.js';
-import { store } from '../../../engine/state/Store.js';
-import { ACTIONS } from '../../../engine/state/Actions.js';
+import { dispatchDeep } from '../../../engine/state/stateAdapters.js';
 
 export class HybridAppearanceSection {
     constructor(orchestrator) {
@@ -24,7 +23,6 @@ export class HybridAppearanceSection {
         this.renderBaseChordal();
 
         // 4. Base Curve Rendering
-        // 4. Base Curve Rendering
         this.renderBaseCurve();
 
         // 5. Fill Rendering
@@ -33,7 +31,7 @@ export class HybridAppearanceSection {
         // 6. Vertex Rendering
         this.renderVertexViz();
 
-        // 6. General Rendering
+        // 7. General Rendering
         this.renderGeneralHelper();
     }
 
@@ -47,15 +45,15 @@ export class HybridAppearanceSection {
         this.hybridVizModule = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null, // actionType unused — module uses dispatchDeep internally
             {
                 // Mapping keys
                 colorMethod: 'colorMethod',
                 color: 'color',
                 blendMode: 'blendMode',
-                opacity: 'opacity', // Moved from Animation
-                size: 'lineWidth',  // New feature
-                antiAlias: 'antiAlias' // New feature
+                opacity: 'opacity',
+                size: 'lineWidth',
+                antiAlias: 'antiAlias'
             },
             {
                 sizeLabel: 'Line Width',
@@ -97,22 +95,8 @@ export class HybridAppearanceSection {
         this.underlayModuleA = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
-                // Keys map to hybrid state but logically control render of Source A
-                // We reuse Rosette A concepts but store in Hybrid state?
-                // Or are these overrides? State structure: hybrid.showRoseA, hybrid.underlayOpacity... 
-                // Wait, previous 'Underlays' only had: Show A, Show B, single Opacity.
-                // New plan implies FULL LayerRenderingModule capabilities for A and B.
-                // Do we have state keys for this? NO.
-                // We need to define NEW schema or reuse existing.
-                // Plan: "Uses LayerRenderingModule for Source A and B".
-                // We need to assume new keys will be created in updateUI/State?
-                // Or are we mapping to existing?
-                // Existing: showRoseA, showRoseB, underlayOpacity (shared).
-                // To support individual full modules, we need separate keys for A & B opacity, color, width etc.
-                // I will name them semantic keys like 'underlayColorA', 'underlayLineWidthA', etc.
-
                 colorMethod: 'underlayColorMethodA',
                 color: 'underlayColorA',
                 blendMode: 'underlayBlendModeA',
@@ -135,7 +119,7 @@ export class HybridAppearanceSection {
         this.underlayModuleB = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 colorMethod: 'underlayColorMethodB',
                 color: 'underlayColorB',
@@ -167,7 +151,7 @@ export class HybridAppearanceSection {
         this.baseCurveModuleA = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 colorMethod: 'baseCurveColorMethodA',
                 color: 'baseCurveColorA',
@@ -190,7 +174,7 @@ export class HybridAppearanceSection {
         this.baseCurveModuleB = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 colorMethod: 'baseCurveColorMethodB',
                 color: 'baseCurveColorB',
@@ -217,7 +201,7 @@ export class HybridAppearanceSection {
         this.fillModule = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 colorMethod: 'fillColorMethod',
                 gradientType: 'fillGradientType',
@@ -246,7 +230,7 @@ export class HybridAppearanceSection {
         this.vertexModule = new LayerRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 size: 'vertexRadius',
                 color: 'vertexColor',
@@ -277,7 +261,7 @@ export class HybridAppearanceSection {
         this.generalModule = new GlobalRenderingModule(
             this.orchestrator,
             'hybrid',
-            ACTIONS.UPDATE_HYBRID,
+            null,
             {
                 autoScale: 'autoScale',
                 scaleLineWidth: 'scaleLineWidth',
@@ -292,45 +276,37 @@ export class HybridAppearanceSection {
         const paramGui = new ParamNumber({
             key, label, min, max, step, value: 0,
             onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, 'hybrid');
             }
         });
         if (this.orchestrator.registerParam) this.orchestrator.registerParam(paramGui);
         return { container: paramGui.getElement(), instance: paramGui };
     }
 
-    update(state) {
-        const hybridParams = state.hybrid;
-
+    update(flatParams) {
         // 1. Viz Module
-        if (this.hybridVizModule) this.hybridVizModule.update(hybridParams);
+        if (this.hybridVizModule) this.hybridVizModule.update(flatParams);
 
         // 2. Resampling
         if (this.resampleThresholdControl) {
-            this.resampleThresholdControl.instance.setValue(hybridParams.approxResampleThreshold ?? 20000);
+            this.resampleThresholdControl.instance.setValue(flatParams.approxResampleThreshold ?? 20000);
         }
 
         // 3. Base Chordal (Underlays)
-        // We pass the entire hybridParams, but the modules are keyed to look for 'underlay...' keys.
-        // We need to ensure logic for defaulting if these keys don't exist yet?
-        // LayerRenderingModule generally handles missing keys gracefully by showing default/empty.
-        if (this.underlayModuleA) this.underlayModuleA.update(hybridParams);
-        if (this.underlayModuleB) this.underlayModuleB.update(hybridParams);
+        if (this.underlayModuleA) this.underlayModuleA.update(flatParams);
+        if (this.underlayModuleB) this.underlayModuleB.update(flatParams);
 
         // 4. Base Curve
-        if (this.baseCurveModuleA) this.baseCurveModuleA.update(hybridParams);
-        if (this.baseCurveModuleB) this.baseCurveModuleB.update(hybridParams);
+        if (this.baseCurveModuleA) this.baseCurveModuleA.update(flatParams);
+        if (this.baseCurveModuleB) this.baseCurveModuleB.update(flatParams);
 
         // 5. Fill
-        if (this.fillModule) this.fillModule.update(hybridParams);
+        if (this.fillModule) this.fillModule.update(flatParams);
 
         // 6. Vertex
-        if (this.vertexModule) this.vertexModule.update(hybridParams);
+        if (this.vertexModule) this.vertexModule.update(flatParams);
 
-        // 6. General
-        if (this.generalModule) this.generalModule.update(hybridParams);
+        // 7. General
+        if (this.generalModule) this.generalModule.update(flatParams);
     }
 }

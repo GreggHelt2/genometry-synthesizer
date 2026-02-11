@@ -1,7 +1,6 @@
 import { Accordion } from '../Accordion.js';
 import { ParamNumber } from '../ParamNumber.js';
-import { store } from '../../../engine/state/Store.js';
-import { ACTIONS } from '../../../engine/state/Actions.js';
+import { dispatchDeep } from '../../../engine/state/stateAdapters.js';
 
 export class HybridAnimationSection {
     constructor(orchestrator) {
@@ -45,10 +44,7 @@ export class HybridAnimationSection {
             value: 0,
             hardLimits: (key === 'weight'), // Enforce strict limits for Morph Weight
             onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, 'hybrid');
             }
         });
 
@@ -63,10 +59,9 @@ export class HybridAnimationSection {
         };
     }
 
-    update(state) {
-        const hybridParams = state.hybrid;
+    update(flatParams) {
         if (this.morphControl) {
-            this.morphControl.instance.setValue(hybridParams.weight);
+            this.morphControl.instance.setValue(flatParams.weight);
         }
     }
 }

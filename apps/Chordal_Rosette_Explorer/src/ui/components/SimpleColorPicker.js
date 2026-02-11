@@ -206,8 +206,8 @@ export class SimpleColorPicker {
         // Preview
         this.previewSwatch.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.value.a})`;
 
-        // Emit Callback
-        if (this.onChange) {
+        // Emit Callback (skip during programmatic setValues)
+        if (this.onChange && !this._suppressOnChange) {
             this.onChange(hex, this.value.a);
         }
     }
@@ -257,10 +257,12 @@ export class SimpleColorPicker {
     }
 
     setValues(color, alpha) {
+        this._suppressOnChange = true;
         const hsv = ColorUtils.hexToHsv(color);
         this.value = { h: hsv.h, s: hsv.s, v: hsv.v, a: alpha };
         this.drawSV();
         this.updateColor();
+        this._suppressOnChange = false;
     }
 
     close() {

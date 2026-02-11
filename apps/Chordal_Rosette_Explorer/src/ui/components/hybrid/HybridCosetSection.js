@@ -4,11 +4,9 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { createElement } from '../../utils/dom.js';
 import { store } from '../../../engine/state/Store.js';
-import { ACTIONS } from '../../../engine/state/Actions.js';
+import { dispatchDeep, flattenRoseParams } from '../../../engine/state/stateAdapters.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, lcm } from '../../../engine/math/MathOps.js';
-import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
-import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 
 export class HybridCosetSection {
     constructor(orchestrator) {
@@ -37,10 +35,7 @@ export class HybridCosetSection {
             label: 'Match Cosets by LCM',
             value: false,
             onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { matchCosetsByLCM: val }
-                });
+                dispatchDeep('matchCosetsByLCM', val, 'hybrid');
             }
         });
         this.accordion.append(this.lcmMatchCheck.getElement());
@@ -66,10 +61,7 @@ export class HybridCosetSection {
             options: distOptions,
             value: 'sequential',
             onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { cosetDistribution: val }
-                });
+                dispatchDeep('cosetDistribution', val, 'hybrid');
             }
         });
         this.accordion.append(this.distSelect.getElement());
@@ -84,10 +76,7 @@ export class HybridCosetSection {
             step,
             value: 0,
             onChange: (val) => {
-                store.dispatch({
-                    type: ACTIONS.UPDATE_HYBRID,
-                    payload: { [key]: val }
-                });
+                dispatchDeep(key, val, 'hybrid');
             }
         });
 
@@ -102,8 +91,12 @@ export class HybridCosetSection {
         };
     }
 
-    update(state) {
-        const hybridParams = state.hybrid;
+    update(flatParams) {
+        // flatParams is already flattened hybrid params from flattenHybridParams
+        // But we also need rosette state for coset K calculations
+        const state = store.getState();
+        const flatA = flattenRoseParams(state.rosetteA);
+        const flatB = flattenRoseParams(state.rosetteB);
 
         // --- Hybrid Coset Logic ---
         const getK = (params) => {
@@ -119,9 +112,9 @@ export class HybridCosetSection {
             return gcd(params.step, params.totalDivs);
         };
 
-        const kA = getK(state.rosetteA);
-        const kB = getK(state.rosetteB);
-        const useLCM = hybridParams.matchCosetsByLCM;
+        const kA = getK(flatA);
+        const kB = getK(flatB);
+        const useLCM = flatParams.matchCosetsByLCM;
         const ringsLCM = lcm(kA, kB);
         const isMatching = (kA === kB && kA > 1);
         const isLCMMatching = (useLCM && ringsLCM > 1 && (kA > 1 || kB > 1));
@@ -149,7 +142,7 @@ export class HybridCosetSection {
         const enableIndexControl = (kA > 1 || kB > 1);
 
         this.cosetCountControl.container.style.opacity = enableMultiControls ? '1' : '0.5';
-        this.cosetCountControl.instance.slider.disabled = !enableMultiControls; // Access slider directly
+        this.cosetCountControl.instance.slider.disabled = !enableMultiControls;
 
         this.distSelect.setDisabled(!enableMultiControls);
         this.distSelect.getElement().style.opacity = enableMultiControls ? '1' : '0.5';
@@ -160,21 +153,17 @@ export class HybridCosetSection {
         // Update Max Ranges & Values
         if (this.cosetCountControl) {
             this.cosetCountControl.instance.setMax(effectiveK);
-            this.cosetCountControl.instance.setValue(Math.min(hybridParams.cosetCount || 1, effectiveK));
+            this.cosetCountControl.instance.setValue(Math.min(flatParams.cosetCount || 1, effectiveK));
         }
 
         const indexMax = (enableMultiControls) ? effectiveK : Math.max(kA, kB);
         if (this.cosetIndexControl) {
             this.cosetIndexControl.instance.setMax(Math.max(1, indexMax - 1));
-            this.cosetIndexControl.instance.setValue((hybridParams.cosetIndex || 0) % (indexMax || 1));
+            this.cosetIndexControl.instance.setValue((flatParams.cosetIndex || 0) % (indexMax || 1));
         }
 
         if (this.distSelect) {
-            this.distSelect.setValue(hybridParams.cosetDistribution || 'sequential');
+            this.distSelect.setValue(flatParams.cosetDistribution || 'sequential');
         }
-
-
     }
-
-
 }
