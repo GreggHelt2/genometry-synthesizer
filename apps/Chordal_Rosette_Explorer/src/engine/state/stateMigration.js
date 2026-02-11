@@ -84,8 +84,8 @@ const FLAT_PARAM_MAP = {
     // Stroke
     'color': 'stroke.coloring.params.solid.color',
     'colorEnd': 'stroke.coloring.params.gradient-2point.colorEnd',
-    'colorMethod': 'stroke.coloring.type',
-    'gradientType': 'stroke.coloring.type',  // overridden by colorMethod in practice
+    'colorMethod': 'stroke.coloring.method',
+    'gradientType': 'stroke.coloring.type',
     'gradientPreset': 'stroke.coloring.params.gradient-preset.preset',
     'gradientStops': 'stroke.coloring.params.gradient-custom.stops',
     'opacity': 'stroke.opacity',
@@ -98,7 +98,7 @@ const FLAT_PARAM_MAP = {
     'fillColorEnd': 'fill.coloring.params.gradient-2point.colorEnd',
     'fillOpacity': 'fill.opacity',
     'fillBlendMode': 'fill.blendMode',
-    'fillColorMethod': 'fill.coloring.type',
+    'fillColorMethod': 'fill.coloring.method',
     'fillGradientType': 'fill.coloring.type',
     'fillGradientStops': 'fill.coloring.params.gradient-custom.stops',
 
@@ -108,7 +108,7 @@ const FLAT_PARAM_MAP = {
     'baseCurveColor': 'baseCurve.coloring.params.solid.color',
     'baseCurveOpacity': 'baseCurve.opacity',
     'baseCurveBlendMode': 'baseCurve.blendMode',
-    'baseCurveColorMethod': 'baseCurve.coloring.type',
+    'baseCurveColorMethod': 'baseCurve.coloring.method',
     'baseCurveAntiAlias': 'baseCurve.antiAlias',
 
     // Vertices
@@ -154,7 +154,7 @@ const HYBRID_FLAT_MAP = {
     // Stroke
     'color': 'stroke.coloring.params.solid.color',
     'colorEnd': 'stroke.coloring.params.gradient-2point.colorEnd',
-    'colorMethod': 'stroke.coloring.type',
+    'colorMethod': 'stroke.coloring.method',
     'gradientType': 'stroke.coloring.type',
     'gradientPreset': 'stroke.coloring.params.gradient-preset.preset',
     'gradientStops': 'stroke.coloring.params.gradient-custom.stops',
@@ -167,7 +167,7 @@ const HYBRID_FLAT_MAP = {
     'fillColorEnd': 'fill.coloring.params.gradient-2point.colorEnd',
     'fillOpacity': 'fill.opacity',
     'fillBlendMode': 'fill.blendMode',
-    'fillColorMethod': 'fill.coloring.type',
+    'fillColorMethod': 'fill.coloring.method',
     'fillGradientType': 'fill.coloring.type',
     'fillGradientStops': 'fill.coloring.params.gradient-custom.stops',
 
