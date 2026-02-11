@@ -4,8 +4,8 @@ import { linkManager } from '../logic/LinkManager.js';
 import { IndexedDBAdapter } from './IndexedDBAdapter.js';
 import { migrateV2ToV3, backupToFile, backupIndexedDB } from './stateMigration.js';
 
-const STORAGE_KEY = 'chordal_rosette_state_v3_0';
-const LEGACY_STORAGE_KEYS = ['chordal_rosette_state_v2_1', 'chordal_rosette_state_v2'];
+const STORAGE_KEY = 'chordal_rosette_state_v4_0';
+const LEGACY_STORAGE_KEYS = ['chordal_rosette_state_v3_0', 'chordal_rosette_state_v2_1', 'chordal_rosette_state_v2'];
 const DEBOUNCE_MS = 1000;
 
 export class PersistenceManager {
@@ -52,11 +52,11 @@ export class PersistenceManager {
     }
 
     /**
-     * Loads state from localStorage. Handles v2.x → v3.0 migration.
+     * Loads state from localStorage. Handles v2.x/v3.x → v4.0 migration.
      */
     load() {
         try {
-            // Try v3.0 key first
+            // Try v4.0 key first
             let raw = localStorage.getItem(STORAGE_KEY);
 
             if (!raw) {
@@ -64,7 +64,7 @@ export class PersistenceManager {
                 for (const legacyKey of LEGACY_STORAGE_KEYS) {
                     raw = localStorage.getItem(legacyKey);
                     if (raw) {
-                        console.log(`[PersistenceManager] Found legacy state (${legacyKey}). Will migrate to v3.0.`);
+                        console.log(`[PersistenceManager] Found legacy state (${legacyKey}). Will migrate to v4.0.`);
                         break;
                     }
                 }
@@ -79,7 +79,7 @@ export class PersistenceManager {
 
             // Check version and migrate if needed
             if (this.needsMigration(savedData)) {
-                console.log('[PersistenceManager] State requires migration to v3.0.');
+                console.log('[PersistenceManager] State requires migration to v4.0.');
 
                 // Backup before migration
                 backupToFile(savedData, 'pre_migration_localStorage.json');
@@ -91,7 +91,7 @@ export class PersistenceManager {
 
                 savedData = migrateV2ToV3(savedData, DEFAULTS);
 
-                // Write migrated state to v3.0 key
+                // Write migrated state to v4.0 key
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
 
                 // Clean up legacy keys
@@ -109,7 +109,7 @@ export class PersistenceManager {
     needsMigration(savedData) {
         if (!savedData.version) return true;
         const ver = parseFloat(savedData.version);
-        return isNaN(ver) || ver < 3.0;
+        return isNaN(ver) || ver < 4.0;
     }
 
     hydrateWithDefaults(savedData) {
@@ -139,7 +139,7 @@ export class PersistenceManager {
 
         const now = new Date();
         const payload = {
-            version: '3.0',
+            version: '4.0',
             timestamp: now.getTime(),
             timeReadable: now.toLocaleString('en-US', {
                 year: 'numeric', month: '2-digit', day: '2-digit',
@@ -207,7 +207,7 @@ export class PersistenceManager {
             // Migrate snapshot if needed
             let snapshotData = data;
             if (this.needsMigration(snapshotData)) {
-                console.log(`[PersistenceManager] Migrating snapshot '${name}' to v3.0.`);
+                console.log(`[PersistenceManager] Migrating snapshot '${name}' to v4.0.`);
                 snapshotData = migrateV2ToV3(snapshotData, DEFAULTS);
                 // Save migrated snapshot back
                 snapshotData.name = name;

@@ -364,7 +364,7 @@ export function migrateV2ToV3(savedData, defaults) {
     console.log('[Migration] Starting v2.x → v3.0 migration...');
 
     const result = {
-        version: '3.0',
+        version: '4.0',
         timestamp: savedData.timestamp || Date.now(),
         timeReadable: savedData.timeReadable || new Date().toLocaleString('en-US', {
             year: 'numeric', month: '2-digit', day: '2-digit',
