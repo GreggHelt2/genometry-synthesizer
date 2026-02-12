@@ -2,6 +2,7 @@
  * Greatest Common Divisor
  */
 export function gcd(a, b) {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
     if (b === 0) return a;
     return gcd(b, a % b);
 }

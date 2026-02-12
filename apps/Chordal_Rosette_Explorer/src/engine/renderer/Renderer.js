@@ -577,17 +577,6 @@ export class CanvasRenderer {
 
     createCurve(params) {
         const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
-
-        if (params.curveType === 'Rhodonea' || !params.curveType) {
-            return new CurveClass(
-                params.n,
-                params.d,
-                params.A,
-                params.c,
-                (params.rot * Math.PI) / 180
-            );
-        }
-
         return new CurveClass(params);
     }
 

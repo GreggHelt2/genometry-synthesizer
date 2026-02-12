@@ -3,20 +3,21 @@ import { gcd } from '../MathOps.js';
 
 export class RhodoneaCurve extends Curve {
     /**
-     * @param {number} n - The numerator of the k value (frequency).
-     * @param {number} d - The denominator of the k value.
-     * @param {number} A - The amplitude (radius).
-     * @param {number} c - The offset from the origin.
-     * @param {number} rot - The rotation in radians.
+     * @param {object} params
+     * @param {number} params.n - The numerator of the k value (frequency).
+     * @param {number} params.d - The denominator of the k value.
+     * @param {number} params.A - The amplitude (radius).
+     * @param {number} params.c - The offset from the origin.
+     * @param {number} params.rot - The rotation in degrees.
      */
-    constructor(n, d, A, c, rot) {
+    constructor(params = {}) {
         super();
-        this.n = n;
-        this.d = d;
-        this.A = A;
-        this.c = c;
-        this.rot = rot;
-        this.k = n / d;
+        this.n = params.n;
+        this.d = params.d;
+        this.A = params.A;
+        this.c = params.c;
+        this.rot = (params.rot || 0) * Math.PI / 180;
+        this.k = this.n / this.d;
     }
 
     getPoint(theta) {
