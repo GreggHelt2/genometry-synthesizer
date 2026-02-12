@@ -59,10 +59,10 @@ export class FourCycleIncrementGenerator extends Sequencer {
 
     getParamsSchema() {
         return [
-            { key: 'incrementA', label: 'Increment A', type: 'slider', min: 1, max: 360, step: 1, default: 1 },
-            { key: 'incrementB', label: 'Increment B', type: 'slider', min: 1, max: 360, step: 1, default: 2 },
-            { key: 'incrementC', label: 'Increment C', type: 'slider', min: 1, max: 360, step: 1, default: 3 },
-            { key: 'incrementD', label: 'Increment D', type: 'slider', min: 1, max: 360, step: 1, default: 4 }
+            { key: 'incrementA', label: 'Increment A', type: 'slider', min: 1, max: 360, step: 1 },
+            { key: 'incrementB', label: 'Increment B', type: 'slider', min: 1, max: 360, step: 1 },
+            { key: 'incrementC', label: 'Increment C', type: 'slider', min: 1, max: 360, step: 1 },
+            { key: 'incrementD', label: 'Increment D', type: 'slider', min: 1, max: 360, step: 1 }
         ];
     }
 }

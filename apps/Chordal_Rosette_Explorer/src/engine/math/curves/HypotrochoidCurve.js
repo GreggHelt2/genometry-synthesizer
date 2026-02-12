@@ -12,10 +12,10 @@ export class HypotrochoidCurve extends Curve {
      */
     constructor(params = {}) {
         super();
-        this.R = params.R || 100;
-        this.r = params.r || 20;
-        this.d = params.d || 50;
-        this.A = params.A !== undefined ? params.A : 100;
+        this.R = params.R;
+        this.r = params.r;
+        this.d = params.d;
+        this.A = params.A;
         this.rot = params.rot || 0;
     }
 
@@ -77,11 +77,11 @@ export class HypotrochoidCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'R', type: 'number', label: 'Fixed Radius (R)', min: 10, max: 300, step: 1, default: 100 },
-            { key: 'r', type: 'number', label: 'Rolling Radius (r)', min: 1, max: 150, step: 1, default: 20 },
-            { key: 'd', type: 'number', label: 'Arm Length (d)', min: 0, max: 200, step: 1, default: 50 },
-            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'R', type: 'number', label: 'Fixed Radius (R)', min: 10, max: 300, step: 1 },
+            { key: 'r', type: 'number', label: 'Rolling Radius (r)', min: 1, max: 150, step: 1 },
+            { key: 'd', type: 'number', label: 'Arm Length (d)', min: 0, max: 200, step: 1 },
+            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 }

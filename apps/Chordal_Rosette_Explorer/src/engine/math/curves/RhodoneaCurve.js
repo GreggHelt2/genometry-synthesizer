@@ -9,7 +9,7 @@ export class RhodoneaCurve extends Curve {
      * @param {number} c - The offset from the origin.
      * @param {number} rot - The rotation in radians.
      */
-    constructor(n = 1, d = 1, A = 100, c = 0, rot = 0) {
+    constructor(n, d, A, c, rot) {
         super();
         this.n = n;
         this.d = d;
@@ -54,11 +54,11 @@ export class RhodoneaCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'n', type: 'number', label: 'n (Numerator)', min: 1, max: 100, step: 1, default: 2 },
-            { key: 'd', type: 'number', label: 'd (Denominator)', min: 1, max: 100, step: 1, default: 29 },
-            { key: 'A', type: 'number', label: 'Amplitude (A)', min: 10, max: 300, step: 1, default: 100 },
-            { key: 'c', type: 'number', label: 'Offset (c)', min: 0, max: 200, step: 1, default: 0 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'n', type: 'number', label: 'n (Numerator)', min: 1, max: 100, step: 1 },
+            { key: 'd', type: 'number', label: 'd (Denominator)', min: 1, max: 100, step: 1 },
+            { key: 'A', type: 'number', label: 'Amplitude (A)', min: 10, max: 300, step: 1 },
+            { key: 'c', type: 'number', label: 'Offset (c)', min: 0, max: 200, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 }

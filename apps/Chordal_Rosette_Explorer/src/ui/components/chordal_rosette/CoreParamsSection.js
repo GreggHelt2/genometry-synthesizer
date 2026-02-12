@@ -93,7 +93,7 @@ export class CoreParamsSection {
             this.controls[item.key] = slider.instance;
 
             // Set initial value from current state params or default
-            const val = params[item.key] !== undefined ? params[item.key] : item.default;
+            const val = params[item.key];
             slider.instance.setValue(val);
         });
     }

@@ -69,8 +69,7 @@ export class MultiplicativeGroupModuloNGenerator extends Sequencer {
                 min: 1,
                 max: 100, // Can be typically up to N, but UI slider needs fixed max? 
                 // Or we make it relative? For now fixed range is fine.
-                step: 1,
-                default: 2
+                step: 1
             }
         ];
     }

@@ -14,14 +14,14 @@ export class SuperformulaCurve extends Curve {
      */
     constructor(params = {}) {
         super();
-        this.m = params.m || 6;
-        this.n1 = params.n1 || 1;
-        this.n2 = params.n2 || 1;
-        this.n3 = params.n3 || 1;
-        this.a = params.a || 1;
-        this.b = params.b || 1;
-        this.A = params.A !== undefined ? params.A : 100;
-        this.rot = params.rot || 0;
+        this.m = params.m;
+        this.n1 = params.n1;
+        this.n2 = params.n2;
+        this.n3 = params.n3;
+        this.a = params.a;
+        this.b = params.b;
+        this.A = params.A;
+        this.rot = params.rot;
     }
 
     getPoint(theta) {
@@ -80,14 +80,14 @@ export class SuperformulaCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'm', type: 'number', label: 'Symmetry (m)', min: 0, max: 20, step: 0.1, default: 6 },
-            { key: 'n1', type: 'number', label: 'Shape n1', min: 0.1, max: 50, step: 0.1, default: 1 },
-            { key: 'n2', type: 'number', label: 'Shape n2', min: 0.1, max: 50, step: 0.1, default: 1 },
-            { key: 'n3', type: 'number', label: 'Shape n3', min: 0.1, max: 50, step: 0.1, default: 1 },
-            { key: 'a', type: 'number', label: 'Axis a', min: 0.1, max: 10, step: 0.1, default: 1 },
-            { key: 'b', type: 'number', label: 'Axis b', min: 0.1, max: 10, step: 0.1, default: 1 },
-            { key: 'A', type: 'number', label: 'Amplitude', min: 0, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'number', label: 'Rotation', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'm', type: 'number', label: 'Symmetry (m)', min: 0, max: 20, step: 0.1 },
+            { key: 'n1', type: 'number', label: 'Shape n1', min: 0.1, max: 50, step: 0.1 },
+            { key: 'n2', type: 'number', label: 'Shape n2', min: 0.1, max: 50, step: 0.1 },
+            { key: 'n3', type: 'number', label: 'Shape n3', min: 0.1, max: 50, step: 0.1 },
+            { key: 'a', type: 'number', label: 'Axis a', min: 0.1, max: 10, step: 0.1 },
+            { key: 'b', type: 'number', label: 'Axis b', min: 0.1, max: 10, step: 0.1 },
+            { key: 'A', type: 'number', label: 'Amplitude', min: 0, max: 300, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation', min: 0, max: 360, step: 1 }
         ];
     }
 }

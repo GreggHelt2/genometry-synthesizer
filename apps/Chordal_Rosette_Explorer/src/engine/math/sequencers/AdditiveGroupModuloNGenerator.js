@@ -65,8 +65,7 @@ export class AdditiveGroupModuloNGenerator extends Sequencer {
                 type: 'slider',
                 min: 1,
                 max: 360, // This is dynamic in the specialized UI, but schema can offer hints
-                step: 1,
-                default: 29
+                step: 1
             }
         ];
     }

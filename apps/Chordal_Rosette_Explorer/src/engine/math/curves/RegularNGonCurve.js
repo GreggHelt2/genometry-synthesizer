@@ -9,8 +9,8 @@ export class RegularNGonCurve extends Curve {
      */
     constructor(params = {}) {
         super();
-        this.n = params.n || 5;
-        this.A = params.A !== undefined ? params.A : 100;
+        this.n = params.n;
+        this.A = params.A;
         this.rot = params.rot || 0;
     }
 
@@ -74,9 +74,9 @@ export class RegularNGonCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'n', type: 'number', label: 'Sides (N)', min: 3, max: 20, step: 1, default: 5 },
-            { key: 'A', type: 'number', label: 'Radius (A)', min: 0, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'n', type: 'number', label: 'Sides (N)', min: 3, max: 20, step: 1 },
+            { key: 'A', type: 'number', label: 'Radius (A)', min: 0, max: 300, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 }

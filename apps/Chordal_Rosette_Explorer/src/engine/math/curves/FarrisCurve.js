@@ -15,13 +15,13 @@ export class FarrisCurve extends Curve {
      */
     constructor(params = {}) {
         super();
-        this.r1 = params.r1 !== undefined ? params.r1 : 100;
-        this.k1 = params.k1 !== undefined ? params.k1 : 1;
-        this.r2 = params.r2 !== undefined ? params.r2 : 50;
-        this.k2 = params.k2 !== undefined ? params.k2 : 7;
-        this.r3 = params.r3 !== undefined ? params.r3 : 25;
-        this.k3 = params.k3 !== undefined ? params.k3 : -17;
-        this.A = params.A !== undefined ? params.A : 100;
+        this.r1 = params.r1;
+        this.k1 = params.k1;
+        this.r2 = params.r2;
+        this.k2 = params.k2;
+        this.r3 = params.r3;
+        this.k3 = params.k3;
+        this.A = params.A;
         this.rot = params.rot || 0;
     }
 
@@ -78,14 +78,14 @@ export class FarrisCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'r1', type: 'number', label: 'Radius 1', min: 0, max: 200, step: 1, default: 100 },
-            { key: 'k1', type: 'number', label: 'Freq 1', min: -20, max: 20, step: 1, default: 1 },
-            { key: 'r2', type: 'number', label: 'Radius 2', min: 0, max: 200, step: 1, default: 50 },
-            { key: 'k2', type: 'number', label: 'Freq 2', min: -20, max: 20, step: 1, default: 7 },
-            { key: 'r3', type: 'number', label: 'Radius 3', min: 0, max: 200, step: 1, default: 25 },
-            { key: 'k3', type: 'number', label: 'Freq 3', min: -20, max: 20, step: 1, default: -17 },
-            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'r1', type: 'number', label: 'Radius 1', min: 0, max: 200, step: 1 },
+            { key: 'k1', type: 'number', label: 'Freq 1', min: -20, max: 20, step: 1 },
+            { key: 'r2', type: 'number', label: 'Radius 2', min: 0, max: 200, step: 1 },
+            { key: 'k2', type: 'number', label: 'Freq 2', min: -20, max: 20, step: 1 },
+            { key: 'r3', type: 'number', label: 'Radius 3', min: 0, max: 200, step: 1 },
+            { key: 'k3', type: 'number', label: 'Freq 3', min: -20, max: 20, step: 1 },
+            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 }

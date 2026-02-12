@@ -5,11 +5,11 @@ export class CircleCurve extends Curve {
      * A simple unit circle (or scaled).
      * @param {number} radius - Radius of the circle.
      */
-    constructor(radius = 100) {
+    constructor(radius) {
         super();
         // Handle if initialized with object (from Renderer) or direct value
         if (typeof radius === 'object') {
-            this.radius = radius.radius || 100;
+            this.radius = radius.radius;
             this.rot = ((radius.rot || 0) * Math.PI) / 180;
         } else {
             this.radius = radius;
@@ -34,8 +34,8 @@ export class CircleCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'radius', type: 'number', label: 'Radius', min: 10, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'slider', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'radius', type: 'number', label: 'Radius', min: 10, max: 300, step: 1 },
+            { key: 'rot', type: 'slider', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 

@@ -12,10 +12,10 @@ export class LissajousCurve extends Curve {
      */
     constructor(params = {}) {
         super();
-        this.a = params.a || 3;
-        this.b = params.b || 2;
-        this.delta = params.delta || 90; // Typical default for "open" Lissajous
-        this.A = params.A !== undefined ? params.A : 100;
+        this.a = params.a;
+        this.b = params.b;
+        this.delta = params.delta;
+        this.A = params.A;
         this.rot = params.rot || 0;
     }
 
@@ -73,11 +73,11 @@ export class LissajousCurve extends Curve {
 
     static getParamsSchema() {
         return [
-            { key: 'a', type: 'number', label: 'Frequency X (a)', min: 0, max: 20, step: 1, default: 3 },
-            { key: 'b', type: 'number', label: 'Frequency Y (b)', min: 0, max: 20, step: 1, default: 2 },
-            { key: 'delta', type: 'number', label: 'Phase (deg)', min: 0, max: 360, step: 1, default: 90 },
-            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1, default: 100 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1, default: 0 }
+            { key: 'a', type: 'number', label: 'Frequency X (a)', min: 0, max: 20, step: 1 },
+            { key: 'b', type: 'number', label: 'Frequency Y (b)', min: 0, max: 20, step: 1 },
+            { key: 'delta', type: 'number', label: 'Phase (deg)', min: 0, max: 360, step: 1 },
+            { key: 'A', type: 'number', label: 'Amplitude (Scale)', min: 0, max: 300, step: 1 },
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
         ];
     }
 }

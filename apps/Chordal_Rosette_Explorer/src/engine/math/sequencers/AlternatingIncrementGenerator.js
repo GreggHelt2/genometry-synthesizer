@@ -78,8 +78,7 @@ export class AlternatingIncrementGenerator extends Sequencer {
                 type: 'slider',
                 min: 1,
                 max: 360,
-                step: 1,
-                default: 1
+                step: 1
             },
             {
                 key: 'incrementB',
@@ -87,8 +86,7 @@ export class AlternatingIncrementGenerator extends Sequencer {
                 type: 'slider',
                 min: 1,
                 max: 360,
-                step: 1,
-                default: 2
+                step: 1
             }
         ];
     }
