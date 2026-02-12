@@ -114,6 +114,7 @@ export const DEFAULTS = {
             opacity: 1,
             radius: 2,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -146,7 +147,8 @@ export const DEFAULTS = {
             splineTension: 0,
             splineBias: 0,
             splineContinuity: 0,
-            splineAlpha: 0.5
+            splineAlpha: 0.5,
+            bezierBulge: 0
         }
     },
 
@@ -252,6 +254,7 @@ export const DEFAULTS = {
             opacity: 1,
             radius: 2,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -284,7 +287,8 @@ export const DEFAULTS = {
             splineTension: 0,
             splineBias: 0,
             splineContinuity: 0,
-            splineAlpha: 0.5
+            splineAlpha: 0.5,
+            bezierBulge: 0
         }
     },
 
@@ -351,6 +355,7 @@ export const DEFAULTS = {
             opacity: 1,
             radius: 2,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -373,6 +378,7 @@ export const DEFAULTS = {
             opacity: 0.3,
             lineWidth: 1,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -395,6 +401,7 @@ export const DEFAULTS = {
             opacity: 0.3,
             lineWidth: 1,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -417,6 +424,7 @@ export const DEFAULTS = {
             opacity: 0.3,
             lineWidth: 1,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -439,6 +447,7 @@ export const DEFAULTS = {
             opacity: 0.3,
             lineWidth: 1,
             blendMode: 'source-over',
+            antiAlias: true,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -477,7 +486,8 @@ export const DEFAULTS = {
             splineTension: 0,
             splineBias: 0,
             splineContinuity: 0,
-            splineAlpha: 0.5
+            splineAlpha: 0.5,
+            bezierBulge: 0
         }
     },
 
