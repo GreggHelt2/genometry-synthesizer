@@ -373,6 +373,28 @@ export const DEFAULTS = {
                 }
             }
         },
+        interpPaths: {
+            visible: false,
+            opacity: 0.3,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            coloring: {
+                method: 'solid',
+                type: '2-point',
+                source: 'length',
+                params: {
+                    'solid': { color: '#888888' },
+                    'gradient-2point': { colorStart: '#888888', colorEnd: '#ffffff' },
+                    'gradient-custom': {
+                        stops: [
+                            { color: '#ffffff', position: 0, alpha: 1 },
+                            { color: '#ff0000', position: 1, alpha: 1 }
+                        ]
+                    },
+                    'gradient-preset': { preset: 'rainbow' }
+                }
+            }
+        },
         sourceA: {
             visible: false,
             opacity: 0.3,

@@ -517,7 +517,9 @@ export class CanvasRenderer {
 
             renderables.push({
                 type: 'hybrid',
-                points: pointsInterp
+                points: pointsInterp,
+                pointsA: finalPtsA,
+                pointsB: finalPtsB
             });
         };
 
@@ -558,6 +560,94 @@ export class CanvasRenderer {
                 this.drawRenderableRose(item.points, hybridParams, hybridParams.color || 'white', lineWidthScale);
             }
         });
+
+        // Interpolation Path Lines (A[i] → B[i])
+        if (hybridParams.showInterpPaths) {
+            this.ctx.globalCompositeOperation = hybridParams.interpPathsBlendMode || 'source-over';
+            const ipColorMethod = hybridParams.interpPathsColorMethod || 'solid';
+            const ipBaseColor = hybridParams.interpPathsColor || '#888888';
+
+            renderables.filter(r => r.type === 'hybrid').forEach(item => {
+                if (!item.pointsA || !item.pointsB) return;
+                const n = Math.min(item.pointsA.length, item.pointsB.length);
+
+                // Generate per-line colors if using a gradient method
+                let lineColors = null;
+                if (ipColorMethod && ipColorMethod !== 'solid') {
+                    // Compute t-values directly for each A[i]→B[i] path line
+                    const tValues = [];
+                    if (ipColorMethod === 'length') {
+                        // Length-based: t = normalized segment length
+                        // Two-pass: first find maxLen, then find minLen excluding
+                        // near-zero segments (< 1% of max) that are effectively invisible
+                        const lengths = [];
+                        let maxLen = -Infinity;
+                        for (let i = 0; i < n; i++) {
+                            const pA = item.pointsA[i], pB = item.pointsB[i];
+                            const dx = (pB.x !== undefined ? pB.x : pB[0]) - (pA.x !== undefined ? pA.x : pA[0]);
+                            const dy = (pB.y !== undefined ? pB.y : pB[1]) - (pA.y !== undefined ? pA.y : pA[1]);
+                            const len = Math.sqrt(dx * dx + dy * dy);
+                            lengths.push(len);
+                            if (len > maxLen) maxLen = len;
+                        }
+                        const threshold = maxLen * 0.01; // 1% of max length
+                        let minLen = maxLen; // start at max, walk down
+                        for (let i = 0; i < lengths.length; i++) {
+                            if (lengths[i] >= threshold && lengths[i] < minLen) minLen = lengths[i];
+                        }
+                        const range = maxLen - minLen || 1;
+                        for (let i = 0; i < lengths.length; i++) {
+                            tValues.push(Math.max(0, Math.min(1, (lengths[i] - minLen) / range)));
+                        }
+                    } else if (ipColorMethod === 'angle') {
+                        // Angle-based: t = normalized angle of A[i]→B[i]
+                        for (let i = 0; i < n; i++) {
+                            const pA = item.pointsA[i], pB = item.pointsB[i];
+                            const dx = (pB.x !== undefined ? pB.x : pB[0]) - (pA.x !== undefined ? pA.x : pA[0]);
+                            const dy = (pB.y !== undefined ? pB.y : pB[1]) - (pA.y !== undefined ? pA.y : pA[1]);
+                            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                            tValues.push((angle + 180) / 360);
+                        }
+                    } else if (ipColorMethod === 'sequence') {
+                        // Sequence-based: t = i / (n-1)
+                        for (let i = 0; i < n; i++) {
+                            tValues.push(i / ((n - 1) || 1));
+                        }
+                    }
+
+                    if (tValues.length > 0) {
+                        const ipColorEnd = hybridParams.interpPathsColorEnd || '#ffffff';
+                        const ipGradientType = hybridParams.interpPathsGradientType || '2-point';
+                        const ipGradientOpts = {
+                            gradientPreset: hybridParams.interpPathsGradientPreset,
+                            gradientStops: hybridParams.interpPathsGradientStops
+                        };
+                        lineColors = tValues.map(t =>
+                            Colorizer.getGradientColor(t, ipBaseColor, ipColorEnd, ipGradientType, ipGradientOpts)
+                        );
+                    }
+                }
+
+                for (let i = 0; i < n; i++) {
+                    const pA = item.pointsA[i];
+                    const pB = item.pointsB[i];
+                    const xA = pA.x !== undefined ? pA.x : pA[0];
+                    const yA = pA.y !== undefined ? pA.y : pA[1];
+                    const xB = pB.x !== undefined ? pB.x : pB[0];
+                    const yB = pB.y !== undefined ? pB.y : pB[1];
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(xA, yA);
+                    this.ctx.lineTo(xB, yB);
+                    this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
+                    this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                    this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
+                    this.ctx.stroke();
+                }
+            });
+            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.globalAlpha = 1;
+        }
 
         // Hybrid Vertices
         if (hybridParams.showVertices) {

@@ -168,6 +168,11 @@ export function flattenHybridParams(hybridState) {
     const srcBc = srcB.coloring || {};
     const srcBcp = srcBc.params || {};
 
+    // Interpolation Paths coloring
+    const interpPaths = hybridState.interpPaths || {};
+    const ipc = interpPaths.coloring || {};
+    const ipcp = ipc.params || {};
+
     // Base curve A/B coloring
     const bcA = hybridState.baseCurveA || {};
     const bcAc = bcA.coloring || {};
@@ -225,6 +230,18 @@ export function flattenHybridParams(hybridState) {
         vertexGradientPreset: vcp['gradient-preset']?.preset,
         vertexGradientStops: vcp['gradient-custom']?.stops,
         vertexAntiAlias: verts.antiAlias,
+
+        // Interpolation Paths
+        showInterpPaths: interpPaths.visible,
+        interpPathsLineWidth: interpPaths.lineWidth,
+        interpPathsColor: ipcp.solid?.color,
+        interpPathsColorEnd: ipcp['gradient-2point']?.colorEnd,
+        interpPathsOpacity: interpPaths.opacity,
+        interpPathsBlendMode: interpPaths.blendMode,
+        interpPathsColorMethod: ipc.method,
+        interpPathsGradientType: ipc.type,
+        interpPathsGradientPreset: ipcp['gradient-preset']?.preset,
+        interpPathsGradientStops: ipcp['gradient-custom']?.stops,
 
         // Source Underlays (A/B)
         underlayColorA: srcAcp.solid?.color,
@@ -423,6 +440,18 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     vertexGradientStops: ['vertices', 'coloring', 'params', 'gradient-custom', 'stops'],
     vertexColorEnd: ['vertices', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
     vertexAntiAlias: ['vertices', 'antiAlias'],
+
+    // Interpolation Paths
+    showInterpPaths: ['interpPaths', 'visible'],
+    interpPathsLineWidth: ['interpPaths', 'lineWidth'],
+    interpPathsColor: ['interpPaths', 'coloring', 'params', 'solid', 'color'],
+    interpPathsColorEnd: ['interpPaths', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
+    interpPathsOpacity: ['interpPaths', 'opacity'],
+    interpPathsBlendMode: ['interpPaths', 'blendMode'],
+    interpPathsColorMethod: ['interpPaths', 'coloring', 'method'],
+    interpPathsGradientType: ['interpPaths', 'coloring', 'type'],
+    interpPathsGradientPreset: ['interpPaths', 'coloring', 'params', 'gradient-preset', 'preset'],
+    interpPathsGradientStops: ['interpPaths', 'coloring', 'params', 'gradient-custom', 'stops'],
 
     // Source A underlay appearance
     underlayColorA: ['sourceA', 'coloring', 'params', 'solid', 'color'],

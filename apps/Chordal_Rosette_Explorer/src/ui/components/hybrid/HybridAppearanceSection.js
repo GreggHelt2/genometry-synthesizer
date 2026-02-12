@@ -31,7 +31,10 @@ export class HybridAppearanceSection {
         // 6. Vertex Rendering
         this.renderVertexViz();
 
-        // 7. General Rendering
+        // 7. Interpolation Paths
+        this.renderInterpPaths();
+
+        // 8. General Rendering
         this.renderGeneralHelper();
     }
 
@@ -251,6 +254,36 @@ export class HybridAppearanceSection {
         this.vertexAccordion.append(this.vertexModule.container);
     }
 
+    renderInterpPaths() {
+        this.interpPathsAccordion = new Accordion('Interpolation Paths', false, (isOpen, id) => {
+            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
+        }, 'hybrid-interp-paths');
+        this.accordions.set('hybrid-interp-paths', this.interpPathsAccordion);
+        this.orchestrator.controlsContainer.appendChild(this.interpPathsAccordion.element);
+
+        this.interpPathsModule = new LayerRenderingModule(
+            this.orchestrator,
+            'hybrid',
+            null,
+            {
+                size: 'interpPathsLineWidth',
+                color: 'interpPathsColor',
+                opacity: 'interpPathsOpacity',
+                blendMode: 'interpPathsBlendMode',
+                colorMethod: 'interpPathsColorMethod',
+                gradientType: 'interpPathsGradientType',
+                gradientPreset: 'interpPathsGradientPreset',
+                gradientStops: 'interpPathsGradientStops',
+                colorEnd: 'interpPathsColorEnd'
+            },
+            {
+                showToggle: { key: 'showInterpPaths', label: 'Show Paths', value: false },
+                sizeLabel: 'Line Width'
+            }
+        );
+        this.interpPathsAccordion.append(this.interpPathsModule.container);
+    }
+
     renderGeneralHelper() {
         this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
             if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
@@ -306,7 +339,10 @@ export class HybridAppearanceSection {
         // 6. Vertex
         if (this.vertexModule) this.vertexModule.update(flatParams);
 
-        // 7. General
+        // 7. Interpolation Paths
+        if (this.interpPathsModule) this.interpPathsModule.update(flatParams);
+
+        // 8. General
         if (this.generalModule) this.generalModule.update(flatParams);
     }
 }
