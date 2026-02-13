@@ -1,5 +1,5 @@
 /**
- * Default configuration for the application — v4.0 Hierarchical Scoped Parameters.
+ * Default configuration for the application — v4.2 Hierarchical Scoped Parameters.
  *
  * This is the canonical data structure used for:
  *   - Application defaults (initial state)
@@ -299,7 +299,14 @@ export const DEFAULTS = {
             samples: 360,
             resampleMethod: 'lcm',
             approxResampleThreshold: 20000,
-            mixType: 'simple'
+            mixType: 'simple',
+            // Interpolation curve parameters
+            interpCurveMode: 'linear',       // 'linear' | 'sine' | 'quadratic-bezier' | 'arc' | 'arc-flipped'
+            interpCurveDetail: 20,           // segments per curve for path visualization
+            interpWaveAmplitude: 0.2,        // sine wave amplitude (fraction of A→B distance)
+            interpWaveFrequency: 1,          // sine wave cycles
+            interpWaveAlternateFlip: false,  // alternate wave direction per vertex
+            interpBezierBulge: 0.3           // bezier control point offset (fraction of A→B distance)
         },
         underlay: {
             showRoseA: false,

@@ -3,6 +3,8 @@ import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
 import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { createElement } from '../../utils/dom.js';
 import { ParamNumber } from '../ParamNumber.js';
+import { ParamSelect } from '../ParamSelect.js';
+import { ParamToggle } from '../ParamToggle.js';
 import { dispatchDeep } from '../../../engine/state/stateAdapters.js';
 
 export class HybridAppearanceSection {
@@ -282,6 +284,63 @@ export class HybridAppearanceSection {
             }
         );
         this.interpPathsAccordion.append(this.interpPathsModule.container);
+
+        // --- Interpolation Curve Mode controls ---
+        const curveContainer = createElement('div', 'flex flex-col gap-1 mt-2');
+
+        // Separator label
+        const curveLabel = createElement('div', 'text-xs font-semibold text-gray-400 uppercase tracking-wider py-1');
+        curveLabel.textContent = 'Path Curve';
+        curveContainer.appendChild(curveLabel);
+
+        // Curve Mode select
+        const curveModeOptions = [
+            { value: 'linear', label: 'Linear (Straight)' },
+            { value: 'sine', label: 'Sine Wave' },
+            { value: 'quadratic-bezier', label: 'Quadratic Bezier' },
+            { value: 'arc', label: 'Arc' },
+            { value: 'arc-flipped', label: 'Arc Flipped' }
+        ];
+        this.interpCurveModeControl = new ParamSelect({
+            key: 'interpCurveMode',
+            label: 'Curve Mode',
+            options: curveModeOptions,
+            value: 'linear',
+            onChange: (val) => {
+                dispatchDeep('interpCurveMode', val, 'hybrid');
+                this.updateInterpCurveVisibility(val);
+            }
+        });
+        curveContainer.appendChild(this.interpCurveModeControl.getElement());
+
+        // Curve Detail slider
+        this.interpCurveDetailControl = this.createSlider('interpCurveDetail', 4, 100, 1, 'Curve Detail');
+        curveContainer.appendChild(this.interpCurveDetailControl.container);
+
+        // Sine Wave params
+        this.interpWaveAmplitudeControl = this.createSlider('interpWaveAmplitude', 0, 1, 0.01, 'Amplitude');
+        curveContainer.appendChild(this.interpWaveAmplitudeControl.container);
+
+        this.interpWaveFrequencyControl = this.createSlider('interpWaveFrequency', 0.5, 10, 0.5, 'Frequency');
+        curveContainer.appendChild(this.interpWaveFrequencyControl.container);
+
+        // Alternate Wave Mirror toggle
+        this.interpWaveAlternateFlipControl = new ParamToggle({
+            key: 'interpWaveAlternateFlip',
+            label: 'Alternate Wave Mirror',
+            value: false,
+            onChange: (val) => dispatchDeep('interpWaveAlternateFlip', val, 'hybrid')
+        });
+        curveContainer.appendChild(this.interpWaveAlternateFlipControl.getElement());
+
+        // Bezier params
+        this.interpBezierBulgeControl = this.createSlider('interpBezierBulge', -2, 2, 0.05, 'Bulge');
+        curveContainer.appendChild(this.interpBezierBulgeControl.container);
+
+        this.interpPathsAccordion.append(curveContainer);
+
+        // Initial visibility
+        this.updateInterpCurveVisibility('linear');
     }
 
     renderGeneralHelper() {
@@ -316,6 +375,35 @@ export class HybridAppearanceSection {
         return { container: paramGui.getElement(), instance: paramGui };
     }
 
+    updateInterpCurveVisibility(mode) {
+        const isLinear = mode === 'linear';
+        const isSine = mode === 'sine';
+        const isQuadraticBezier = mode === 'quadratic-bezier';
+        const isArc = mode === 'arc' || mode === 'arc-flipped';
+
+        // Curve Detail is relevant for all non-linear curves
+        if (this.interpCurveDetailControl) {
+            this.interpCurveDetailControl.container.style.display = isLinear ? 'none' : 'flex';
+        }
+
+        // Sine Wave controls
+        if (this.interpWaveAmplitudeControl) {
+            this.interpWaveAmplitudeControl.container.style.display = isSine ? 'flex' : 'none';
+        }
+        if (this.interpWaveFrequencyControl) {
+            this.interpWaveFrequencyControl.container.style.display = isSine ? 'flex' : 'none';
+        }
+        if (this.interpWaveAlternateFlipControl) {
+            this.interpWaveAlternateFlipControl.getElement().style.display = isSine ? 'flex' : 'none';
+        }
+
+        // Bezier controls
+        if (this.interpBezierBulgeControl) {
+            this.interpBezierBulgeControl.container.style.display = isQuadraticBezier ? 'flex' : 'none';
+        }
+        // Arc controls (currently none specific, but could be added here)
+    }
+
     update(flatParams) {
         // 1. Viz Module
         if (this.hybridVizModule) this.hybridVizModule.update(flatParams);
@@ -341,6 +429,16 @@ export class HybridAppearanceSection {
 
         // 7. Interpolation Paths
         if (this.interpPathsModule) this.interpPathsModule.update(flatParams);
+
+        // 7b. Interpolation Curve Mode controls
+        const curveMode = flatParams.interpCurveMode || 'linear';
+        if (this.interpCurveModeControl) this.interpCurveModeControl.setValue(curveMode);
+        if (this.interpCurveDetailControl) this.interpCurveDetailControl.instance.setValue(flatParams.interpCurveDetail ?? 20);
+        if (this.interpWaveAmplitudeControl) this.interpWaveAmplitudeControl.instance.setValue(flatParams.interpWaveAmplitude ?? 0.2);
+        if (this.interpWaveFrequencyControl) this.interpWaveFrequencyControl.instance.setValue(flatParams.interpWaveFrequency ?? 1);
+        if (this.interpWaveAlternateFlipControl) this.interpWaveAlternateFlipControl.setValue(flatParams.interpWaveAlternateFlip || false);
+        if (this.interpBezierBulgeControl) this.interpBezierBulgeControl.instance.setValue(flatParams.interpBezierBulge ?? 0.3);
+        this.updateInterpCurveVisibility(curveMode);
 
         // 8. General
         if (this.generalModule) this.generalModule.update(flatParams);

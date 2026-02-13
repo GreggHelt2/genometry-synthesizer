@@ -2,7 +2,7 @@ import { PolylineLayer } from './layers/PolylineLayer.js';
 import { CurveRegistry } from '../math/curves/CurveRegistry.js';
 import { generateChordalPolyline } from '../math/chordal_rosette.js';
 
-import { interpolateLinear, resamplePolyline, resamplePolylineApprox } from '../math/interpolation.js';
+import { interpolateLinear, interpolateCurved, sampleInterpCurves, resamplePolyline, resamplePolylineApprox } from '../math/interpolation.js';
 import { Colorizer } from '../math/Colorizer.js';
 import { gcd, lcm } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
@@ -513,7 +513,14 @@ export class CanvasRenderer {
             }
 
             const weight = hybridParams.weight;
-            const pointsInterp = interpolateLinear(finalPtsA, finalPtsB, weight);
+            const interpMode = hybridParams.interpCurveMode || 'linear';
+            const interpParams = {
+                interpWaveAmplitude: hybridParams.interpWaveAmplitude,
+                interpWaveFrequency: hybridParams.interpWaveFrequency,
+                interpWaveAlternateFlip: hybridParams.interpWaveAlternateFlip,
+                interpBezierBulge: hybridParams.interpBezierBulge
+            };
+            const pointsInterp = interpolateCurved(finalPtsA, finalPtsB, weight, interpMode, interpParams);
 
             renderables.push({
                 type: 'hybrid',
@@ -628,21 +635,48 @@ export class CanvasRenderer {
                     }
                 }
 
-                for (let i = 0; i < n; i++) {
-                    const pA = item.pointsA[i];
-                    const pB = item.pointsB[i];
-                    const xA = pA.x !== undefined ? pA.x : pA[0];
-                    const yA = pA.y !== undefined ? pA.y : pA[1];
-                    const xB = pB.x !== undefined ? pB.x : pB[0];
-                    const yB = pB.y !== undefined ? pB.y : pB[1];
+                // Draw path curves (or straight lines for linear mode)
+                const pathMode = hybridParams.interpCurveMode || 'linear';
+                const pathDetail = hybridParams.interpCurveDetail || 20;
+                const pathParams = {
+                    interpWaveAmplitude: hybridParams.interpWaveAmplitude,
+                    interpWaveFrequency: hybridParams.interpWaveFrequency,
+                    interpWaveAlternateFlip: hybridParams.interpWaveAlternateFlip,
+                    interpBezierBulge: hybridParams.interpBezierBulge
+                };
 
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(xA, yA);
-                    this.ctx.lineTo(xB, yB);
-                    this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
-                    this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
-                    this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
-                    this.ctx.stroke();
+                if (pathMode === 'linear') {
+                    // Draw straight lines
+                    for (let i = 0; i < n; i++) {
+                        const pA = item.pointsA[i], pB = item.pointsB[i];
+                        const xA = pA.x !== undefined ? pA.x : pA[0];
+                        const yA = pA.y !== undefined ? pA.y : pA[1];
+                        const xB = pB.x !== undefined ? pB.x : pB[0];
+                        const yB = pB.y !== undefined ? pB.y : pB[1];
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(xA, yA);
+                        this.ctx.lineTo(xB, yB);
+                        this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
+                        this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                        this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
+                        this.ctx.stroke();
+                    }
+                } else {
+                    // Draw curved paths by sampling the curve
+                    const curves = sampleInterpCurves(item.pointsA, item.pointsB, pathMode, pathParams, pathDetail);
+                    for (let i = 0; i < curves.length; i++) {
+                        const curvePts = curves[i];
+                        if (curvePts.length < 2) continue;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(curvePts[0].x, curvePts[0].y);
+                        for (let j = 1; j < curvePts.length; j++) {
+                            this.ctx.lineTo(curvePts[j].x, curvePts[j].y);
+                        }
+                        this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
+                        this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                        this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
+                        this.ctx.stroke();
+                    }
                 }
             });
             this.ctx.globalCompositeOperation = 'source-over';

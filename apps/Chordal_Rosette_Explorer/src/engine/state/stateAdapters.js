@@ -189,6 +189,12 @@ export function flattenHybridParams(hybridState) {
         resampleMethod: mix.resampleMethod,
         approxResampleThreshold: mix.approxResampleThreshold,
         mixType: mix.mixType,
+        interpCurveMode: mix.interpCurveMode,
+        interpCurveDetail: mix.interpCurveDetail,
+        interpWaveAmplitude: mix.interpWaveAmplitude,
+        interpWaveFrequency: mix.interpWaveFrequency,
+        interpWaveAlternateFlip: mix.interpWaveAlternateFlip,
+        interpBezierBulge: mix.interpBezierBulge,
 
         // Underlay
         showRoseA: underlay.showRoseA,
@@ -399,6 +405,12 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     resampleMethod: ['mix', 'resampleMethod'],
     approxResampleThreshold: ['mix', 'approxResampleThreshold'],
     mixType: ['mix', 'mixType'],
+    interpCurveMode: ['mix', 'interpCurveMode'],
+    interpCurveDetail: ['mix', 'interpCurveDetail'],
+    interpWaveAmplitude: ['mix', 'interpWaveAmplitude'],
+    interpWaveFrequency: ['mix', 'interpWaveFrequency'],
+    interpWaveAlternateFlip: ['mix', 'interpWaveAlternateFlip'],
+    interpBezierBulge: ['mix', 'interpBezierBulge'],
 
     // Underlay toggles
     showRoseA: ['underlay', 'showRoseA'],
