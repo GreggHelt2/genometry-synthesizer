@@ -448,15 +448,31 @@ export class PolylineLayer {
         // Support string color or CanvasGradient/Pattern
         this.ctx.fillStyle = style.color || 'white';
         this.ctx.globalAlpha = style.opacity ?? 1;
+        this.ctx.globalCompositeOperation = style.blendMode || 'source-over';
+
+        const mode = style.connectMode || 'straight';
 
         this.ctx.beginPath();
-        this.ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-            this.ctx.lineTo(points[i].x, points[i].y);
+        if (mode === 'straight') {
+            this.ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                this.ctx.lineTo(points[i].x, points[i].y);
+            }
+        } else {
+            // Build path using drawSegment (same as draw())
+            this.ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p0 = (i === 0) ? p1 : points[i - 1];
+                const p3 = (i >= points.length - 2) ? p2 : points[i + 2];
+                this.drawSegment(p0, p1, p2, p3, mode, style, i);
+            }
         }
 
         // Use even-odd rule by default for complex polygons like roses
         this.ctx.fill(style.rule || 'evenodd');
+        this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.globalAlpha = 1; // Reset
     }
 }

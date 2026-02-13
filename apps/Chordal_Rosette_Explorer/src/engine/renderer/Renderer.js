@@ -317,7 +317,18 @@ export class CanvasRenderer {
             this.polylineLayer.fill(points, {
                 color: fillStyle,
                 opacity: params.fillOpacity,
-                rule: 'evenodd'
+                rule: 'evenodd',
+                blendMode: params.fillBlendMode || blendMode,
+                connectMode: params.connectMode,
+                connectDetail: params.connectDetail,
+                waveAmplitude: params.waveAmplitude,
+                waveFrequency: params.waveFrequency,
+                waveAlternateFlip: params.waveAlternateFlip,
+                splineTension: params.splineTension,
+                splineBias: params.splineBias,
+                splineContinuity: params.splineContinuity,
+                splineAlpha: params.splineAlpha,
+                bezierBulge: params.bezierBulge
             });
         }
 
