@@ -68,6 +68,7 @@ export function flattenRoseParams(roseState) {
         cosetDistribution: coset.distribution,
 
         // Stroke
+        showChordalLines: stroke.visible !== false,
         color: scp.solid?.color,
         colorEnd: scp['gradient-2point']?.colorEnd,
         colorMethod: sc.method,
@@ -202,6 +203,7 @@ export function flattenHybridParams(hybridState) {
         underlayOpacity: underlay.opacity,
 
         // Stroke
+        showHybridLines: stroke.visible !== false,
         color: scp.solid?.color,
         colorEnd: scp['gradient-2point']?.colorEnd,
         colorMethod: sc.method,
@@ -315,6 +317,7 @@ export function flattenHybridParams(hybridState) {
  */
 const FLAT_KEY_TO_PATH = {
     // Stroke
+    showChordalLines: ['stroke', 'visible'],
     color: ['stroke', 'coloring', 'params', 'solid', 'color'],
     colorEnd: ['stroke', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
     colorMethod: ['stroke', 'coloring', 'method'],
@@ -418,6 +421,7 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     underlayOpacity: ['underlay', 'opacity'],
 
     // Stroke (hybrid main curve)
+    showHybridLines: ['stroke', 'visible'],
     color: ['stroke', 'coloring', 'params', 'solid', 'color'],
     colorEnd: ['stroke', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
     colorMethod: ['stroke', 'coloring', 'method'],

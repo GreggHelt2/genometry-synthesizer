@@ -48,6 +48,11 @@ export class AppearanceSection {
         );
         this.chordalAccordion.append(this.chordalModule.container);
 
+        // Eye toggle for chordal line visibility
+        this.chordalEyeToggle = this.chordalAccordion.addEyeToggle(true, (val) => {
+            dispatchDeep('showChordalLines', val, this.roseId);
+        });
+
 
         // 2. Vertex Rendering Accordion
         this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen, id) => {
@@ -84,6 +89,11 @@ export class AppearanceSection {
         );
         this.vertexAccordion.append(this.vertexModule.container);
 
+        // Eye toggle for vertex visibility
+        this.vertexEyeToggle = this.vertexAccordion.addEyeToggle(false, (val) => {
+            dispatchDeep('showVertices', val, this.roseId);
+        });
+
 
         // 3. Base Curve Rendering Accordion
         this.baseCurveAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
@@ -114,6 +124,11 @@ export class AppearanceSection {
         );
         this.baseCurveAccordion.append(this.baseCurveModule.container);
 
+        // Eye toggle for base curve visibility
+        this.baseCurveEyeToggle = this.baseCurveAccordion.addEyeToggle(true, (val) => {
+            dispatchDeep('showBaseCurve', val, this.roseId);
+        });
+
 
         // 4. Fill Rendering Accordion
         this.fillAccordion = new Accordion('Fill Rendering', false, (isOpen, id) => {
@@ -142,6 +157,11 @@ export class AppearanceSection {
             }
         );
         this.fillAccordion.append(this.fillModule.container);
+
+        // Eye toggle for fill visibility
+        this.fillEyeToggle = this.fillAccordion.addEyeToggle(true, (val) => {
+            dispatchDeep('showFill', val, this.roseId);
+        });
 
 
         // General Rendering Settings Accordion - Use Module
@@ -217,6 +237,12 @@ export class AppearanceSection {
         if (this.fillModule) this.fillModule.update(params);
 
         if (this.generalModule) this.generalModule.update(params);
+
+        // Sync eye toggles
+        if (this.chordalEyeToggle) this.chordalEyeToggle.setActive(params.showChordalLines !== false);
+        if (this.vertexEyeToggle) this.vertexEyeToggle.setActive(params.showVertices || false);
+        if (this.baseCurveEyeToggle) this.baseCurveEyeToggle.setActive(params.showBaseCurve !== false);
+        if (this.fillEyeToggle) this.fillEyeToggle.setActive(params.showFill !== false);
     }
 
     createSlider(key, min, max, step, label) {

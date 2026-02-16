@@ -66,6 +66,11 @@ export class HybridAppearanceSection {
             }
         );
         this.vizAccordion.append(this.hybridVizModule.container);
+
+        // Eye toggle for hybrid line visibility
+        this.hybridVizEyeToggle = this.vizAccordion.addEyeToggle(true, (val) => {
+            dispatchDeep('showHybridLines', val, 'hybrid');
+        });
     }
 
     renderInterpolationDetails() {
@@ -140,6 +145,14 @@ export class HybridAppearanceSection {
         );
         groupB.appendChild(this.underlayModuleB.container);
         this.baseChordalAccordion.append(groupB);
+
+        // Labeled eye toggles for A and B
+        this.baseChordalEyeA = this.baseChordalAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showRoseA', val, 'hybrid');
+        }, 'A');
+        this.baseChordalEyeB = this.baseChordalAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showRoseB', val, 'hybrid');
+        }, 'B');
     }
 
     renderBaseCurve() {
@@ -194,6 +207,14 @@ export class HybridAppearanceSection {
         );
         groupB.appendChild(this.baseCurveModuleB.container);
         this.baseCurveVizAccordion.append(groupB);
+
+        // Labeled eye toggles for A and B
+        this.baseCurveEyeA = this.baseCurveVizAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showBaseCurveA', val, 'hybrid');
+        }, 'A');
+        this.baseCurveEyeB = this.baseCurveVizAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showBaseCurveB', val, 'hybrid');
+        }, 'B');
     }
 
     renderFill() {
@@ -223,6 +244,11 @@ export class HybridAppearanceSection {
             }
         );
         this.fillAccordion.append(this.fillModule.container);
+
+        // Eye toggle for fill visibility
+        this.fillEyeToggle = this.fillAccordion.addEyeToggle(true, (val) => {
+            dispatchDeep('showFill', val, 'hybrid');
+        });
     }
 
     renderVertexViz() {
@@ -254,6 +280,11 @@ export class HybridAppearanceSection {
             }
         );
         this.vertexAccordion.append(this.vertexModule.container);
+
+        // Eye toggle for vertex visibility
+        this.vertexEyeToggle = this.vertexAccordion.addEyeToggle(false, (val) => {
+            dispatchDeep('showVertices', val, 'hybrid');
+        });
     }
 
     renderInterpPaths() {
@@ -284,6 +315,11 @@ export class HybridAppearanceSection {
             }
         );
         this.interpPathsAccordion.append(this.interpPathsModule.container);
+
+        // Eye toggle for interp paths visibility
+        this.interpPathsEyeToggle = this.interpPathsAccordion.addEyeToggle(false, (val) => {
+            dispatchDeep('showInterpPaths', val, 'hybrid');
+        });
 
         // --- Interpolation Curve Mode controls ---
         const curveContainer = createElement('div', 'flex flex-col gap-1 mt-2');
@@ -442,5 +478,15 @@ export class HybridAppearanceSection {
 
         // 8. General
         if (this.generalModule) this.generalModule.update(flatParams);
+
+        // Sync eye toggles
+        if (this.hybridVizEyeToggle) this.hybridVizEyeToggle.setActive(flatParams.showHybridLines !== false);
+        if (this.fillEyeToggle) this.fillEyeToggle.setActive(flatParams.showFill !== false);
+        if (this.vertexEyeToggle) this.vertexEyeToggle.setActive(flatParams.showVertices || false);
+        if (this.interpPathsEyeToggle) this.interpPathsEyeToggle.setActive(flatParams.showInterpPaths || false);
+        if (this.baseChordalEyeA) this.baseChordalEyeA.setActive(flatParams.showRoseA || false);
+        if (this.baseChordalEyeB) this.baseChordalEyeB.setActive(flatParams.showRoseB || false);
+        if (this.baseCurveEyeA) this.baseCurveEyeA.setActive(flatParams.showBaseCurveA || false);
+        if (this.baseCurveEyeB) this.baseCurveEyeB.setActive(flatParams.showBaseCurveB || false);
     }
 }

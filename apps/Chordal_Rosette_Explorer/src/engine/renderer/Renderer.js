@@ -213,7 +213,7 @@ export class CanvasRenderer {
                 this.ctx.arc(x0, y0, 3 * lineWidthScale, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.globalAlpha = 1;
-            } else {
+            } else if (roseParams.showChordalLines !== false) {
                 this.drawRenderableRose(item.points, item.params, defaultColor, lineWidthScale);
             }
         });
@@ -574,7 +574,7 @@ export class CanvasRenderer {
                     antiAlias: item.options.antiAlias
                 };
                 this.drawRenderableRose(item.points, drawParams, 'white', lineWidthScale);
-            } else if (item.type === 'hybrid') {
+            } else if (item.type === 'hybrid' && hybridParams.showHybridLines !== false) {
                 this.drawRenderableRose(item.points, hybridParams, hybridParams.color || 'white', lineWidthScale);
             }
         });

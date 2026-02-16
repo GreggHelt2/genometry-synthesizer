@@ -1,18 +1,5 @@
 
 {
-    "version": "2.2",
-    "timestamp": 1770748234554,
-    "state": {
-        "rosetteA": {
-            "curveType": "Rhodonea",
-            "sequencerType": "Cyclic Additive Group Modulo N",
-            "n": 3,
-            "d": 4,
-            "A": 200,
-            "c": 0,
-            "rot": 0,
-            "radius": 100,
-            "totalDivs": 360,
             "step": 29,
             "useCustomDivs": false,
             "cosetIndex": 0,
@@ -28,7 +15,7 @@
                     "alpha": 1
                 },
                 {
-                    "color": "#ff0000",
+                    "color": "#ff0000",n
                     "position": 1,
                     "alpha": 1
                 }
