@@ -266,7 +266,7 @@ function migrateHybridState(flatHybrid, defaults) {
     if (!flatHybrid) return result;
 
     // Merge existing nested sub-objects
-    const NESTED_KEYS = ['mix', 'underlay', 'stroke', 'fill', 'vertices', 'sourceA', 'sourceB', 'baseCurveA', 'baseCurveB', 'background', 'rendering'];
+    const NESTED_KEYS = ['mix', 'underlay', 'stroke', 'fill', 'vertices', 'sourceA', 'sourceB', 'baseCurveA', 'baseCurveB', 'coincidentIndices', 'background', 'rendering'];
     NESTED_KEYS.forEach(key => {
         if (flatHybrid[key] && typeof flatHybrid[key] === 'object') {
             deepMergeInto(result[key], flatHybrid[key]);

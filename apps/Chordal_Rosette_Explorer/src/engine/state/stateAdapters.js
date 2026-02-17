@@ -153,6 +153,7 @@ export function flattenHybridParams(hybridState) {
     const bg = hybridState.background || {};
     const rendering = hybridState.rendering || {};
     const coset = hybridState.coset || {};
+    const ci = hybridState.coincidentIndices || {};
 
     const sc = stroke.coloring || {};
     const scp = sc.params || {};
@@ -288,6 +289,13 @@ export function flattenHybridParams(hybridState) {
         cosetIndex: coset.index,
         cosetCount: coset.count,
         cosetDistribution: coset.distribution,
+
+        // Coincident Indices
+        showCoincidentIndices: ci.visible,
+        coincidentPointSize: ci.pointSize,
+        coincidentColor: ci.color,
+        coincidentOpacity: ci.opacity,
+        coincidentShape: ci.shape,
 
         // Background
         backgroundColor: bg.color,
@@ -508,6 +516,13 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     cosetIndex: ['coset', 'index'],
     cosetCount: ['coset', 'count'],
     cosetDistribution: ['coset', 'distribution'],
+
+    // Coincident Indices
+    showCoincidentIndices: ['coincidentIndices', 'visible'],
+    coincidentPointSize: ['coincidentIndices', 'pointSize'],
+    coincidentColor: ['coincidentIndices', 'color'],
+    coincidentOpacity: ['coincidentIndices', 'opacity'],
+    coincidentShape: ['coincidentIndices', 'shape'],
 
     // Background
     backgroundColor: ['background', 'color'],

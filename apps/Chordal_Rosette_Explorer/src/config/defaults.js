@@ -500,6 +500,13 @@ export const DEFAULTS = {
             count: 1,
             distribution: 'sequential'
         },
+        coincidentIndices: {
+            visible: false,
+            pointSize: 6,
+            color: '#FFD700',
+            opacity: 1.0,
+            shape: 'circle'
+        },
         background: {
             color: '#000000',
             opacity: 0

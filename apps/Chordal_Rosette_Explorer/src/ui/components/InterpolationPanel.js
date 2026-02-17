@@ -16,6 +16,7 @@ import { dispatchDeep, flattenHybridParams, flattenRoseParams } from '../../engi
 import { HybridAnimationSection } from './hybrid/HybridAnimationSection.js';
 import { HybridCosetSection } from './hybrid/HybridCosetSection.js';
 import { HybridAppearanceSection } from './hybrid/HybridAppearanceSection.js';
+import { HybridCoincidentSection } from './hybrid/HybridCoincidentSection.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title) {
@@ -80,6 +81,10 @@ export class InterpolationPanel extends Panel {
         this.cosetSection = new HybridCosetSection(this);
         this.controlsContainer.appendChild(this.cosetSection.element);
 
+        // 4. Coincident Indices Section
+        this.coincidentSection = new HybridCoincidentSection(this);
+        this.controlsContainer.appendChild(this.coincidentSection.element);
+
         // Recording Controls Section
         this.recordingAccordion = new Accordion('Recording', false, this.handleAccordionToggle.bind(this), 'hybrid-recording');
         this.accordions.set('hybrid-recording', this.recordingAccordion);
@@ -122,6 +127,7 @@ export class InterpolationPanel extends Panel {
         if (this.animationSection) this.animationSection.update(flatHybrid);
         if (this.appearanceSection) this.appearanceSection.update(flatHybrid);
         if (this.cosetSection) this.cosetSection.update(flatHybrid);
+        if (this.coincidentSection) this.coincidentSection.update(flatHybrid);
 
         // Recording Button State
         const isRecording = state.app.isRecording;

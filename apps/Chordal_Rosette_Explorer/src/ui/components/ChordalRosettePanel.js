@@ -6,6 +6,7 @@ import { CoreParamsSection } from './chordal_rosette/CoreParamsSection.js';
 import { SequencerSection } from './chordal_rosette/SequencerSection.js';
 import { AppearanceSection } from './chordal_rosette/AppearanceSection.js';
 import { CosetVizSection } from './chordal_rosette/CosetVizSection.js';
+import { CoincidentFinderSection } from './chordal_rosette/CoincidentFinderSection.js';
 
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
 import { flattenRoseParams } from '../../engine/state/stateAdapters.js';
@@ -137,6 +138,10 @@ export class ChordalRosettePanel extends Panel {
         // 6. Coset Visualization
         this.cosetVizSection = new CosetVizSection(this, this.roseId);
         this.controlsContainer.appendChild(this.cosetVizSection.element);
+
+        // 7. Coincident Finder
+        this.coincidentFinderSection = new CoincidentFinderSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.coincidentFinderSection.element);
     }
 
 
@@ -232,6 +237,11 @@ export class ChordalRosettePanel extends Panel {
         // 6. Coset Viz
         if (this.cosetVizSection) {
             this.cosetVizSection.update(params);
+        }
+
+        // 7. Coincident Finder
+        if (this.coincidentFinderSection) {
+            this.coincidentFinderSection.update(params);
         }
     }
 

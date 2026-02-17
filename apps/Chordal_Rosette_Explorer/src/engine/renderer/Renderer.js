@@ -8,6 +8,7 @@ import { gcd, lcm } from '../math/MathOps.js';
 import { SequencerRegistry } from '../math/sequencers/SequencerRegistry.js';
 import { AdditiveGroupModuloNGenerator } from '../math/sequencers/AdditiveGroupModuloNGenerator.js';
 import { flattenRoseParams, flattenHybridParams } from '../state/stateAdapters.js';
+import { findCoincidentIndices } from '../math/CoincidentIndices.js';
 
 // ─── Renderer-specific State Helpers ────────────────────
 
@@ -705,6 +706,71 @@ export class CanvasRenderer {
                 });
             });
             this.ctx.globalCompositeOperation = 'source-over';
+        }
+        // Coincident Indices Points
+        if (hybridParams.showCoincidentIndices) {
+            const ADDITIVE_TYPE = 'Cyclic Additive Group Modulo N';
+            const seqTypeA = roseParamsA.sequencerType || '';
+            const seqTypeB = roseParamsB.sequencerType || '';
+
+            if (seqTypeA === ADDITIVE_TYPE && seqTypeB === ADDITIVE_TYPE) {
+                const nA = roseParamsA.totalDivs || 360;
+                const nB = roseParamsB.totalDivs || 360;
+
+                if (nA === nB) {
+                    const n = nA;
+                    const gA = roseParamsA.step || 1;
+                    const gB = roseParamsB.step || 1;
+                    const startA = roseParamsA.cosetIndex || 0;
+                    const startB = roseParamsB.cosetIndex || 0;
+
+                    const indices = findCoincidentIndices(n, gA, gB, startA, startB);
+
+                    if (indices.length > 0) {
+                        const ciColor = hybridParams.coincidentColor || '#FFD700';
+                        const ciSize = (hybridParams.coincidentPointSize ?? 6) * lineWidthScale;
+                        const ciOpacity = hybridParams.coincidentOpacity ?? 1.0;
+                        const ciShape = hybridParams.coincidentShape || 'circle';
+
+                        // Get the first hybrid renderable's points for position lookup
+                        const hybridItem = renderables.find(r => r.type === 'hybrid');
+                        if (hybridItem && hybridItem.points && hybridItem.points.length > 0) {
+                            this.ctx.save();
+                            this.ctx.globalAlpha = ciOpacity;
+                            this.ctx.fillStyle = ciColor;
+
+                            const totalPts = hybridItem.points.length;
+
+                            indices.forEach(idx => {
+                                // Map sequence index to interpolated point index
+                                // The hybrid points are resampled, so scale proportionally
+                                const ptIdx = Math.round((idx / n) * (totalPts - 1));
+                                if (ptIdx < 0 || ptIdx >= totalPts) return;
+
+                                const p = hybridItem.points[ptIdx];
+                                const x = p.x !== undefined ? p.x : p[0];
+                                const y = p.y !== undefined ? p.y : p[1];
+
+                                this.ctx.beginPath();
+                                if (ciShape === 'circle') {
+                                    this.ctx.arc(x, y, ciSize, 0, Math.PI * 2);
+                                } else if (ciShape === 'diamond') {
+                                    this.ctx.moveTo(x, y - ciSize);
+                                    this.ctx.lineTo(x + ciSize, y);
+                                    this.ctx.lineTo(x, y + ciSize);
+                                    this.ctx.lineTo(x - ciSize, y);
+                                    this.ctx.closePath();
+                                } else if (ciShape === 'square') {
+                                    this.ctx.rect(x - ciSize, y - ciSize, ciSize * 2, ciSize * 2);
+                                }
+                                this.ctx.fill();
+                            });
+
+                            this.ctx.restore();
+                        }
+                    }
+                }
+            }
         }
 
         this.ctx.restore();
