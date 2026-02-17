@@ -26,6 +26,7 @@ export class CoincidentFinderSection {
         this.otherRoseId = roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
 
         this.results = [];
+        this.resultCounts = {};
         this.resultIndex = 0;
         this.offsetAValue = 0;
         this.offsetBValue = 0;
@@ -250,6 +251,7 @@ export class CoincidentFinderSection {
 
         this.statusDiv.textContent = 'Searching…';
         this.results = [];
+        this.resultCounts = {};
         this.resultIndex = 0;
 
         // Use requestAnimationFrame to avoid UI blocking
@@ -267,7 +269,13 @@ export class CoincidentFinderSection {
                     case 'range': {
                         const minC = Math.round(this.minCountValue);
                         const maxC = Math.round(this.maxCountValue);
-                        this.results = findGeneratorsInCountRange(n, otherG, minC, maxC, startA, startB);
+                        const rangeResults = findGeneratorsInCountRange(n, otherG, minC, maxC, startA, startB);
+                        // Normalize: extract generator numbers, store counts separately
+                        this.resultCounts = {};
+                        this.results = rangeResults.map(r => {
+                            this.resultCounts[r.generator] = r.count;
+                            return r.generator;
+                        });
                         break;
                     }
                     case 'specific': {
