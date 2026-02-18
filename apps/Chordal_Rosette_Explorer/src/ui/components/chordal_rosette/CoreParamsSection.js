@@ -1,5 +1,6 @@
 import { Accordion } from '../Accordion.js';
 import { ParamNumber } from '../ParamNumber.js';
+import { ParamToggle } from '../ParamToggle.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
@@ -80,22 +81,67 @@ export class CoreParamsSection {
         const schema = CurveClass.getParamsSchema();
 
         schema.forEach(item => {
-            const slider = this.createSlider(
-                item.key,
-                item.min,
-                item.max,
-                item.step,
-                item.label,
-                item.step < 1
-            );
+            if (item.type === 'boolean') {
+                const toggle = this.createToggle(item.key, item.label, params);
+                this.dynamicContainer.appendChild(toggle.container);
+                this.controls[item.key] = toggle.instance;
+            } else {
+                const slider = this.createSlider(
+                    item.key,
+                    item.min,
+                    item.max,
+                    item.step,
+                    item.label,
+                    item.step < 1
+                );
 
-            this.dynamicContainer.appendChild(slider.container);
-            this.controls[item.key] = slider.instance;
+                this.dynamicContainer.appendChild(slider.container);
+                this.controls[item.key] = slider.instance;
 
-            // Set initial value from current state params or default
-            const val = params[item.key];
-            slider.instance.setValue(val);
+                // Set initial value from current state params or default
+                const val = params[item.key];
+                slider.instance.setValue(val);
+            }
         });
+    }
+
+    /**
+     * Helper to create a boolean toggle linked to store
+     */
+    createToggle(key, label, params) {
+        const toggle = new ParamToggle({
+            key: key,
+            label: label,
+            value: !!params[key],
+            onChange: (val) => {
+                dispatchDeep(key, val, this.roseId);
+            },
+            onLinkToggle: (isActive) => {
+                const myKey = getLinkKey(key, this.roseId);
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = getLinkKey(key, otherRoseId);
+
+                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    const linked = linkManager.toggleLink(myKey, otherKey);
+                    if (linked !== isActive) {
+                        toggle.setLinkActive(linked);
+                    }
+                });
+            }
+        });
+
+        // Initialize link state
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = getLinkKey(key, this.roseId);
+            if (linkManager.isLinked(myKey)) {
+                toggle.setLinkActive(true);
+            }
+        });
+
+        return {
+            container: toggle.getElement(),
+            instance: toggle
+        };
     }
 
     /**

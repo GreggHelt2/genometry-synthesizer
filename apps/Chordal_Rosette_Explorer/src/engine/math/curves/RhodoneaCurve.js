@@ -9,6 +9,7 @@ export class RhodoneaCurve extends Curve {
      * @param {number} params.A - The amplitude (radius).
      * @param {number} params.c - The offset from the origin.
      * @param {number} params.rot - The rotation in degrees.
+     * @param {boolean} params.allowDoubleTrace - If true, bypass the both-odd halving rule.
      */
     constructor(params = {}) {
         super();
@@ -17,6 +18,7 @@ export class RhodoneaCurve extends Curve {
         this.A = params.A;
         this.c = params.c;
         this.rot = (params.rot || 0) * Math.PI / 180;
+        this.allowDoubleTrace = !!params.allowDoubleTrace;
         this.k = this.n / this.d;
     }
 
@@ -35,7 +37,7 @@ export class RhodoneaCurve extends Curve {
     }
 
     getSignature() {
-        return `Rhodonea:${this.n}:${this.d}:${this.A}:${this.c}:${this.rot}`;
+        return `Rhodonea:${this.n}:${this.d}:${this.A}:${this.c}:${this.rot}:${this.allowDoubleTrace}`;
     }
 
     getRadiansToClosure() {
@@ -46,9 +48,14 @@ export class RhodoneaCurve extends Curve {
         const d1 = this.d / commonDivisor;
 
         // Logic from prototype/papers:
-        // If both n1 and d1 are odd, the period is PI (0.5 cycles).
+        // If both n1 and d1 are odd AND there is no radial offset,
+        // the curve double-traces, so the period is PI (0.5 cycles).
+        // With a non-zero offset c, the full period is needed for closure.
+        // allowDoubleTrace bypasses the halving rule entirely, useful when
+        // animating offset through zero to avoid a jarring period transition.
         // Otherwise, the period is 2PI * d1
-        const cycles = (n1 % 2 !== 0 && d1 % 2 !== 0) ? (d1 / 2) : d1;
+        const canHalve = !this.allowDoubleTrace && n1 % 2 !== 0 && d1 % 2 !== 0 && this.c === 0;
+        const cycles = canHalve ? (d1 / 2) : d1;
 
         return cycles * 2 * Math.PI;
     }
@@ -285,7 +292,8 @@ export class RhodoneaCurve extends Curve {
             { key: 'd', type: 'number', label: 'd (Denominator)', min: 1, max: 100, step: 1 },
             { key: 'A', type: 'number', label: 'Amplitude (A)', min: 10, max: 300, step: 1 },
             { key: 'c', type: 'number', label: 'Offset (c)', min: 0, max: 200, step: 1 },
-            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 }
+            { key: 'rot', type: 'number', label: 'Rotation (deg)', min: 0, max: 360, step: 1 },
+            { key: 'allowDoubleTrace', type: 'boolean', label: 'Allow Double Trace', default: false }
         ];
     }
 }
