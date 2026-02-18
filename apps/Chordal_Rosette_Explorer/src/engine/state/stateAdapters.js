@@ -35,6 +35,7 @@ export function flattenRoseParams(roseState) {
     const bg = roseState.background || {};
     const rendering = roseState.rendering || {};
     const coset = roseState.coset || {};
+    const sp = roseState.specialPoints || {};
 
     // Stroke coloring
     const sc = stroke.coloring || {};
@@ -132,7 +133,23 @@ export function flattenRoseParams(roseState) {
         splineBias: rendering.splineBias,
         splineContinuity: rendering.splineContinuity,
         splineAlpha: rendering.splineAlpha,
-        bezierBulge: rendering.bezierBulge
+        bezierBulge: rendering.bezierBulge,
+
+        // Special Points
+        showSpecialPoints: sp.show,
+        showZeroPoints: sp.zeroPoints?.show,
+        zeroPointsColor: sp.zeroPoints?.color,
+        zeroPointsSize: sp.zeroPoints?.pointSize,
+        zeroPointsOpacity: sp.zeroPoints?.opacity,
+        showDoublePoints: sp.doublePoints?.show,
+        doublePointsColor: sp.doublePoints?.color,
+        doublePointsSize: sp.doublePoints?.pointSize,
+        doublePointsOpacity: sp.doublePoints?.opacity,
+        showBoundaryPoints: sp.boundaryPoints?.show,
+        boundaryPointsColor: sp.boundaryPoints?.color,
+        boundaryPointsSize: sp.boundaryPoints?.pointSize,
+        boundaryPointsOpacity: sp.boundaryPoints?.opacity,
+        specialPointsShape: sp.shape
     };
 }
 
@@ -377,6 +394,22 @@ const FLAT_KEY_TO_PATH = {
     // Background
     backgroundColor: ['background', 'color'],
     backgroundOpacity: ['background', 'opacity'],
+
+    // Special Points
+    showSpecialPoints: ['specialPoints', 'show'],
+    showZeroPoints: ['specialPoints', 'zeroPoints', 'show'],
+    zeroPointsColor: ['specialPoints', 'zeroPoints', 'color'],
+    zeroPointsSize: ['specialPoints', 'zeroPoints', 'pointSize'],
+    zeroPointsOpacity: ['specialPoints', 'zeroPoints', 'opacity'],
+    showDoublePoints: ['specialPoints', 'doublePoints', 'show'],
+    doublePointsColor: ['specialPoints', 'doublePoints', 'color'],
+    doublePointsSize: ['specialPoints', 'doublePoints', 'pointSize'],
+    doublePointsOpacity: ['specialPoints', 'doublePoints', 'opacity'],
+    showBoundaryPoints: ['specialPoints', 'boundaryPoints', 'show'],
+    boundaryPointsColor: ['specialPoints', 'boundaryPoints', 'color'],
+    boundaryPointsSize: ['specialPoints', 'boundaryPoints', 'pointSize'],
+    boundaryPointsOpacity: ['specialPoints', 'boundaryPoints', 'opacity'],
+    specialPointsShape: ['specialPoints', 'shape'],
 
     // Rendering
     autoScale: ['rendering', 'autoScale'],

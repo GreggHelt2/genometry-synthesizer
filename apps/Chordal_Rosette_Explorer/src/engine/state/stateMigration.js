@@ -235,7 +235,7 @@ function migrateRosetteState(flatRose, defaults) {
     if (!flatRose) return result;
 
     // If the v2.1 state already has nested sub-objects, deep-merge them first
-    const NESTED_KEYS = ['curve', 'sequencer', 'coset', 'stroke', 'fill', 'baseCurve', 'vertices', 'background', 'rendering'];
+    const NESTED_KEYS = ['curve', 'sequencer', 'coset', 'stroke', 'fill', 'baseCurve', 'vertices', 'background', 'rendering', 'specialPoints'];
     NESTED_KEYS.forEach(key => {
         if (flatRose[key] && typeof flatRose[key] === 'object') {
             deepMergeInto(result[key], flatRose[key]);

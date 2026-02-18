@@ -55,11 +55,6 @@ export class HypotrochoidCurve extends Curve {
     }
 
     getRadiansToClosure() {
-        // The period depends on the ratio R/r.
-        // Let R/r = p/q in simplest form.
-        // The period is 2 * PI * q.
-        // This is the same logic as Epitrochoid regarding the resonances.
-
         const numerator = Math.round(this.R);
         const denominator = Math.round(this.r);
 
@@ -69,6 +64,109 @@ export class HypotrochoidCurve extends Curve {
         const q = denominator / common;
 
         return 2 * Math.PI * q;
+    }
+
+    /**
+     * Finds special points on this Hypotrochoid curve using Erb's framework.
+     * With R/r = p/q (reduced), self-intersections lie on grid t_l = l·π/(p·q).
+     */
+    getSpecialPoints() {
+        const totalRad = this.getRadiansToClosure();
+        if (totalRad <= 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
+
+        const numerator = Math.round(this.R);
+        const denominator = Math.round(this.r);
+        if (denominator === 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
+
+        const common = gcd(numerator, denominator);
+        const p = numerator / common;
+        const q = denominator / common;
+
+        const EPS = 1e-9;
+        const scale = (this.A || 100) / 100;
+        const SPATIAL_EPS = 1e-4 * scale * Math.max(this.R, this.r, this.d, 1);
+
+        // --- Zero Points: both x=0 and y=0 ---
+        const zeroPoints = [];
+        const gridStep = Math.PI / (p * q);
+        const gridSize = Math.ceil(totalRad / gridStep);
+        const gridPoints = [];
+
+        for (let l = 0; l < gridSize; l++) {
+            const theta = l * gridStep;
+            if (theta >= totalRad - EPS) break;
+            const pt = this.getPoint(theta);
+            const dist = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            gridPoints.push({ theta, x: pt.x, y: pt.y, dist });
+
+            if (dist < SPATIAL_EPS) {
+                zeroPoints.push({ theta, x: pt.x, y: pt.y });
+            }
+        }
+
+        // --- Double Points: group by spatial proximity ---
+        const doublePoints = [];
+        const used = new Set();
+
+        for (let i = 0; i < gridPoints.length; i++) {
+            if (used.has(i)) continue;
+            const pi = gridPoints[i];
+            if (pi.dist < SPATIAL_EPS) { used.add(i); continue; } // Skip zero points
+            const group = [pi];
+
+            for (let j = i + 1; j < gridPoints.length; j++) {
+                if (used.has(j)) continue;
+                const pj = gridPoints[j];
+                if (pj.dist < SPATIAL_EPS) continue;
+                const dx = pi.x - pj.x;
+                const dy = pi.y - pj.y;
+                if (Math.sqrt(dx * dx + dy * dy) < SPATIAL_EPS) {
+                    group.push(pj);
+                    used.add(j);
+                }
+            }
+
+            if (group.length >= 2) {
+                used.add(i);
+                doublePoints.push({
+                    x: pi.x, y: pi.y,
+                    theta1: group[0].theta, theta2: group[1].theta
+                });
+            }
+        }
+
+        // --- Boundary Points: numerical peak detection ---
+        const boundaryPoints = this._findBoundaryPointsNumerical(totalRad);
+
+        return { zeroPoints, doublePoints, boundaryPoints };
+    }
+
+    /**
+     * Numerical boundary point detection — finds local maxima of x²+y².
+     */
+    _findBoundaryPointsNumerical(totalRad) {
+        const sampleCount = Math.min(50000, Math.max(1000, Math.round(totalRad * 200)));
+        const step = totalRad / sampleCount;
+        const results = [];
+
+        let prevR2 = 0, prevPrevR2 = 0;
+        for (let i = 0; i <= sampleCount; i++) {
+            const theta = i * step;
+            const pt = this.getPoint(theta);
+            const r2 = pt.x * pt.x + pt.y * pt.y;
+
+            if (i >= 2 && prevR2 > prevPrevR2 && prevR2 > r2) {
+                const peakTheta = (i - 1) * step;
+                const peakPt = this.getPoint(peakTheta);
+                const r = Math.sqrt(prevR2);
+                results.push({ theta: peakTheta, x: peakPt.x, y: peakPt.y, r });
+            }
+
+            prevPrevR2 = prevR2;
+            prevR2 = r2;
+        }
+
+        return results;
     }
 
     getSignature() {

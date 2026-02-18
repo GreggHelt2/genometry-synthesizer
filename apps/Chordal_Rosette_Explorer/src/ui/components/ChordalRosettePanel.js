@@ -7,6 +7,7 @@ import { SequencerSection } from './chordal_rosette/SequencerSection.js';
 import { AppearanceSection } from './chordal_rosette/AppearanceSection.js';
 import { CosetVizSection } from './chordal_rosette/CosetVizSection.js';
 import { CoincidentFinderSection } from './chordal_rosette/CoincidentFinderSection.js';
+import { SpecialPointsSection } from './chordal_rosette/SpecialPointsSection.js';
 
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
 import { flattenRoseParams } from '../../engine/state/stateAdapters.js';
@@ -142,6 +143,10 @@ export class ChordalRosettePanel extends Panel {
         // 7. Coincident Finder
         this.coincidentFinderSection = new CoincidentFinderSection(this, this.roseId);
         this.controlsContainer.appendChild(this.coincidentFinderSection.element);
+
+        // 8. Special Points (Erb self-intersection analysis)
+        this.specialPointsSection = new SpecialPointsSection(this, this.roseId);
+        this.controlsContainer.appendChild(this.specialPointsSection.element);
     }
 
 
@@ -242,6 +247,11 @@ export class ChordalRosettePanel extends Panel {
         // 7. Coincident Finder
         if (this.coincidentFinderSection) {
             this.coincidentFinderSection.update(params);
+        }
+
+        // 8. Special Points
+        if (this.specialPointsSection) {
+            this.specialPointsSection.update(params);
         }
     }
 

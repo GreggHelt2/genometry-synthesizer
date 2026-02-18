@@ -248,6 +248,88 @@ export class CanvasRenderer {
             this.ctx.globalCompositeOperation = 'source-over';
         }
 
+        // --- Special Points Rendering ---
+        if (roseParams.showSpecialPoints) {
+            const spCurve = this.createCurve(roseParams);
+            if (spCurve) {
+                try {
+                    const sp = spCurve.getSpecialPoints();
+                    const shape = roseParams.specialPointsShape || 'circle';
+
+                    if (roseParams.showZeroPoints && sp.zeroPoints.length > 0) {
+                        this.drawSpecialPointMarkers(sp.zeroPoints, {
+                            color: roseParams.zeroPointsColor || '#FF4444',
+                            size: (roseParams.zeroPointsSize || 6) * lineWidthScale,
+                            opacity: roseParams.zeroPointsOpacity ?? 0.9,
+                            shape
+                        });
+                    }
+                    if (roseParams.showDoublePoints && sp.doublePoints.length > 0) {
+                        this.drawSpecialPointMarkers(sp.doublePoints, {
+                            color: roseParams.doublePointsColor || '#FFD700',
+                            size: (roseParams.doublePointsSize || 5) * lineWidthScale,
+                            opacity: roseParams.doublePointsOpacity ?? 0.8,
+                            shape
+                        });
+                    }
+                    if (roseParams.showBoundaryPoints && sp.boundaryPoints.length > 0) {
+                        this.drawSpecialPointMarkers(sp.boundaryPoints, {
+                            color: roseParams.boundaryPointsColor || '#44FF44',
+                            size: (roseParams.boundaryPointsSize || 6) * lineWidthScale,
+                            opacity: roseParams.boundaryPointsOpacity ?? 0.9,
+                            shape
+                        });
+                    }
+                } catch (e) {
+                    // Silently skip if getSpecialPoints fails for this curve
+                }
+            }
+        }
+
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw markers at special point locations (zero/double/boundary).
+     * @param {Array<{x: number, y: number}>} points 
+     * @param {{color: string, size: number, opacity: number, shape: string}} options 
+     */
+    drawSpecialPointMarkers(points, options) {
+        if (!points || points.length === 0) return;
+        const { color = '#ffffff', size = 5, opacity = 1, shape = 'circle' } = options;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity;
+        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 1;
+
+        for (const pt of points) {
+            const x = pt.x;
+            const y = pt.y;
+
+            switch (shape) {
+                case 'diamond':
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y - size);
+                    this.ctx.lineTo(x + size, y);
+                    this.ctx.lineTo(x, y + size);
+                    this.ctx.lineTo(x - size, y);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    break;
+                case 'square':
+                    this.ctx.fillRect(x - size, y - size, size * 2, size * 2);
+                    break;
+                case 'circle':
+                default:
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+            }
+        }
+
         this.ctx.restore();
     }
 

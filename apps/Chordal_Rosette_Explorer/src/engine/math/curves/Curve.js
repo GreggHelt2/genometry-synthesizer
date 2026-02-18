@@ -37,6 +37,21 @@ export class Curve {
     }
 
     /**
+     * Returns special points on the curve: zero points (origin crossings),
+     * double points (self-intersections), and boundary points (maximal radius).
+     * Subclasses should override with analytical or numerical implementations.
+     * 
+     * @returns {{
+     *   zeroPoints: Array<{theta: number, x: number, y: number}>,
+     *   doublePoints: Array<{x: number, y: number, theta1: number, theta2: number}>,
+     *   boundaryPoints: Array<{theta: number, x: number, y: number, r: number}>
+     * }}
+     */
+    getSpecialPoints() {
+        return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
+    }
+
+    /**
      * Returns the schema for the curve's parameters.
      * Used by the UI to dynamically generate controls.
      * @returns {Array<{key: string, type: string, label: string, min: number, max: number, step: number, default: number}>}

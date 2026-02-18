@@ -149,6 +149,13 @@ export const DEFAULTS = {
             splineContinuity: 0,
             splineAlpha: 0.5,
             bezierBulge: 0
+        },
+        specialPoints: {
+            show: false,
+            zeroPoints: { show: true, color: '#FF4444', pointSize: 6, opacity: 0.9 },
+            doublePoints: { show: true, color: '#FFD700', pointSize: 5, opacity: 0.8 },
+            boundaryPoints: { show: true, color: '#44FF44', pointSize: 6, opacity: 0.9 },
+            shape: 'circle'
         }
     },
 
@@ -289,6 +296,13 @@ export const DEFAULTS = {
             splineContinuity: 0,
             splineAlpha: 0.5,
             bezierBulge: 0
+        },
+        specialPoints: {
+            show: false,
+            zeroPoints: { show: true, color: '#FF4444', pointSize: 6, opacity: 0.9 },
+            doublePoints: { show: true, color: '#FFD700', pointSize: 5, opacity: 0.8 },
+            boundaryPoints: { show: true, color: '#44FF44', pointSize: 6, opacity: 0.9 },
+            shape: 'circle'
         }
     },
 
