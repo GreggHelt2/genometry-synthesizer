@@ -300,6 +300,9 @@ class App {
         const centerControls = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden');
 
         this.interpPanel = new InterpolationPanel('interp', 'Controls');
+        // Give the hybrid panel a reference to the hybrid canvas so its
+        // GlobalRenderingModule can report canvas dimensions.
+        this.interpPanel.canvas = this.canvas;
         // Fit container, ensure flex growth, constrain overflow to force internal scroll
         this.interpPanel.element.className = 'flex-1 flex flex-col w-full min-h-0 overflow-hidden';
 

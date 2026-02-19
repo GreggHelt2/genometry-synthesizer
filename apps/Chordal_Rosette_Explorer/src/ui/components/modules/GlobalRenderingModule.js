@@ -22,6 +22,37 @@ export class GlobalRenderingModule {
     }
 
     render() {
+        // 0. Canvas Dimensions Info (read-only display rows)
+        const createInfoRow = (labelText) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between text-xs';
+            const label = document.createElement('span');
+            label.className = 'text-gray-400';
+            label.textContent = labelText;
+            const value = document.createElement('span');
+            value.className = 'text-blue-400 font-mono';
+            value.textContent = '—';
+            row.appendChild(label);
+            row.appendChild(value);
+            return { row, value };
+        };
+
+        const physicalInfo = createInfoRow('Canvas Size (px)');
+        this.canvasDimsValue = physicalInfo.value;
+        this.container.appendChild(physicalInfo.row);
+
+        const logicalInfo = createInfoRow('CSS Size (px)');
+        this.canvasLogicalValue = logicalInfo.value;
+        this.container.appendChild(logicalInfo.row);
+
+        const dprInfo = createInfoRow('Device Pixel Ratio');
+        this.canvasDprValue = dprInfo.value;
+        // Add bottom margin to separate from controls below
+        dprInfo.row.className += ' mb-2';
+        this.container.appendChild(dprInfo.row);
+
+        this._setupCanvasObserver();
+
         // 1. Auto Scale
         this.controls.autoScale = new ParamToggle({
             key: this.keys.autoScale,
@@ -131,5 +162,67 @@ export class GlobalRenderingModule {
         if (this.controls.scaleLineWidth) this.controls.scaleLineWidth.setValue(params[this.keys.scaleLineWidth] !== false);
         if (this.controls.backgroundOpacity) this.controls.backgroundOpacity.instance.setValue(params[this.keys.backgroundOpacity] ?? 0);
         if (this.controls.backgroundColor) this.controls.backgroundColor.setValue(params[this.keys.backgroundColor] || '#000000');
+
+        // Update canvas dimensions display on every state update
+        this._updateCanvasDims();
+    }
+
+    /**
+     * Set up a ResizeObserver on the canvas (or its container) to keep
+     * the dimension display updated whenever the canvas resizes.
+     * Defers setup if the canvas reference isn't available yet.
+     */
+    _setupCanvasObserver() {
+        const canvas = this.orchestrator?.canvas;
+        if (!canvas) {
+            // Canvas not available yet (e.g. hybrid panel — set after construction).
+            // Defer and retry once on next frame; update() will also refresh the display.
+            requestAnimationFrame(() => this._setupCanvasObserver());
+            return;
+        }
+
+        // Initial read
+        this._updateCanvasDims();
+
+        // Observe the canvas's parent container for layout-driven resizes
+        if (!this._resizeObserver && typeof ResizeObserver !== 'undefined') {
+            const target = canvas.parentElement || canvas;
+            this._resizeObserver = new ResizeObserver(() => {
+                this._updateCanvasDims();
+            });
+            this._resizeObserver.observe(target);
+        }
+    }
+
+    /**
+     * Read the current canvas pixel dimensions and update the info displays.
+     * Shows physical pixels, logical (CSS) pixels, and devicePixelRatio.
+     */
+    _updateCanvasDims() {
+        const canvas = this.orchestrator?.canvas;
+        if (!canvas || !this.canvasDimsValue) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const dpr = window.devicePixelRatio || 1;
+
+        // Physical (backing-store) pixels
+        this.canvasDimsValue.textContent = (w > 0 && h > 0)
+            ? `${w} × ${h}`
+            : '—';
+
+        // Logical (CSS) pixels
+        if (this.canvasLogicalValue) {
+            const lw = Math.round(w / dpr);
+            const lh = Math.round(h / dpr);
+            this.canvasLogicalValue.textContent = (w > 0 && h > 0)
+                ? `${lw} × ${lh}`
+                : '—';
+        }
+
+        // Device Pixel Ratio
+        if (this.canvasDprValue) {
+            this.canvasDprValue.textContent = `${dpr}`;
+        }
     }
 }
