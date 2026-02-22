@@ -21,6 +21,8 @@ export class SegmentHistogram {
         this.barColorEnd = options.barColorEnd || '#06b6d4';
         this.highlightColor = options.highlightColor || '#ffff00';
         this.onHighlight = options.onHighlight || null;
+        this.onLinkToggle = options.onLinkToggle || null;  // callback(linked: boolean)
+        this.onSelectionChange = options.onSelectionChange || null;  // callback(hasSelection: boolean)
 
         // Outer container
         this.container = createElement('div', 'mt-2');
@@ -58,45 +60,23 @@ export class SegmentHistogram {
         this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
         this._sidePanel.appendChild(this.statsDiv);
 
-        // Highlight controls (bottom of side panel)
-        this._modeRow = createElement('div', 'flex flex-col gap-1');
-        this._sidePanel.appendChild(this._modeRow);
-
-        const modeLabel = createElement('span', 'text-gray-500', { textContent: 'Highlight:' });
-        this._modeRow.appendChild(modeLabel);
-
-        const btnRow = createElement('div', 'flex gap-1');
-        this._modeRow.appendChild(btnRow);
-
-        this._snapshotBtn = createElement('button', '', { textContent: 'Snap' });
-        this._liveBtn = createElement('button', '', { textContent: 'Live' });
-        this._linkBtn = createElement('button', 'p-1 rounded');
+        // Link button (bottom of side panel)
+        this._linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border border-transparent');
+        this._linkBtn.style.alignSelf = 'flex-start';
         this._linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
-        this._linkBtn.title = 'Link highlights across all panels (Snapshot mode only)';
-        btnRow.appendChild(this._snapshotBtn);
-        btnRow.appendChild(this._liveBtn);
-        btnRow.appendChild(this._linkBtn);
+        this._linkBtn.title = 'Link highlights across all panels';
+        this._sidePanel.appendChild(this._linkBtn);
 
-        this._highlightMode = 'snapshot'; // 'snapshot' | 'live'
         this._linked = false;
-        this._updateModeButtons();
+        this._selectedBins = new Set();
+        this._activeBin = -1;
+        this._updateLinkButton();
 
-        this._snapshotBtn.addEventListener('click', () => {
-            this._highlightMode = 'snapshot';
-            this._updateModeButtons();
-            this._reemitHighlight();
-        });
-        this._liveBtn.addEventListener('click', () => {
-            this._highlightMode = 'live';
-            this._linked = false; // Link only works in snapshot mode
-            this._updateModeButtons();
-            this._reemitHighlight();
-        });
         this._linkBtn.addEventListener('click', () => {
-            if (this._highlightMode !== 'snapshot') return; // Only active in snapshot mode
             this._linked = !this._linked;
-            this._updateModeButtons();
+            this._updateLinkButton();
             this._reemitHighlight();
+            if (this.onLinkToggle) this.onLinkToggle(this._linked);
         });
 
         this._resizeObserver = new ResizeObserver(() => this._redraw());
@@ -104,8 +84,7 @@ export class SegmentHistogram {
 
         this._lengths = [];
         this._bins = [];
-        this._selectedBin = -1;
-        this._snapshotIndices = null; // Captured segment indices for snapshot mode
+        this._snapshotIndices = null;     // Captured segment indices for snapshot mode
         this._lastPadding = null;
         this._lastPlotW = 0;
         this._lastBarW = 0;
@@ -136,6 +115,30 @@ export class SegmentHistogram {
         this._computeBins();
         this._redraw();
         this._updateStats();
+    }
+
+    /**
+     * Programmatically set the linked state (for cross-panel synchronization).
+     * @param {boolean} linked
+     */
+    setLinked(linked) {
+        this._linked = linked;
+        this._updateLinkButton();
+        this._reemitHighlight();
+    }
+
+    /**
+     * Programmatically clear all selected bins (for cross-panel synchronization).
+     * Does not fire onSelectionChange to avoid loops.
+     */
+    clearSelection() {
+        if (this._selectedBins.size > 0 || this._activeBin !== -1) {
+            this._selectedBins.clear();
+            this._activeBin = -1;
+            this._snapshotIndices = null;
+            this._redraw();
+            if (this.onHighlight) this.onHighlight(null);
+        }
     }
 
     /**
@@ -276,9 +279,9 @@ export class SegmentHistogram {
             }
         }
 
-        // Selection highlight on selected bar
-        if (this._selectedBin >= 0 && this._selectedBin < bins.length && bins[this._selectedBin] > 0) {
-            const i = this._selectedBin;
+        // Selection highlight on selected bars
+        for (const i of this._selectedBins) {
+            if (i < 0 || i >= bins.length || bins[i] <= 0) continue;
             const barH = (bins[i] / maxCount) * plotH;
             const x = padding.left + i * barW + gap;
             const y = padding.top + plotH - barH;
@@ -305,7 +308,6 @@ export class SegmentHistogram {
                 const uniqueLengths = new Set();
                 for (const len of this._lengths) {
                     if (len >= range.minLength && len <= range.maxLength) {
-                        // Round to 6 significant figures to group near-identical lengths
                         uniqueLengths.add(Number(len.toPrecision(6)));
                     }
                 }
@@ -410,11 +412,7 @@ export class SegmentHistogram {
      * @returns {string}
      */
     _formatNum(n) {
-        if (n === 0) return '0';
-        if (Math.abs(n) >= 100) return n.toFixed(1);
-        if (Math.abs(n) >= 1) return n.toFixed(3);
-        if (Math.abs(n) >= 0.01) return n.toFixed(4);
-        return n.toExponential(2);
+        return n.toFixed(2);
     }
 
     /**
@@ -443,7 +441,10 @@ export class SegmentHistogram {
     }
 
     /**
-     * Handle click on histogram canvas — select or deselect a bar.
+     * Handle click on histogram canvas — select or deselect bars.
+     * Plain click: select single bin (deselect others)
+     * Ctrl/Cmd+click: toggle individual bin
+     * Shift+click: range select from anchor to clicked bin
      */
     _onClick(e) {
         if (!this._lastPadding || !this._bins || this._bins.length === 0) return;
@@ -453,11 +454,13 @@ export class SegmentHistogram {
         const y = e.clientY - rect.top;
         const padding = this._lastPadding;
         const barW = this._lastBarW;
+        const isCtrlCmd = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
 
         // Check if within plot area horizontally
         const plotX = x - padding.left;
         if (plotX < 0 || plotX >= this._lastPlotW) {
-            this._deselectBin();
+            if (!isCtrlCmd && !isShift) this._deselectAll();
             return;
         }
 
@@ -475,31 +478,66 @@ export class SegmentHistogram {
         }
 
         if (!hitBar) {
-            this._deselectBin();
-        } else if (binIndex === this._selectedBin) {
-            this._deselectBin();
-        } else {
-            this._selectBin(binIndex);
+            if (!isCtrlCmd && !isShift) this._deselectAll();
+            return;
         }
+
+        if (isShift && this._activeBin >= 0) {
+            // Shift+click: range select from anchor to clicked bin
+            const from = Math.min(this._activeBin, binIndex);
+            const to = Math.max(this._activeBin, binIndex);
+            if (!isCtrlCmd) this._selectedBins.clear();
+            for (let i = from; i <= to; i++) {
+                if (this._bins[i] > 0) this._selectedBins.add(i);
+            }
+            // Don't update _activeBin on shift-click (keep anchor)
+        } else if (isCtrlCmd) {
+            // Ctrl/Cmd+click: toggle individual bin
+            if (this._selectedBins.has(binIndex)) {
+                this._selectedBins.delete(binIndex);
+            } else {
+                this._selectedBins.add(binIndex);
+            }
+            this._activeBin = binIndex;
+        } else {
+            // Plain click: select single bin
+            if (this._selectedBins.size === 1 && this._selectedBins.has(binIndex)) {
+                this._deselectAll();
+                return;
+            }
+            this._selectedBins.clear();
+            this._selectedBins.add(binIndex);
+            this._activeBin = binIndex;
+        }
+
+        this._onSelectionChanged();
     }
 
     /**
-     * Handle keyboard navigation — left/right arrows cycle through bars.
+     * Handle keyboard navigation — arrow keys move/extend selection.
      */
     _onKeyDown(e) {
-        if (this._selectedBin === -1 || !this._bins || this._bins.length === 0) return;
+        if (this._activeBin === -1 || !this._bins || this._bins.length === 0) return;
 
-        if (e.key === 'ArrowLeft') {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
-            const next = this._findNextNonEmptyBin(-1);
-            if (next !== -1) this._selectBin(next);
-        } else if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            const next = this._findNextNonEmptyBin(1);
-            if (next !== -1) this._selectBin(next);
+            const dir = e.key === 'ArrowLeft' ? -1 : 1;
+            const next = this._findNextNonEmptyBin(dir);
+            if (next === -1) return;
+
+            if (e.shiftKey) {
+                // Shift+arrow: extend selection
+                this._selectedBins.add(next);
+            } else {
+                // Plain arrow: move to single bin
+                this._selectedBins.clear();
+                this._selectedBins.add(next);
+            }
+            this._activeBin = next;
+            this._onSelectionChanged();
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            this._deselectBin();
+            this._deselectAll();
         }
     }
 
@@ -511,92 +549,91 @@ export class SegmentHistogram {
     _findNextNonEmptyBin(direction) {
         const n = this._bins.length;
         for (let step = 1; step < n; step++) {
-            const idx = ((this._selectedBin + direction * step) % n + n) % n;
+            const idx = ((this._activeBin + direction * step) % n + n) % n;
             if (this._bins[idx] > 0) return idx;
         }
         return -1;
     }
 
-    /** @private Select a bin and emit highlight */
-    _selectBin(binIndex) {
-        this._selectedBin = binIndex;
+    /** @private Called after selection changes — update visuals and emit */
+    _onSelectionChanged() {
+        this._captureSnapshotIndices();
         this._redraw();
+        this._updateLinkButton();
+        // Clear other histograms first (when linked), then emit our highlight
+        if (this.onSelectionChange) this.onSelectionChange(this._selectedBins.size > 0);
+        this._emitHighlight();
+    }
 
-        // Capture segment indices for this bin's range (used in snapshot mode)
-        const range = this._getBinRange(binIndex);
-        if (range) {
-            const indices = [];
+    /** @private Capture segment indices for all selected bins (snapshot mode) */
+    _captureSnapshotIndices() {
+        const indices = [];
+        for (const binIdx of this._selectedBins) {
+            const range = this._getBinRange(binIdx);
+            if (!range) continue;
             for (let i = 0; i < this._lengths.length; i++) {
                 const len = this._lengths[i];
                 if (len >= range.minLength && len <= range.maxLength) {
                     indices.push(i);
                 }
             }
-            this._snapshotIndices = indices;
         }
-
-        this._emitHighlight(range);
-        this._updateModeButtons();
+        this._snapshotIndices = indices;
     }
 
-    /** @private Deselect current bin and clear highlight */
-    _deselectBin() {
-        if (this._selectedBin !== -1) {
-            this._selectedBin = -1;
+    /** @private Get the combined min/max length range across all selected bins */
+    _getSelectedRange() {
+        if (this._selectedBins.size === 0) return null;
+        let minL = Infinity, maxL = -Infinity;
+        for (const binIdx of this._selectedBins) {
+            const range = this._getBinRange(binIdx);
+            if (!range) continue;
+            if (range.minLength < minL) minL = range.minLength;
+            if (range.maxLength > maxL) maxL = range.maxLength;
+        }
+        return minL < Infinity ? { minLength: minL, maxLength: maxL } : null;
+    }
+
+    /** @private Deselect all bins and clear highlight */
+    _deselectAll() {
+        if (this._selectedBins.size > 0 || this._activeBin !== -1) {
+            this._selectedBins.clear();
+            this._activeBin = -1;
             this._snapshotIndices = null;
             this._redraw();
-            this._updateModeButtons();
+            this._updateLinkButton();
             if (this.onHighlight) this.onHighlight(null);
         }
     }
 
     /** @private Re-emit highlight for current selection when mode changes */
     _reemitHighlight() {
-        if (this._selectedBin === -1) return;
-        const range = this._getBinRange(this._selectedBin);
-        this._emitHighlight(range);
+        if (this._selectedBins.size === 0) return;
+        this._emitHighlight();
     }
 
-    /** @private Emit highlight callback with mode-appropriate data */
-    _emitHighlight(range) {
-        if (!this.onHighlight || !range) return;
+    /** @private Emit highlight callback with snapshot data */
+    _emitHighlight() {
+        if (!this.onHighlight) return;
+        const range = this._getSelectedRange();
+        if (!range) return;
 
-        if (this._highlightMode === 'snapshot') {
-            this.onHighlight({
-                ...range,
-                mode: 'snapshot',
-                segmentIndices: this._snapshotIndices || [],
-                linked: this._linked
-            });
-        } else {
-            this.onHighlight({
-                ...range,
-                mode: 'live'
-            });
-        }
+        this.onHighlight({
+            ...range,
+            mode: 'snapshot',
+            segmentIndices: this._snapshotIndices || [],
+            linked: this._linked
+        });
     }
 
-    /** @private Update visual state of mode toggle buttons */
-    _updateModeButtons() {
-        const hasSelection = this._selectedBin >= 0;
-        const activeStyle = 'background: #3b82f6; color: white;';
-        const inactiveStyle = 'background: #1f2937; color: #9ca3af; border: 1px solid #374151;';
-        const disabledStyle = 'background: #111827; color: #4b5563; border: 1px solid #1f2937; cursor: not-allowed; opacity: 0.4;';
-        const baseBtn = 'font-size:12px;padding:2px 5px;border-radius:3px;border:none;';
+    /** @private Update visual state of link button */
+    _updateLinkButton() {
+        this._linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400', 'text-gray-500', 'border-transparent');
 
-        if (!hasSelection) {
-            // No bar selected — dim all buttons
-            this._snapshotBtn.style.cssText = `${baseBtn}${disabledStyle}`;
-            this._liveBtn.style.cssText = `${baseBtn}${disabledStyle}`;
-            this._linkBtn.style.cssText = `${baseBtn}${disabledStyle}`;
+        if (this._linked) {
+            this._linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         } else {
-            const isSnapshot = this._highlightMode === 'snapshot';
-            this._snapshotBtn.style.cssText = `${baseBtn}cursor:pointer;${isSnapshot ? activeStyle : inactiveStyle}`;
-            this._liveBtn.style.cssText = `${baseBtn}cursor:pointer;${this._highlightMode === 'live' ? activeStyle : inactiveStyle}`;
-            // Link button: active (green) when linked + snapshot, disabled when not snapshot
-            const linkActive = isSnapshot && this._linked;
-            const linkStyle = linkActive ? 'background: #10b981; color: white;' : (isSnapshot ? inactiveStyle : disabledStyle);
-            this._linkBtn.style.cssText = `${baseBtn}cursor:${isSnapshot ? 'pointer' : 'not-allowed'};${linkStyle}`;
+            this._linkBtn.classList.add('text-gray-500', 'border-transparent');
         }
     }
 

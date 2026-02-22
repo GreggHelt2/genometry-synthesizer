@@ -318,6 +318,27 @@ class App {
         visualArea.appendChild(this.centerArea);
         this.panelB.mount(visualArea);
 
+        // Synchronize histogram link buttons across all three panels
+        const histograms = [
+            this.panelA.statsSection?.histogram,
+            this.panelB.statsSection?.histogram,
+            this.interpPanel?.histogram
+        ].filter(Boolean);
+
+        for (const hist of histograms) {
+            hist.onLinkToggle = (linked) => {
+                for (const other of histograms) {
+                    if (other !== hist) other.setLinked(linked);
+                }
+            };
+            hist.onSelectionChange = (hasSelection) => {
+                if (!hist._linked || !hasSelection) return;
+                for (const other of histograms) {
+                    if (other !== hist) other.clearSelection();
+                }
+            };
+        }
+
         // Append Visual Area to Main Content
         mainContent.appendChild(visualArea);
 

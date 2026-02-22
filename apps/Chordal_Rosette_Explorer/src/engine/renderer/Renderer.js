@@ -364,16 +364,14 @@ export class CanvasRenderer {
     }
 
     /**
-     * Draw highlighted segments on renderables.
-     * Supports two modes:
-     * - 'snapshot': draws specific segment indices (captured at selection time)
-     * - 'live' (default): draws segments whose current length falls within [minLength, maxLength]
+     * Draw highlighted segments on renderables by segment index.
      * @param {Array} renderables - Array of renderable items with .points arrays
-     * @param {Object} highlightInfo - { mode, minLength, maxLength, segmentIndices, color }
+     * @param {Object} highlightInfo - { segmentIndices, color }
      * @param {number} lineWidthScale
      */
     drawSegmentHighlights(renderables, highlightInfo, lineWidthScale = 1) {
-        const { color = '#ffff00', mode = 'live' } = highlightInfo;
+        const { color = '#ffff00', segmentIndices } = highlightInfo;
+        if (!segmentIndices || segmentIndices.length === 0) return;
 
         this.ctx.save();
         this.ctx.globalCompositeOperation = 'source-over';
@@ -386,42 +384,18 @@ export class CanvasRenderer {
             const pts = item.points;
             if (!pts || pts.length < 2) continue;
 
-            if (mode === 'snapshot' && highlightInfo.segmentIndices) {
-                // Draw specific pre-captured segment indices
-                for (const i of highlightInfo.segmentIndices) {
-                    if (i < 0 || i >= pts.length - 1) continue;
-                    const p1 = pts[i];
-                    const p2 = pts[i + 1];
-                    const x1 = p1.x !== undefined ? p1.x : p1[0];
-                    const y1 = p1.y !== undefined ? p1.y : p1[1];
-                    const x2 = p2.x !== undefined ? p2.x : p2[0];
-                    const y2 = p2.y !== undefined ? p2.y : p2[1];
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x1, y1);
-                    this.ctx.lineTo(x2, y2);
-                    this.ctx.stroke();
-                }
-            } else {
-                // Live mode: filter by current segment length
-                const { minLength, maxLength } = highlightInfo;
-                for (let i = 0; i < pts.length - 1; i++) {
-                    const p1 = pts[i];
-                    const p2 = pts[i + 1];
-                    const x1 = p1.x !== undefined ? p1.x : p1[0];
-                    const y1 = p1.y !== undefined ? p1.y : p1[1];
-                    const x2 = p2.x !== undefined ? p2.x : p2[0];
-                    const y2 = p2.y !== undefined ? p2.y : p2[1];
-                    const dx = x2 - x1;
-                    const dy = y2 - y1;
-                    const len = Math.sqrt(dx * dx + dy * dy);
-
-                    if (len >= minLength && len <= maxLength) {
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(x1, y1);
-                        this.ctx.lineTo(x2, y2);
-                        this.ctx.stroke();
-                    }
-                }
+            for (const i of segmentIndices) {
+                if (i < 0 || i >= pts.length - 1) continue;
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.stroke();
             }
         }
 
