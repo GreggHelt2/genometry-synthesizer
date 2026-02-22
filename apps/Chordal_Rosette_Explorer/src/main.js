@@ -426,8 +426,9 @@ class App {
 
         // Render Previews
         // Optimization: Previews only need update if Rose params changed, but for now global dirty is fine.
-        this.rosetteRendererA.renderPreview(state.rosetteA, 'rgba(255, 100, 100, 0.8)');
-        this.rosetteRendererB.renderPreview(state.rosetteB, 'rgba(100, 100, 255, 0.8)');
+        const hl = state.app?.segmentHighlight;
+        this.rosetteRendererA.renderPreview(state.rosetteA, 'rgba(255, 100, 100, 0.8)', hl?.target === 'rosetteA' ? hl : null);
+        this.rosetteRendererB.renderPreview(state.rosetteB, 'rgba(100, 100, 255, 0.8)', hl?.target === 'rosetteB' ? hl : null);
 
         store.clearDirty();
     }

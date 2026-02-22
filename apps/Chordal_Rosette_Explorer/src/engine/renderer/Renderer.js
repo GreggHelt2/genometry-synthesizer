@@ -107,7 +107,7 @@ export class CanvasRenderer {
      * @param {object} roseState - v3.0 nested rosette state (e.g., state.rosetteA)
      * @param {string} defaultColor
      */
-    renderPreview(roseState, defaultColor = 'white') {
+    renderPreview(roseState, defaultColor = 'white', highlightInfo = null) {
         // Flatten the v3.0 state for rendering
         const roseParams = flattenRoseParams(roseState);
 
@@ -286,6 +286,12 @@ export class CanvasRenderer {
             }
         }
 
+        // --- Segment Highlight Layer ---
+        if (highlightInfo) {
+            const rosetteRenderables = renderables.filter(r => r.type === 'rose');
+            this.drawSegmentHighlights(rosetteRenderables, highlightInfo, lineWidthScale);
+        }
+
         this.ctx.restore();
     }
 
@@ -355,6 +361,49 @@ export class CanvasRenderer {
                 opacity: opacity
             });
         }
+    }
+
+    /**
+     * Draw highlighted segments on renderables whose lengths fall within a given range.
+     * @param {Array} renderables - Array of renderable items with .points arrays
+     * @param {{minLength: number, maxLength: number, color: string}} highlightInfo
+     * @param {number} lineWidthScale
+     */
+    drawSegmentHighlights(renderables, highlightInfo, lineWidthScale = 1) {
+        const { minLength, maxLength, color = '#ffff00' } = highlightInfo;
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 3 * lineWidthScale;
+        this.ctx.lineCap = 'round';
+        this.ctx.globalAlpha = 0.85;
+
+        for (const item of renderables) {
+            const pts = item.points;
+            if (!pts || pts.length < 2) continue;
+
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len = Math.sqrt(dx * dx + dy * dy);
+
+                if (len >= minLength && len <= maxLength) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                }
+            }
+        }
+
+        this.ctx.restore();
     }
 
     drawRenderableRose(points, params, defaultColor, lineWidthScale = 1) {
@@ -853,6 +902,13 @@ export class CanvasRenderer {
                     }
                 }
             }
+        }
+
+        // --- Segment Highlight Layer (Hybrid) ---
+        const segHL = state.app?.segmentHighlight;
+        if (segHL && segHL.target === 'hybrid') {
+            const hybridRenderables = renderables.filter(r => r.type === 'hybrid');
+            this.drawSegmentHighlights(hybridRenderables, segHL, lineWidthScale);
         }
 
         this.ctx.restore();

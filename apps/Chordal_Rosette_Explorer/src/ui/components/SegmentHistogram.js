@@ -19,6 +19,8 @@ export class SegmentHistogram {
         this.numBins = options.numBins || 30;
         this.barColorStart = options.barColorStart || '#3b82f6';
         this.barColorEnd = options.barColorEnd || '#06b6d4';
+        this.highlightColor = options.highlightColor || '#ffff00';
+        this.onHighlight = options.onHighlight || null;
 
         // Container
         this.container = createElement('div', 'mt-2');
@@ -34,6 +36,7 @@ export class SegmentHistogram {
         this.canvas.style.height = `${this.height}px`;
         this.canvas.style.background = '#111827';
         this.canvas.style.border = '1px solid #374151';
+        this.canvas.style.cursor = 'crosshair';
         this.container.appendChild(this.canvas);
 
         // Stats line
@@ -45,6 +48,14 @@ export class SegmentHistogram {
 
         this._lengths = [];
         this._bins = [];
+        this._hoveredBin = -1;
+        this._lastPadding = null;
+        this._lastPlotW = 0;
+        this._lastBarW = 0;
+
+        // Mouse events
+        this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
+        this.canvas.addEventListener('mouseleave', () => this._onMouseLeave());
     }
 
     get element() {
@@ -163,6 +174,11 @@ export class SegmentHistogram {
         const barW = plotW / bins.length;
         const gap = Math.min(1, barW * 0.1);
 
+        // Store layout for mouse hit testing
+        this._lastPadding = padding;
+        this._lastPlotW = plotW;
+        this._lastBarW = barW;
+
         // Determine bar colors
         const opts = this._colorOptions;
         const useLengthGradient = opts && opts.colorMethod === 'length';
@@ -198,6 +214,22 @@ export class SegmentHistogram {
                 ctx.fillStyle = fill;
                 ctx.fillRect(x, y, Math.max(w, 1), barH);
             }
+        }
+
+        // Hover highlight on hovered bar
+        if (this._hoveredBin >= 0 && this._hoveredBin < bins.length && bins[this._hoveredBin] > 0) {
+            const i = this._hoveredBin;
+            const barH = (bins[i] / maxCount) * plotH;
+            const x = padding.left + i * barW + gap;
+            const y = padding.top + plotH - barH;
+            const w = barW - gap * 2;
+            ctx.strokeStyle = this.highlightColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, Math.max(w, 1), barH);
+            ctx.fillStyle = this.highlightColor;
+            ctx.globalAlpha = 0.25;
+            ctx.fillRect(x, y, Math.max(w, 1), barH);
+            ctx.globalAlpha = 1;
         }
 
         // --- Axes ---
@@ -304,6 +336,67 @@ export class SegmentHistogram {
         if (Math.abs(n) >= 1) return n.toFixed(3);
         if (Math.abs(n) >= 0.01) return n.toFixed(4);
         return n.toExponential(2);
+    }
+
+    /**
+     * Get the length range for a given bin index.
+     * @param {number} binIndex
+     * @returns {{minLength: number, maxLength: number}|null}
+     */
+    _getBinRange(binIndex) {
+        if (binIndex < 0 || binIndex >= this._bins.length) return null;
+        const numBins = this._bins.length;
+        const binWidth = (this._binMax - this._binMin) / numBins;
+        return {
+            minLength: this._binMin + binIndex * binWidth,
+            maxLength: this._binMin + (binIndex + 1) * binWidth
+        };
+    }
+
+    /**
+     * Handle mouse move over histogram canvas.
+     */
+    _onMouseMove(e) {
+        if (!this._lastPadding || !this._bins || this._bins.length === 0) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const padding = this._lastPadding;
+        const barW = this._lastBarW;
+
+        // Check if within plot area horizontally
+        const plotX = x - padding.left;
+        if (plotX < 0 || plotX >= this._lastPlotW) {
+            if (this._hoveredBin !== -1) {
+                this._hoveredBin = -1;
+                this._redraw();
+                if (this.onHighlight) this.onHighlight(null);
+            }
+            return;
+        }
+
+        const binIndex = Math.min(Math.floor(plotX / barW), this._bins.length - 1);
+
+        if (binIndex !== this._hoveredBin) {
+            this._hoveredBin = binIndex;
+            this._redraw();
+
+            if (this.onHighlight) {
+                const range = this._getBinRange(binIndex);
+                this.onHighlight(range); // { minLength, maxLength } or null
+            }
+        }
+    }
+
+    /**
+     * Handle mouse leaving histogram canvas.
+     */
+    _onMouseLeave() {
+        if (this._hoveredBin !== -1) {
+            this._hoveredBin = -1;
+            this._redraw();
+            if (this.onHighlight) this.onHighlight(null);
+        }
     }
 
     dispose() {

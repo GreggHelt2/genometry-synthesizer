@@ -5,6 +5,8 @@ import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { gcd, getLinesToClose } from '../../../engine/math/MathOps.js';
 import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
 import { SegmentHistogram } from '../SegmentHistogram.js';
+import { store } from '../../../engine/state/Store.js';
+import { ACTIONS } from '../../../engine/state/Actions.js';
 
 export class StatsSection {
     /**
@@ -25,8 +27,17 @@ export class StatsSection {
         this.content = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.accordion.append(this.content);
 
-        // Segment Length Histogram
-        this.histogram = new SegmentHistogram();
+        // Segment Length Histogram with hover → highlight dispatch
+        this.histogram = new SegmentHistogram({
+            onHighlight: (range) => {
+                store.dispatch({
+                    type: ACTIONS.SET_DEEP,
+                    path: ['app', 'segmentHighlight'],
+                    value: range ? { target: this.roseId, ...range, color: '#ffff00' } : null,
+                    meta: { transient: true }
+                });
+            }
+        });
         this.accordion.append(this.histogram.element);
 
         // Deferred histogram update state

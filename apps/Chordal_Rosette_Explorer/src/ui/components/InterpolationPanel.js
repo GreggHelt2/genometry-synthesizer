@@ -76,8 +76,17 @@ export class InterpolationPanel extends Panel {
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
 
-        // Segment Length Histogram for hybrid
-        this.histogram = new SegmentHistogram();
+        // Segment Length Histogram for hybrid with hover → highlight dispatch
+        this.histogram = new SegmentHistogram({
+            onHighlight: (range) => {
+                store.dispatch({
+                    type: ACTIONS.SET_DEEP,
+                    path: ['app', 'segmentHighlight'],
+                    value: range ? { target: 'hybrid', ...range, color: '#ffff00' } : null,
+                    meta: { transient: true }
+                });
+            }
+        });
         this.infoAccordion.append(this.histogram.element);
 
         this.controlsContainer.appendChild(this.infoAccordion.element);

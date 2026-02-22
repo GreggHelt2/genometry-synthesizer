@@ -546,6 +546,7 @@ export const DEFAULTS = {
     },
 
     app: {
-        isRecording: false
+        isRecording: false,
+        segmentHighlight: null
     }
 };
