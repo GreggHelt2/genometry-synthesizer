@@ -10,6 +10,7 @@ import { linkManager } from './engine/logic/LinkManager.js';
 import { SnapshotModal } from './ui/components/SnapshotModal.js';
 import { SnapshotSidebar } from './ui/components/SnapshotSidebar.js';
 import { ChordSelection } from './engine/ChordSelection.js';
+import { ChordPicker } from './ui/interactions/ChordPicker.js';
 
 // Application Bootstrapper
 class App {
@@ -373,6 +374,17 @@ class App {
         // Preview Renderers (targeting the canvases created inside RosePanels)
         this.rosetteRendererA = new CanvasRenderer(this.panelA.canvas);
         this.rosetteRendererB = new CanvasRenderer(this.panelB.canvas);
+
+        // Canvas Chord Pickers
+        this.pickerA = new ChordPicker(this.panelA.canvas, this.chordSelection, this.rosetteRendererA, {
+            sourceId: 'canvas-rosetteA'
+        });
+        this.pickerB = new ChordPicker(this.panelB.canvas, this.chordSelection, this.rosetteRendererB, {
+            sourceId: 'canvas-rosetteB'
+        });
+        this.pickerHybrid = new ChordPicker(this.canvas, this.chordSelection, this.hybridRenderer, {
+            sourceId: 'canvas-hybrid'
+        });
 
         // Initial Resize
         this.handleResize();

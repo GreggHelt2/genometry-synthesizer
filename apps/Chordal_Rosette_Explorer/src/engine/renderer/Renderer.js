@@ -42,6 +42,10 @@ export class CanvasRenderer {
         this.width = canvas.width;
         this.height = canvas.height;
         this.polylineLayer = new PolylineLayer(this.ctx);
+        /** @type {number} Last active scale used in setupCamera */
+        this.lastScale = 1;
+        /** @type {Array} Last set of renderables from the most recent render */
+        this.lastRenderables = [];
     }
 
     resize(width, height) {
@@ -99,6 +103,7 @@ export class CanvasRenderer {
             scale = Math.min(this.width, this.height) / 500;
         }
 
+        this.lastScale = scale;
         return scale;
     }
 
@@ -292,6 +297,7 @@ export class CanvasRenderer {
             this.drawSegmentHighlights(rosetteRenderables, highlightInfo, lineWidthScale);
         }
 
+        this.lastRenderables = renderables;
         this.ctx.restore();
     }
 
@@ -907,6 +913,7 @@ export class CanvasRenderer {
             this.drawSegmentHighlights(hybridRenderables, segHL, lineWidthScale);
         }
 
+        this.lastRenderables = renderables;
         this.ctx.restore();
     }
 
