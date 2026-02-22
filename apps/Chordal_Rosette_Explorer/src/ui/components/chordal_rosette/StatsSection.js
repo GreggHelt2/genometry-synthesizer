@@ -27,13 +27,13 @@ export class StatsSection {
         this.content = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.accordion.append(this.content);
 
-        // Segment Length Histogram with hover → highlight dispatch
+        // Chord Length Histogram with click → highlight dispatch
         this.histogram = new SegmentHistogram({
-            onHighlight: (range) => {
+            onHighlight: (info) => {
                 store.dispatch({
                     type: ACTIONS.SET_DEEP,
                     path: ['app', 'segmentHighlight'],
-                    value: range ? { target: this.roseId, ...range, color: '#ffff00' } : null,
+                    value: info ? { target: this.roseId, ...info, color: '#ffff00' } : null,
                     meta: { transient: true }
                 });
             }

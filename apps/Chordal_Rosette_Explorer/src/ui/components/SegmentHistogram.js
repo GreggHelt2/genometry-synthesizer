@@ -27,35 +27,79 @@ export class SegmentHistogram {
 
         // Label
         this.label = createElement('div', 'text-[10px] text-gray-500 mb-1', {
-            textContent: 'Segment Length Distribution'
+            textContent: 'Chord Length Distribution'
         });
         this.container.appendChild(this.label);
 
-        // Canvas
+        // Canvas — tabindex makes it focusable for keyboard events
         this.canvas = createElement('canvas', 'w-full rounded');
         this.canvas.style.height = `${this.height}px`;
         this.canvas.style.background = '#111827';
         this.canvas.style.border = '1px solid #374151';
-        this.canvas.style.cursor = 'crosshair';
+        this.canvas.style.cursor = 'pointer';
+        this.canvas.style.outline = 'none';
+        this.canvas.setAttribute('tabindex', '0');
         this.container.appendChild(this.canvas);
 
         // Stats line
         this.statsDiv = createElement('div', 'text-[10px] text-gray-400 mt-1 font-mono leading-tight');
         this.container.appendChild(this.statsDiv);
 
+        // Highlight mode toggle row (hidden until a bin is selected)
+        this._modeRow = createElement('div', 'flex items-center gap-2 mt-1');
+        this._modeRow.style.display = 'none';
+        const modeLabel = createElement('span', 'text-[9px] text-gray-500', { textContent: 'Highlight:' });
+        this._modeRow.appendChild(modeLabel);
+
+        this._snapshotBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: 'Snapshot' });
+        this._liveBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: 'Live' });
+        this._linkBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: '🔗' });
+        this._linkBtn.title = 'Link highlights across all panels (Snapshot mode only)';
+        this._snapshotBtn.style.cursor = 'pointer';
+        this._liveBtn.style.cursor = 'pointer';
+        this._linkBtn.style.cursor = 'pointer';
+        this._modeRow.appendChild(this._snapshotBtn);
+        this._modeRow.appendChild(this._liveBtn);
+        this._modeRow.appendChild(this._linkBtn);
+        this.container.appendChild(this._modeRow);
+
+        this._highlightMode = 'snapshot'; // 'snapshot' | 'live'
+        this._linked = false;
+        this._updateModeButtons();
+
+        this._snapshotBtn.addEventListener('click', () => {
+            this._highlightMode = 'snapshot';
+            this._updateModeButtons();
+            this._reemitHighlight();
+        });
+        this._liveBtn.addEventListener('click', () => {
+            this._highlightMode = 'live';
+            this._linked = false; // Link only works in snapshot mode
+            this._updateModeButtons();
+            this._reemitHighlight();
+        });
+        this._linkBtn.addEventListener('click', () => {
+            if (this._highlightMode !== 'snapshot') return; // Only active in snapshot mode
+            this._linked = !this._linked;
+            this._updateModeButtons();
+            this._reemitHighlight();
+        });
+
         this._resizeObserver = new ResizeObserver(() => this._redraw());
         this._resizeObserver.observe(this.canvas);
 
         this._lengths = [];
         this._bins = [];
-        this._hoveredBin = -1;
+        this._selectedBin = -1;
+        this._snapshotIndices = null; // Captured segment indices for snapshot mode
         this._lastPadding = null;
         this._lastPlotW = 0;
         this._lastBarW = 0;
 
-        // Mouse events
-        this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
-        this.canvas.addEventListener('mouseleave', () => this._onMouseLeave());
+        // Click to select/deselect a bar
+        this.canvas.addEventListener('click', (e) => this._onClick(e));
+        // Arrow keys to traverse bars
+        this.canvas.addEventListener('keydown', (e) => this._onKeyDown(e));
     }
 
     get element() {
@@ -217,8 +261,8 @@ export class SegmentHistogram {
         }
 
         // Hover highlight on hovered bar
-        if (this._hoveredBin >= 0 && this._hoveredBin < bins.length && bins[this._hoveredBin] > 0) {
-            const i = this._hoveredBin;
+        if (this._selectedBin >= 0 && this._selectedBin < bins.length && bins[this._selectedBin] > 0) {
+            const i = this._selectedBin;
             const barH = (bins[i] / maxCount) * plotH;
             const x = padding.left + i * barW + gap;
             const y = padding.top + plotH - barH;
@@ -354,9 +398,9 @@ export class SegmentHistogram {
     }
 
     /**
-     * Handle mouse move over histogram canvas.
+     * Handle click on histogram canvas — select or deselect a bar.
      */
-    _onMouseMove(e) {
+    _onClick(e) {
         if (!this._lastPadding || !this._bins || this._bins.length === 0) return;
 
         const rect = this.canvas.getBoundingClientRect();
@@ -367,36 +411,127 @@ export class SegmentHistogram {
         // Check if within plot area horizontally
         const plotX = x - padding.left;
         if (plotX < 0 || plotX >= this._lastPlotW) {
-            if (this._hoveredBin !== -1) {
-                this._hoveredBin = -1;
-                this._redraw();
-                if (this.onHighlight) this.onHighlight(null);
-            }
+            // Clicked outside plot → deselect
+            this._deselectBin();
             return;
         }
 
         const binIndex = Math.min(Math.floor(plotX / barW), this._bins.length - 1);
 
-        if (binIndex !== this._hoveredBin) {
-            this._hoveredBin = binIndex;
-            this._redraw();
-
-            if (this.onHighlight) {
-                const range = this._getBinRange(binIndex);
-                this.onHighlight(range); // { minLength, maxLength } or null
-            }
+        if (binIndex === this._selectedBin) {
+            // Clicking the same bar toggles selection off
+            this._deselectBin();
+        } else if (this._bins[binIndex] > 0) {
+            // Only select non-empty bins
+            this._selectBin(binIndex);
         }
     }
 
     /**
-     * Handle mouse leaving histogram canvas.
+     * Handle keyboard navigation — left/right arrows cycle through bars.
      */
-    _onMouseLeave() {
-        if (this._hoveredBin !== -1) {
-            this._hoveredBin = -1;
+    _onKeyDown(e) {
+        if (this._selectedBin === -1 || !this._bins || this._bins.length === 0) return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const next = this._findNextNonEmptyBin(-1);
+            if (next !== -1) this._selectBin(next);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            const next = this._findNextNonEmptyBin(1);
+            if (next !== -1) this._selectBin(next);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this._deselectBin();
+        }
+    }
+
+    /**
+     * Find the next non-empty bin in the given direction, wrapping around.
+     * @param {number} direction - -1 for left, +1 for right
+     * @returns {number} bin index, or -1 if none found
+     */
+    _findNextNonEmptyBin(direction) {
+        const n = this._bins.length;
+        for (let step = 1; step < n; step++) {
+            const idx = ((this._selectedBin + direction * step) % n + n) % n;
+            if (this._bins[idx] > 0) return idx;
+        }
+        return -1;
+    }
+
+    /** @private Select a bin and emit highlight */
+    _selectBin(binIndex) {
+        this._selectedBin = binIndex;
+        this._modeRow.style.display = 'flex';
+        this._redraw();
+
+        // Capture segment indices for this bin's range (used in snapshot mode)
+        const range = this._getBinRange(binIndex);
+        if (range) {
+            const indices = [];
+            for (let i = 0; i < this._lengths.length; i++) {
+                const len = this._lengths[i];
+                if (len >= range.minLength && len <= range.maxLength) {
+                    indices.push(i);
+                }
+            }
+            this._snapshotIndices = indices;
+        }
+
+        this._emitHighlight(range);
+    }
+
+    /** @private Deselect current bin and clear highlight */
+    _deselectBin() {
+        if (this._selectedBin !== -1) {
+            this._selectedBin = -1;
+            this._snapshotIndices = null;
+            this._modeRow.style.display = 'none';
             this._redraw();
             if (this.onHighlight) this.onHighlight(null);
         }
+    }
+
+    /** @private Re-emit highlight for current selection when mode changes */
+    _reemitHighlight() {
+        if (this._selectedBin === -1) return;
+        const range = this._getBinRange(this._selectedBin);
+        this._emitHighlight(range);
+    }
+
+    /** @private Emit highlight callback with mode-appropriate data */
+    _emitHighlight(range) {
+        if (!this.onHighlight || !range) return;
+
+        if (this._highlightMode === 'snapshot') {
+            this.onHighlight({
+                ...range,
+                mode: 'snapshot',
+                segmentIndices: this._snapshotIndices || [],
+                linked: this._linked
+            });
+        } else {
+            this.onHighlight({
+                ...range,
+                mode: 'live'
+            });
+        }
+    }
+
+    /** @private Update visual state of mode toggle buttons */
+    _updateModeButtons() {
+        const activeStyle = 'background: #3b82f6; color: white;';
+        const inactiveStyle = 'background: #1f2937; color: #9ca3af; border: 1px solid #374151;';
+        const disabledStyle = 'background: #111827; color: #4b5563; border: 1px solid #1f2937; cursor: not-allowed;';
+        this._snapshotBtn.style.cssText = `cursor:pointer;font-size:9px;padding:1px 6px;border-radius:3px;${this._highlightMode === 'snapshot' ? activeStyle : inactiveStyle}`;
+        this._liveBtn.style.cssText = `cursor:pointer;font-size:9px;padding:1px 6px;border-radius:3px;${this._highlightMode === 'live' ? activeStyle : inactiveStyle}`;
+        // Link button: active (green) when linked + snapshot, disabled when not snapshot
+        const isSnapshot = this._highlightMode === 'snapshot';
+        const linkActive = isSnapshot && this._linked;
+        const linkStyle = linkActive ? 'background: #10b981; color: white;' : (isSnapshot ? inactiveStyle : disabledStyle);
+        this._linkBtn.style.cssText = `cursor:${isSnapshot ? 'pointer' : 'not-allowed'};font-size:9px;padding:1px 6px;border-radius:3px;${linkStyle}`;
     }
 
     dispose() {
