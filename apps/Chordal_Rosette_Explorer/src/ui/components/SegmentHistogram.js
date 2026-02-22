@@ -15,53 +15,67 @@ export class SegmentHistogram {
      * @param {string} [options.barColorEnd='#06b6d4'] - Bar gradient end color
      */
     constructor(options = {}) {
-        this.height = options.height || 90;
+        this.height = options.height || 135;
         this.numBins = options.numBins || 30;
         this.barColorStart = options.barColorStart || '#3b82f6';
         this.barColorEnd = options.barColorEnd || '#06b6d4';
         this.highlightColor = options.highlightColor || '#ffff00';
         this.onHighlight = options.onHighlight || null;
 
-        // Container
+        // Outer container
         this.container = createElement('div', 'mt-2');
 
         // Label
-        this.label = createElement('div', 'text-[10px] text-gray-500 mb-1', {
+        this.label = createElement('div', 'text-[11px] text-gray-500 mb-1', {
             textContent: 'Chord Length Distribution'
         });
         this.container.appendChild(this.label);
 
-        // Canvas — tabindex makes it focusable for keyboard events
-        this.canvas = createElement('canvas', 'w-full rounded');
+        // Horizontal layout: [Canvas] [Right Subpanel]
+        const row = createElement('div', 'flex gap-2');
+        this.container.appendChild(row);
+
+        // Canvas (left, flexible width) — tabindex makes it focusable for keyboard events
+        this.canvas = createElement('canvas', 'rounded');
+        this.canvas.style.flex = '1';
+        this.canvas.style.minWidth = '0';
         this.canvas.style.height = `${this.height}px`;
         this.canvas.style.background = '#111827';
         this.canvas.style.border = '1px solid #374151';
         this.canvas.style.cursor = 'pointer';
         this.canvas.style.outline = 'none';
         this.canvas.setAttribute('tabindex', '0');
-        this.container.appendChild(this.canvas);
+        row.appendChild(this.canvas);
 
-        // Stats line
-        this.statsDiv = createElement('div', 'text-[10px] text-gray-400 mt-1 font-mono leading-tight');
-        this.container.appendChild(this.statsDiv);
+        // Right subpanel: stats + highlight controls
+        this._sidePanel = createElement('div', 'flex flex-col justify-between');
+        this._sidePanel.style.minWidth = '72px';
+        this._sidePanel.style.fontSize = '12px';
+        this._sidePanel.style.fontFamily = 'monospace';
+        row.appendChild(this._sidePanel);
 
-        // Highlight mode toggle row (hidden until a bin is selected)
-        this._modeRow = createElement('div', 'flex items-center gap-2 mt-1');
-        this._modeRow.style.display = 'none';
-        const modeLabel = createElement('span', 'text-[9px] text-gray-500', { textContent: 'Highlight:' });
+        // Stats section (top of side panel)
+        this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
+        this._sidePanel.appendChild(this.statsDiv);
+
+        // Highlight controls (bottom of side panel)
+        this._modeRow = createElement('div', 'flex flex-col gap-1');
+        this._sidePanel.appendChild(this._modeRow);
+
+        const modeLabel = createElement('span', 'text-gray-500', { textContent: 'Highlight:' });
         this._modeRow.appendChild(modeLabel);
 
-        this._snapshotBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: 'Snapshot' });
-        this._liveBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: 'Live' });
-        this._linkBtn = createElement('button', 'text-[9px] px-1.5 py-0.5 rounded', { textContent: '🔗' });
+        const btnRow = createElement('div', 'flex gap-1');
+        this._modeRow.appendChild(btnRow);
+
+        this._snapshotBtn = createElement('button', '', { textContent: 'Snap' });
+        this._liveBtn = createElement('button', '', { textContent: 'Live' });
+        this._linkBtn = createElement('button', 'p-1 rounded');
+        this._linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
         this._linkBtn.title = 'Link highlights across all panels (Snapshot mode only)';
-        this._snapshotBtn.style.cursor = 'pointer';
-        this._liveBtn.style.cursor = 'pointer';
-        this._linkBtn.style.cursor = 'pointer';
-        this._modeRow.appendChild(this._snapshotBtn);
-        this._modeRow.appendChild(this._liveBtn);
-        this._modeRow.appendChild(this._linkBtn);
-        this.container.appendChild(this._modeRow);
+        btnRow.appendChild(this._snapshotBtn);
+        btnRow.appendChild(this._liveBtn);
+        btnRow.appendChild(this._linkBtn);
 
         this._highlightMode = 'snapshot'; // 'snapshot' | 'live'
         this._linked = false;
@@ -203,7 +217,7 @@ export class SegmentHistogram {
         const bins = this._bins;
         if (!bins || bins.length === 0) {
             ctx.fillStyle = '#6b7280';
-            ctx.font = '10px monospace';
+            ctx.font = '11px monospace';
             ctx.textAlign = 'center';
             ctx.fillText('No data', width / 2, height / 2 + 4);
             return;
@@ -212,7 +226,7 @@ export class SegmentHistogram {
         const maxCount = Math.max(...bins);
         if (maxCount === 0) return;
 
-        const padding = { top: 6, bottom: 18, left: 32, right: 4 };
+        const padding = { top: 16, bottom: 18, left: 32, right: 16 };
         const plotW = width - padding.left - padding.right;
         const plotH = height - padding.top - padding.bottom;
         const barW = plotW / bins.length;
@@ -221,7 +235,9 @@ export class SegmentHistogram {
         // Store layout for mouse hit testing
         this._lastPadding = padding;
         this._lastPlotW = plotW;
+        this._lastPlotH = plotH;
         this._lastBarW = barW;
+        this._lastMaxCount = maxCount;
 
         // Determine bar colors
         const opts = this._colorOptions;
@@ -260,7 +276,7 @@ export class SegmentHistogram {
             }
         }
 
-        // Hover highlight on hovered bar
+        // Selection highlight on selected bar
         if (this._selectedBin >= 0 && this._selectedBin < bins.length && bins[this._selectedBin] > 0) {
             const i = this._selectedBin;
             const barH = (bins[i] / maxCount) * plotH;
@@ -274,6 +290,30 @@ export class SegmentHistogram {
             ctx.globalAlpha = 0.25;
             ctx.fillRect(x, y, Math.max(w, 1), barH);
             ctx.globalAlpha = 1;
+
+            // Annotation: total chord count above bar
+            const barCenterX = x + Math.max(w, 1) / 2;
+            ctx.fillStyle = this.highlightColor;
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(String(bins[i]), barCenterX, y - 2);
+
+            // Annotation: spectral node count (distinct lengths) below bar
+            const range = this._getBinRange(i);
+            if (range) {
+                const uniqueLengths = new Set();
+                for (const len of this._lengths) {
+                    if (len >= range.minLength && len <= range.maxLength) {
+                        // Round to 6 significant figures to group near-identical lengths
+                        uniqueLengths.add(Number(len.toPrecision(6)));
+                    }
+                }
+                ctx.textBaseline = 'top';
+                ctx.font = '9px monospace';
+                ctx.fillStyle = '#9ca3af';
+                ctx.fillText(`${uniqueLengths.size}`, barCenterX, padding.top + plotH + 2);
+            }
         }
 
         // --- Axes ---
@@ -297,14 +337,13 @@ export class SegmentHistogram {
 
         // Y-axis ticks and labels (0, mid, max)
         ctx.fillStyle = labelColor;
-        ctx.font = '8px monospace';
+        ctx.font = '11px monospace';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
         const yTicks = [
             { value: maxCount, yPos: padding.top },
-            { value: Math.round(maxCount / 2), yPos: padding.top + plotH / 2 },
-            { value: 0, yPos: padding.top + plotH }
+            { value: Math.round(maxCount / 2), yPos: padding.top + plotH / 2 }
         ];
         for (const tick of yTicks) {
             // Tick mark
@@ -332,7 +371,7 @@ export class SegmentHistogram {
             ctx.lineTo(tick.xPos, padding.top + plotH + tickLen);
             ctx.stroke();
             // Label
-            ctx.fillText(this._formatNum(tick.value), tick.xPos, padding.top + plotH + tickLen + 1);
+            ctx.fillText(this._formatAxisLabel(tick.value), tick.xPos, padding.top + plotH + tickLen + 1);
         }
     }
 
@@ -354,18 +393,14 @@ export class SegmentHistogram {
             ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
             : sorted[Math.floor(sorted.length / 2)];
 
-        const variance = lengths.reduce((acc, l) => acc + (l - mean) ** 2, 0) / lengths.length;
-        const stdDev = Math.sqrt(variance);
-
         const min = sorted[0];
         const max = sorted[sorted.length - 1];
 
         this.statsDiv.innerHTML = `
-            <span class="text-gray-500">Min:</span> ${this._formatNum(min)}
-            <span class="text-gray-500 ml-1">Max:</span> ${this._formatNum(max)}
-            <span class="text-gray-500 ml-1">μ:</span> ${this._formatNum(mean)}
-            <span class="text-gray-500 ml-1">M̃:</span> ${this._formatNum(median)}
-            <span class="text-gray-500 ml-1">σ:</span> ${this._formatNum(stdDev)}
+            <div><span class="text-gray-500">Min:</span> ${this._formatNum(min)}</div>
+            <div><span class="text-gray-500">Max:</span> ${this._formatNum(max)}</div>
+            <div><span class="text-gray-500">Mean:</span> ${this._formatNum(mean)}</div>
+            <div><span class="text-gray-500">Median:</span> ${this._formatNum(median)}</div>
         `;
     }
 
@@ -380,6 +415,16 @@ export class SegmentHistogram {
         if (Math.abs(n) >= 1) return n.toFixed(3);
         if (Math.abs(n) >= 0.01) return n.toFixed(4);
         return n.toExponential(2);
+    }
+
+    /**
+     * Format a number for axis labels — round to 2 decimal places.
+     * @param {number} n
+     * @returns {string}
+     */
+    _formatAxisLabel(n) {
+        if (Number.isInteger(n)) return String(n);
+        return n.toFixed(2);
     }
 
     /**
@@ -405,24 +450,35 @@ export class SegmentHistogram {
 
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
         const padding = this._lastPadding;
         const barW = this._lastBarW;
 
         // Check if within plot area horizontally
         const plotX = x - padding.left;
         if (plotX < 0 || plotX >= this._lastPlotW) {
-            // Clicked outside plot → deselect
             this._deselectBin();
             return;
         }
 
         const binIndex = Math.min(Math.floor(plotX / barW), this._bins.length - 1);
+        const binCount = this._bins[binIndex];
 
-        if (binIndex === this._selectedBin) {
-            // Clicking the same bar toggles selection off
+        // Check if click Y is actually within the bar rectangle
+        let hitBar = false;
+        if (binCount > 0 && this._lastMaxCount > 0) {
+            const plotH = this._lastPlotH;
+            const barH = (binCount / this._lastMaxCount) * plotH;
+            const barTop = padding.top + plotH - barH;
+            const barBottom = padding.top + plotH;
+            hitBar = (y >= barTop && y <= barBottom);
+        }
+
+        if (!hitBar) {
             this._deselectBin();
-        } else if (this._bins[binIndex] > 0) {
-            // Only select non-empty bins
+        } else if (binIndex === this._selectedBin) {
+            this._deselectBin();
+        } else {
             this._selectBin(binIndex);
         }
     }
@@ -464,7 +520,6 @@ export class SegmentHistogram {
     /** @private Select a bin and emit highlight */
     _selectBin(binIndex) {
         this._selectedBin = binIndex;
-        this._modeRow.style.display = 'flex';
         this._redraw();
 
         // Capture segment indices for this bin's range (used in snapshot mode)
@@ -481,6 +536,7 @@ export class SegmentHistogram {
         }
 
         this._emitHighlight(range);
+        this._updateModeButtons();
     }
 
     /** @private Deselect current bin and clear highlight */
@@ -488,8 +544,8 @@ export class SegmentHistogram {
         if (this._selectedBin !== -1) {
             this._selectedBin = -1;
             this._snapshotIndices = null;
-            this._modeRow.style.display = 'none';
             this._redraw();
+            this._updateModeButtons();
             if (this.onHighlight) this.onHighlight(null);
         }
     }
@@ -522,16 +578,26 @@ export class SegmentHistogram {
 
     /** @private Update visual state of mode toggle buttons */
     _updateModeButtons() {
+        const hasSelection = this._selectedBin >= 0;
         const activeStyle = 'background: #3b82f6; color: white;';
         const inactiveStyle = 'background: #1f2937; color: #9ca3af; border: 1px solid #374151;';
-        const disabledStyle = 'background: #111827; color: #4b5563; border: 1px solid #1f2937; cursor: not-allowed;';
-        this._snapshotBtn.style.cssText = `cursor:pointer;font-size:9px;padding:1px 6px;border-radius:3px;${this._highlightMode === 'snapshot' ? activeStyle : inactiveStyle}`;
-        this._liveBtn.style.cssText = `cursor:pointer;font-size:9px;padding:1px 6px;border-radius:3px;${this._highlightMode === 'live' ? activeStyle : inactiveStyle}`;
-        // Link button: active (green) when linked + snapshot, disabled when not snapshot
-        const isSnapshot = this._highlightMode === 'snapshot';
-        const linkActive = isSnapshot && this._linked;
-        const linkStyle = linkActive ? 'background: #10b981; color: white;' : (isSnapshot ? inactiveStyle : disabledStyle);
-        this._linkBtn.style.cssText = `cursor:${isSnapshot ? 'pointer' : 'not-allowed'};font-size:9px;padding:1px 6px;border-radius:3px;${linkStyle}`;
+        const disabledStyle = 'background: #111827; color: #4b5563; border: 1px solid #1f2937; cursor: not-allowed; opacity: 0.4;';
+        const baseBtn = 'font-size:12px;padding:2px 5px;border-radius:3px;border:none;';
+
+        if (!hasSelection) {
+            // No bar selected — dim all buttons
+            this._snapshotBtn.style.cssText = `${baseBtn}${disabledStyle}`;
+            this._liveBtn.style.cssText = `${baseBtn}${disabledStyle}`;
+            this._linkBtn.style.cssText = `${baseBtn}${disabledStyle}`;
+        } else {
+            const isSnapshot = this._highlightMode === 'snapshot';
+            this._snapshotBtn.style.cssText = `${baseBtn}cursor:pointer;${isSnapshot ? activeStyle : inactiveStyle}`;
+            this._liveBtn.style.cssText = `${baseBtn}cursor:pointer;${this._highlightMode === 'live' ? activeStyle : inactiveStyle}`;
+            // Link button: active (green) when linked + snapshot, disabled when not snapshot
+            const linkActive = isSnapshot && this._linked;
+            const linkStyle = linkActive ? 'background: #10b981; color: white;' : (isSnapshot ? inactiveStyle : disabledStyle);
+            this._linkBtn.style.cssText = `${baseBtn}cursor:${isSnapshot ? 'pointer' : 'not-allowed'};${linkStyle}`;
+        }
     }
 
     dispose() {
