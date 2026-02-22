@@ -71,8 +71,9 @@ export class SegmentHistogram {
                 if (source !== this._sourceId) {
                     this._selectedBins.clear();
                     this._activeBin = -1;
-                    this._redraw();
                 }
+                // Always redraw to update selection overlays
+                this._redraw();
             });
         }
 
@@ -252,42 +253,60 @@ export class SegmentHistogram {
             }
         }
 
-        // Selection highlight on selected bars
-        for (const i of this._selectedBins) {
-            if (i < 0 || i >= bins.length || bins[i] <= 0) continue;
-            const barH = (bins[i] / maxCount) * plotH;
-            const x = padding.left + i * barW + gap;
-            const y = padding.top + plotH - barH;
-            const w = barW - gap * 2;
+        // --- Selection overlay: proportional highlight based on ChordSelection ---
+        if (this._chordSelection && this._chordSelection.size > 0 && this._lengths.length > 0) {
+            // Count how many selected chord indices fall into each bin
+            const selectedPerBin = new Array(bins.length).fill(0);
+            for (const idx of this._chordSelection.indices) {
+                if (idx < 0 || idx >= this._lengths.length) continue;
+                const len = this._lengths[idx];
+                // Find which bin this length falls into
+                const binIdx = this._lengthToBin(len);
+                if (binIdx >= 0 && binIdx < bins.length) {
+                    selectedPerBin[binIdx]++;
+                }
+            }
+
+            // Draw proportional overlay rectangles with count annotations
+            for (let i = 0; i < bins.length; i++) {
+                if (selectedPerBin[i] <= 0 || bins[i] <= 0) continue;
+                const fraction = Math.min(selectedPerBin[i] / bins[i], 1);
+                const fullBarH = (bins[i] / maxCount) * plotH;
+                const overlayH = fraction * fullBarH;
+                const x = padding.left + i * barW + gap;
+                const y = padding.top + plotH - overlayH;  // anchor at bottom
+                const w = barW - gap * 2;
+
+                ctx.fillStyle = this.highlightColor;
+                ctx.fillRect(x, y, Math.max(w, 1), overlayH);
+
+                // Count annotation above the full bar
+                const fullBarTop = padding.top + plotH - fullBarH;
+                const barCenterX = x + Math.max(w, 1) / 2;
+                ctx.fillStyle = this.highlightColor;
+                ctx.font = 'bold 9px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`${selectedPerBin[i]}`, barCenterX, fullBarTop - 2);
+            }
+        }
+
+        // Selection range outlines — one rectangle per contiguous run of selected bins
+        if (this._selectedBins.size > 0) {
+            // Sort selected bins and find contiguous runs
+            const sorted = [...this._selectedBins].sort((a, b) => a - b);
             ctx.strokeStyle = this.highlightColor;
             ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, Math.max(w, 1), barH);
-            ctx.fillStyle = this.highlightColor;
-            ctx.globalAlpha = 0.25;
-            ctx.fillRect(x, y, Math.max(w, 1), barH);
-            ctx.globalAlpha = 1;
-
-            // Annotation: total chord count above bar
-            const barCenterX = x + Math.max(w, 1) / 2;
-            ctx.fillStyle = this.highlightColor;
-            ctx.font = 'bold 10px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(String(bins[i]), barCenterX, y - 2);
-
-            // Annotation: spectral node count (distinct lengths) below bar
-            const range = this._getBinRange(i);
-            if (range) {
-                const uniqueLengths = new Set();
-                for (const len of this._lengths) {
-                    if (len >= range.minLength && len <= range.maxLength) {
-                        uniqueLengths.add(Number(len.toPrecision(6)));
-                    }
+            let runStart = sorted[0];
+            for (let i = 1; i <= sorted.length; i++) {
+                if (i === sorted.length || sorted[i] !== sorted[i - 1] + 1) {
+                    // End of a contiguous run: runStart..sorted[i-1]
+                    const runEnd = sorted[i - 1];
+                    const x = padding.left + runStart * barW;
+                    const w = (runEnd - runStart + 1) * barW;
+                    ctx.strokeRect(x, padding.top, w, plotH);
+                    if (i < sorted.length) runStart = sorted[i];
                 }
-                ctx.textBaseline = 'top';
-                ctx.font = '9px monospace';
-                ctx.fillStyle = '#9ca3af';
-                ctx.fillText(`${uniqueLengths.size}`, barCenterX, padding.top + plotH + 2);
             }
         }
 
@@ -414,6 +433,21 @@ export class SegmentHistogram {
     }
 
     /**
+     * Map a chord length to its bin index.
+     * @param {number} length
+     * @returns {number} bin index, or -1 if out of range
+     */
+    _lengthToBin(length) {
+        const numBins = this._bins.length;
+        if (numBins === 0) return -1;
+        const binWidth = (this._binMax - this._binMin) / numBins;
+        if (binWidth <= 0) return 0;
+        const idx = Math.floor((length - this._binMin) / binWidth);
+        // Clamp: lengths exactly at _binMax fall into the last bin
+        return Math.max(0, Math.min(idx, numBins - 1));
+    }
+
+    /**
      * Handle click on histogram canvas — select or deselect bars.
      * Plain click: select single bin (deselect others)
      * Ctrl/Cmd+click: toggle individual bin
@@ -455,23 +489,23 @@ export class SegmentHistogram {
             return;
         }
 
-        if (isShift && this._activeBin >= 0) {
-            // Shift+click: range select from anchor to clicked bin
-            const from = Math.min(this._activeBin, binIndex);
-            const to = Math.max(this._activeBin, binIndex);
-            if (!isCtrlCmd) this._selectedBins.clear();
-            for (let i = from; i <= to; i++) {
-                if (this._bins[i] > 0) this._selectedBins.add(i);
-            }
-            // Don't update _activeBin on shift-click (keep anchor)
-        } else if (isCtrlCmd) {
-            // Ctrl/Cmd+click: toggle individual bin
+        if (isCtrlCmd) {
+            // Ctrl/Cmd+click: toggle individual bin (takes priority over shift)
             if (this._selectedBins.has(binIndex)) {
                 this._selectedBins.delete(binIndex);
             } else {
                 this._selectedBins.add(binIndex);
             }
             this._activeBin = binIndex;
+        } else if (isShift && this._activeBin >= 0) {
+            // Shift+click: range select from anchor to clicked bin
+            const from = Math.min(this._activeBin, binIndex);
+            const to = Math.max(this._activeBin, binIndex);
+            this._selectedBins.clear();
+            for (let i = from; i <= to; i++) {
+                if (this._bins[i] > 0) this._selectedBins.add(i);
+            }
+            // Don't update _activeBin on shift-click (keep anchor)
         } else {
             // Plain click: select single bin
             if (this._selectedBins.size === 1 && this._selectedBins.has(binIndex)) {
