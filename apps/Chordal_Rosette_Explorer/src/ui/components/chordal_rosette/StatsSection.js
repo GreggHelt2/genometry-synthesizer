@@ -5,15 +5,15 @@ import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { gcd, getLinesToClose } from '../../../engine/math/MathOps.js';
 import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
 import { SegmentHistogram } from '../SegmentHistogram.js';
-import { store } from '../../../engine/state/Store.js';
-import { ACTIONS } from '../../../engine/state/Actions.js';
 
 export class StatsSection {
     /**
      * @param {Object} orchestrator - The parent panel instance (for registration/context)
      * @param {string} roseId - 'rosetteA' or 'rosetteB'
+     * @param {Object} [options]
+     * @param {import('../../../engine/ChordSelection').ChordSelection} [options.chordSelection]
      */
-    constructor(orchestrator, roseId) {
+    constructor(orchestrator, roseId, options = {}) {
         this.orchestrator = orchestrator;
         this.roseId = roseId;
 
@@ -27,16 +27,10 @@ export class StatsSection {
         this.content = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.accordion.append(this.content);
 
-        // Chord Length Histogram with click → highlight dispatch
+        // Chord Length Histogram
         this.histogram = new SegmentHistogram({
-            onHighlight: (info) => {
-                store.dispatch({
-                    type: ACTIONS.SET_DEEP,
-                    path: ['app', 'segmentHighlight'],
-                    value: info ? { target: this.roseId, ...info, color: '#ffff00' } : null,
-                    meta: { transient: true }
-                });
-            }
+            chordSelection: options.chordSelection || null,
+            sourceId: `histogram-${roseId}`
         });
         this.accordion.append(this.histogram.element);
 

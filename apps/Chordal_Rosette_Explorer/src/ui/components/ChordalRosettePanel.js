@@ -19,9 +19,10 @@ import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistr
 import { gcd } from '../../engine/math/MathOps.js';
 
 export class ChordalRosettePanel extends Panel {
-    constructor(id, title, roseId) {
+    constructor(id, title, roseId, options = {}) {
         super(id, title);
         this.roseId = roseId; // 'rosetteA' or 'rosetteB'
+        this._options = options;
 
         // UI State Tracking
         this.uiState = {
@@ -117,7 +118,9 @@ export class ChordalRosettePanel extends Panel {
         // Create Sub-Sections (The new V3 architecture)
 
         // 1. Stats
-        this.statsSection = new StatsSection(this, this.roseId);
+        this.statsSection = new StatsSection(this, this.roseId, {
+            chordSelection: this._options.chordSelection || null
+        });
         this.controlsContainer.appendChild(this.statsSection.element);
 
         // 2. Core Params

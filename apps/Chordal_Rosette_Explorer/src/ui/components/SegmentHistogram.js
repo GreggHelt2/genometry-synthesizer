@@ -20,9 +20,9 @@ export class SegmentHistogram {
         this.barColorStart = options.barColorStart || '#3b82f6';
         this.barColorEnd = options.barColorEnd || '#06b6d4';
         this.highlightColor = options.highlightColor || '#ffff00';
-        this.onHighlight = options.onHighlight || null;
-        this.onLinkToggle = options.onLinkToggle || null;  // callback(linked: boolean)
-        this.onSelectionChange = options.onSelectionChange || null;  // callback(hasSelection: boolean)
+        /** @type {import('../../engine/ChordSelection').ChordSelection|null} */
+        this._chordSelection = options.chordSelection || null;
+        this._sourceId = options.sourceId || 'histogram';
 
         // Outer container
         this.container = createElement('div', 'mt-2');
@@ -60,31 +60,27 @@ export class SegmentHistogram {
         this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
         this._sidePanel.appendChild(this.statsDiv);
 
-        // Link button (bottom of side panel)
-        this._linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border border-transparent');
-        this._linkBtn.style.alignSelf = 'flex-start';
-        this._linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
-        this._linkBtn.title = 'Link highlights across all panels';
-        this._sidePanel.appendChild(this._linkBtn);
-
-        this._linked = false;
         this._selectedBins = new Set();
         this._activeBin = -1;
-        this._updateLinkButton();
 
-        this._linkBtn.addEventListener('click', () => {
-            this._linked = !this._linked;
-            this._updateLinkButton();
-            this._reemitHighlight();
-            if (this.onLinkToggle) this.onLinkToggle(this._linked);
-        });
+        // Listen for external selection changes (e.g. another histogram or canvas picker)
+        if (this._chordSelection) {
+            this._chordSelection.addEventListener('change', (e) => {
+                const { source } = e.detail;
+                // If another source changed the selection, clear our bar highlighting
+                if (source !== this._sourceId) {
+                    this._selectedBins.clear();
+                    this._activeBin = -1;
+                    this._redraw();
+                }
+            });
+        }
 
         this._resizeObserver = new ResizeObserver(() => this._redraw());
         this._resizeObserver.observe(this.canvas);
 
         this._lengths = [];
         this._bins = [];
-        this._snapshotIndices = null;     // Captured segment indices for snapshot mode
         this._lastPadding = null;
         this._lastPlotW = 0;
         this._lastBarW = 0;
@@ -117,29 +113,6 @@ export class SegmentHistogram {
         this._updateStats();
     }
 
-    /**
-     * Programmatically set the linked state (for cross-panel synchronization).
-     * @param {boolean} linked
-     */
-    setLinked(linked) {
-        this._linked = linked;
-        this._updateLinkButton();
-        this._reemitHighlight();
-    }
-
-    /**
-     * Programmatically clear all selected bins (for cross-panel synchronization).
-     * Does not fire onSelectionChange to avoid loops.
-     */
-    clearSelection() {
-        if (this._selectedBins.size > 0 || this._activeBin !== -1) {
-            this._selectedBins.clear();
-            this._activeBin = -1;
-            this._snapshotIndices = null;
-            this._redraw();
-            if (this.onHighlight) this.onHighlight(null);
-        }
-    }
 
     /**
      * Compute Euclidean distances between consecutive points.
@@ -555,18 +528,36 @@ export class SegmentHistogram {
         return -1;
     }
 
-    /** @private Called after selection changes — update visuals and emit */
-    _onSelectionChanged() {
-        this._captureSnapshotIndices();
+    /** @private Called after selection changes — update visuals and push to ChordSelection */
+    _onSelectionChanged(operation = 'set') {
         this._redraw();
-        this._updateLinkButton();
-        // Clear other histograms first (when linked), then emit our highlight
-        if (this.onSelectionChange) this.onSelectionChange(this._selectedBins.size > 0);
-        this._emitHighlight();
+        this._pushToChordSelection(operation);
     }
 
-    /** @private Capture segment indices for all selected bins (snapshot mode) */
-    _captureSnapshotIndices() {
+    /**
+     * @private Compute segment indices for all selected bins and push to ChordSelection.
+     * @param {'set'|'add'|'remove'|'toggle'} operation
+     */
+    _pushToChordSelection(operation = 'set') {
+        if (!this._chordSelection) return;
+        const indices = this._getSelectedSegmentIndices();
+        if (operation === 'set') {
+            if (indices.length === 0) {
+                this._chordSelection.clear(this._sourceId);
+            } else {
+                this._chordSelection.set(indices, this._sourceId);
+            }
+        } else if (operation === 'add') {
+            this._chordSelection.add(indices, this._sourceId);
+        } else if (operation === 'remove') {
+            this._chordSelection.remove(indices, this._sourceId);
+        } else if (operation === 'toggle') {
+            this._chordSelection.toggle(indices, this._sourceId);
+        }
+    }
+
+    /** @private Get segment indices for all currently selected bins */
+    _getSelectedSegmentIndices() {
         const indices = [];
         for (const binIdx of this._selectedBins) {
             const range = this._getBinRange(binIdx);
@@ -578,7 +569,7 @@ export class SegmentHistogram {
                 }
             }
         }
-        this._snapshotIndices = indices;
+        return indices;
     }
 
     /** @private Get the combined min/max length range across all selected bins */
@@ -594,48 +585,18 @@ export class SegmentHistogram {
         return minL < Infinity ? { minLength: minL, maxLength: maxL } : null;
     }
 
-    /** @private Deselect all bins and clear highlight */
+    /** @private Deselect all bins and clear ChordSelection */
     _deselectAll() {
         if (this._selectedBins.size > 0 || this._activeBin !== -1) {
             this._selectedBins.clear();
             this._activeBin = -1;
-            this._snapshotIndices = null;
             this._redraw();
-            this._updateLinkButton();
-            if (this.onHighlight) this.onHighlight(null);
+            if (this._chordSelection) {
+                this._chordSelection.clear(this._sourceId);
+            }
         }
     }
 
-    /** @private Re-emit highlight for current selection when mode changes */
-    _reemitHighlight() {
-        if (this._selectedBins.size === 0) return;
-        this._emitHighlight();
-    }
-
-    /** @private Emit highlight callback with snapshot data */
-    _emitHighlight() {
-        if (!this.onHighlight) return;
-        const range = this._getSelectedRange();
-        if (!range) return;
-
-        this.onHighlight({
-            ...range,
-            mode: 'snapshot',
-            segmentIndices: this._snapshotIndices || [],
-            linked: this._linked
-        });
-    }
-
-    /** @private Update visual state of link button */
-    _updateLinkButton() {
-        this._linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400', 'text-gray-500', 'border-transparent');
-
-        if (this._linked) {
-            this._linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
-        } else {
-            this._linkBtn.classList.add('text-gray-500', 'border-transparent');
-        }
-    }
 
     dispose() {
         if (this._resizeObserver) {

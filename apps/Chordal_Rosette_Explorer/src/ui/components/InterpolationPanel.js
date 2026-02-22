@@ -22,8 +22,9 @@ import { HybridAppearanceSection } from './hybrid/HybridAppearanceSection.js';
 import { HybridCoincidentSection } from './hybrid/HybridCoincidentSection.js';
 
 export class InterpolationPanel extends Panel {
-    constructor(id, title) {
+    constructor(id, title, options = {}) {
         super(id, title);
+        this._options = options;
 
         // UI State Persistence
         this.uiState = {
@@ -76,16 +77,10 @@ export class InterpolationPanel extends Panel {
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
 
-        // Chord Length Histogram for hybrid with click → highlight dispatch
+        // Chord Length Histogram for hybrid
         this.histogram = new SegmentHistogram({
-            onHighlight: (info) => {
-                store.dispatch({
-                    type: ACTIONS.SET_DEEP,
-                    path: ['app', 'segmentHighlight'],
-                    value: info ? { target: 'hybrid', ...info, color: '#ffff00' } : null,
-                    meta: { transient: true }
-                });
-            }
+            chordSelection: this._options.chordSelection || null,
+            sourceId: 'histogram-hybrid'
         });
         this.infoAccordion.append(this.histogram.element);
 

@@ -9,6 +9,7 @@ import { persistenceManager } from './engine/state/PersistenceManager.js';
 import { linkManager } from './engine/logic/LinkManager.js';
 import { SnapshotModal } from './ui/components/SnapshotModal.js';
 import { SnapshotSidebar } from './ui/components/SnapshotSidebar.js';
+import { ChordSelection } from './engine/ChordSelection.js';
 
 // Application Bootstrapper
 class App {
@@ -276,8 +277,24 @@ class App {
         // We wrap the 3 visual columns in a flexible div that will shrink when sidebar opens
         const visualArea = createElement('div', 'flex-1 flex flex-col md:flex-row overflow-hidden relative min-w-0');
 
+        // Centralized chord selection model
+        this.chordSelection = new ChordSelection();
+        this.chordSelection.addEventListener('change', (e) => {
+            const { indices, linked } = e.detail;
+            store.dispatch({
+                type: ACTIONS.SET_DEEP,
+                path: ['app', 'segmentHighlight'],
+                value: indices.size > 0
+                    ? { segmentIndices: [...indices], linked, color: '#ffff00' }
+                    : null,
+                meta: { transient: true }
+            });
+        });
+
         // Column 1: Curve A
-        this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'rosetteA');
+        this.panelA = new ChordalRosettePanel('rose-a', 'Chordal Rosette A', 'rosetteA', {
+            chordSelection: this.chordSelection
+        });
         // Override classes to ensure equal width (flex-1)
         this.panelA.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden border-r border-gray-700';
 
@@ -299,7 +316,9 @@ class App {
         // Controls Layer (Scrollable area below canvas)
         const centerControls = createElement('div', 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden');
 
-        this.interpPanel = new InterpolationPanel('interp', 'Controls');
+        this.interpPanel = new InterpolationPanel('interp', 'Controls', {
+            chordSelection: this.chordSelection
+        });
         // Give the hybrid panel a reference to the hybrid canvas so its
         // GlobalRenderingModule can report canvas dimensions.
         this.interpPanel.canvas = this.canvas;
@@ -310,34 +329,15 @@ class App {
         this.centerArea.appendChild(centerControls);
 
         // Column 3: Curve B
-        this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'rosetteB');
+        this.panelB = new ChordalRosettePanel('rose-b', 'Chordal Rosette B', 'rosetteB', {
+            chordSelection: this.chordSelection
+        });
         this.panelB.element.className = 'flex-1 flex flex-col min-w-0 bg-gray-900 overflow-hidden';
 
         // Mount Columns to Visual Area
         this.panelA.mount(visualArea);
         visualArea.appendChild(this.centerArea);
         this.panelB.mount(visualArea);
-
-        // Synchronize histogram link buttons across all three panels
-        const histograms = [
-            this.panelA.statsSection?.histogram,
-            this.panelB.statsSection?.histogram,
-            this.interpPanel?.histogram
-        ].filter(Boolean);
-
-        for (const hist of histograms) {
-            hist.onLinkToggle = (linked) => {
-                for (const other of histograms) {
-                    if (other !== hist) other.setLinked(linked);
-                }
-            };
-            hist.onSelectionChange = (hasSelection) => {
-                if (!hist._linked || !hasSelection) return;
-                for (const other of histograms) {
-                    if (other !== hist) other.clearSelection();
-                }
-            };
-        }
 
         // Append Visual Area to Main Content
         mainContent.appendChild(visualArea);
@@ -448,9 +448,8 @@ class App {
         // Render Previews
         // Optimization: Previews only need update if Rose params changed, but for now global dirty is fine.
         const hl = state.app?.segmentHighlight;
-        const linked = hl?.linked;
-        this.rosetteRendererA.renderPreview(state.rosetteA, 'rgba(255, 100, 100, 0.8)', (linked || hl?.target === 'rosetteA') ? hl : null);
-        this.rosetteRendererB.renderPreview(state.rosetteB, 'rgba(100, 100, 255, 0.8)', (linked || hl?.target === 'rosetteB') ? hl : null);
+        this.rosetteRendererA.renderPreview(state.rosetteA, 'rgba(255, 100, 100, 0.8)', hl);
+        this.rosetteRendererB.renderPreview(state.rosetteB, 'rgba(100, 100, 255, 0.8)', hl);
 
         store.clearDirty();
     }

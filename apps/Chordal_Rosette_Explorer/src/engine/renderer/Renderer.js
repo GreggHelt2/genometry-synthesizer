@@ -902,7 +902,7 @@ export class CanvasRenderer {
 
         // --- Segment Highlight Layer (Hybrid) ---
         const segHL = state.app?.segmentHighlight;
-        if (segHL && (segHL.target === 'hybrid' || segHL.linked)) {
+        if (segHL) {
             const hybridRenderables = renderables.filter(r => r.type === 'hybrid');
             this.drawSegmentHighlights(hybridRenderables, segHL, lineWidthScale);
         }
