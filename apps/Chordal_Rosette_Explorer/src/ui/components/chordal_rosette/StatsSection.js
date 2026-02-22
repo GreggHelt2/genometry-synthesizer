@@ -3,6 +3,8 @@ import { createElement } from '../../utils/dom.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { gcd, getLinesToClose } from '../../../engine/math/MathOps.js';
+import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
+import { SegmentHistogram } from '../SegmentHistogram.js';
 
 export class StatsSection {
     /**
@@ -22,13 +24,25 @@ export class StatsSection {
 
         this.content = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.accordion.append(this.content);
+
+        // Segment Length Histogram
+        this.histogram = new SegmentHistogram();
+        this.accordion.append(this.histogram.element);
+
+        // Deferred histogram update state
+        this._histogramDirty = false;
+        this._lastParams = null;
+        this._lastK = null;
     }
 
     handleToggle(isOpen, id) {
         // Delegate to orchestrator for UI state persistence logic
-        // The orchestrator's handleAccordionToggle updates this.uiState.accordions[id] and saves
         if (this.orchestrator.handleAccordionToggle) {
             this.orchestrator.handleAccordionToggle(isOpen, id);
+        }
+        // If re-opened and histogram is dirty, update now
+        if (isOpen && this._histogramDirty && this._lastParams) {
+            this._updateHistogram(this._lastParams, this._lastK);
         }
     }
 
@@ -47,14 +61,7 @@ export class StatsSection {
         const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
 
         // Renderer logic to create curve instance
-        let curve;
-        if (params.curveType === 'Rhodonea' || !params.curveType) {
-            curve = new CurveClass(
-                params.n, params.d, params.A, params.c, (params.rot * Math.PI) / 180
-            );
-        } else {
-            curve = new CurveClass(params);
-        }
+        const curve = new CurveClass(params);
         const radiansToClose = curve.getRadiansToClosure();
 
         // Calculate Lines/Sequence Length based on Sequencer Type
@@ -151,5 +158,44 @@ export class StatsSection {
             <div><span class="text-gray-400">Total Paths:</span> <span class="text-blue-400">${k}</span></div>
             ${coprimeString}
         `;
+
+        // Update segment length histogram (skip if accordion is collapsed)
+        if (this.histogram) {
+            this._lastParams = params;
+            this._lastK = k;
+            if (!this.accordion.isOpen) {
+                this._histogramDirty = true;
+                return;
+            }
+            this._updateHistogram(params, k);
+        }
+    }
+
+    /** @private Compute polyline and update histogram */
+    _updateHistogram(params, k) {
+        const currentSequencerType = params.sequencerType || 'Cyclic Additive Group Modulo N';
+        const SeqClass = SequencerRegistry[currentSequencerType];
+        const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
+        const curve = new CurveClass(params);
+        if (SeqClass && curve) {
+            const seq = new SeqClass();
+            let start = 0;
+            if (seq.getCosets && k > 1) {
+                const cosets = seq.getCosets(params.totalDivs, params);
+                if (cosets) {
+                    const idx = (params.cosetIndex || 0) % cosets.length;
+                    start = cosets[idx];
+                }
+            }
+            const points = generateChordalPolyline(curve, seq, params.totalDivs, start, params);
+            this.histogram.update(points, {
+                colorMethod: params.colorMethod,
+                color: params.color,
+                colorEnd: params.colorEnd,
+                gradientType: params.gradientType,
+                gradientStops: params.gradientStops
+            });
+        }
+        this._histogramDirty = false;
     }
 }

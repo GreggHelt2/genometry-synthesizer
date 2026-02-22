@@ -6,6 +6,9 @@ import { ACTIONS } from '../../engine/state/Actions.js';
 import { SequencerRegistry } from '../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd, lcm, getLinesToClose } from '../../engine/math/MathOps.js';
 import { generateChordalPolyline } from '../../engine/math/chordal_rosette.js';
+import { SegmentHistogram } from './SegmentHistogram.js';
+import { interpolateCurved } from '../../engine/math/interpolation.js';
+import { resamplePolyline, resamplePolylineApprox } from '../../engine/math/interpolation.js';
 import { CurveRegistry } from '../../engine/math/curves/CurveRegistry.js';
 import { ParamNumber } from './ParamNumber.js';
 import { ParamSelect } from './ParamSelect.js';
@@ -41,6 +44,10 @@ export class InterpolationPanel extends Panel {
         import('../../engine/state/PersistenceManager.js').then(({ persistenceManager }) => {
             persistenceManager.save();
         });
+        // If Hybrid Info accordion re-opened and histogram is dirty, update now
+        if (isOpen && id === 'hybrid-info' && this._histogramDirty && this._lastHistogramArgs) {
+            this._updateHistogram(...this._lastHistogramArgs);
+        }
     }
 
     getUIState() {
@@ -68,6 +75,11 @@ export class InterpolationPanel extends Panel {
         this.accordions.set('hybrid-info', this.infoAccordion);
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
+
+        // Segment Length Histogram for hybrid
+        this.histogram = new SegmentHistogram();
+        this.infoAccordion.append(this.histogram.element);
+
         this.controlsContainer.appendChild(this.infoAccordion.element);
 
         // 1. Animation Section
@@ -166,9 +178,7 @@ export class InterpolationPanel extends Panel {
 
         const getSegs = (params, k) => {
             const CurveClass = CurveRegistry[params.curveType] || CurveRegistry['Rhodonea'];
-            const curve = (params.curveType === 'Rhodonea' || !params.curveType)
-                ? new CurveClass(params.n, params.d, params.A, params.c, (params.rot * Math.PI) / 180)
-                : new CurveClass(params);
+            const curve = new CurveClass(params);
 
             const SeqClass = SequencerRegistry[params.sequencerType || 'Additive Group Modulo N'];
             const seq = new SeqClass();
@@ -219,6 +229,84 @@ export class InterpolationPanel extends Panel {
             <div><span class="text-gray-400">Status:</span> <span class="${color}">${status}</span></div>
             <div class="text-[10px] text-gray-500">${detail}</div>
         `;
+
+        // Update segment length histogram (skip if accordion is collapsed)
+        if (this.histogram) {
+            this._lastHistogramArgs = [flatA, flatB, flatHybrid, kA, kB];
+            if (!this.infoAccordion.isOpen) {
+                this._histogramDirty = true;
+                return;
+            }
+            this._updateHistogram(flatA, flatB, flatHybrid, kA, kB);
+        }
+    }
+
+    /**
+     * Compute interpolated hybrid polyline and update the histogram.
+     */
+    _updateHistogram(flatA, flatB, flatHybrid, kA, kB) {
+        try {
+            const CurveClassA = CurveRegistry[flatA.curveType] || CurveRegistry['Rhodonea'];
+            const CurveClassB = CurveRegistry[flatB.curveType] || CurveRegistry['Rhodonea'];
+            const curveA = new CurveClassA(flatA);
+            const curveB = new CurveClassB(flatB);
+
+            const SeqClassA = SequencerRegistry[flatA.sequencerType || 'Additive Group Modulo N'];
+            const SeqClassB = SequencerRegistry[flatB.sequencerType || 'Additive Group Modulo N'];
+            const seqA = new SeqClassA();
+            const seqB = new SeqClassB();
+
+            // Get coset starts
+            let startA = 0, startB = 0;
+            if (seqA.getCosets && kA > 1) {
+                const cosetsA = seqA.getCosets(flatA.totalDivs, flatA);
+                if (cosetsA) startA = cosetsA[(flatA.cosetIndex || 0) % cosetsA.length];
+            }
+            if (seqB.getCosets && kB > 1) {
+                const cosetsB = seqB.getCosets(flatB.totalDivs, flatB);
+                if (cosetsB) startB = cosetsB[(flatB.cosetIndex || 0) % cosetsB.length];
+            }
+
+            let pointsA = generateChordalPolyline(curveA, seqA, flatA.totalDivs, startA, flatA);
+            let pointsB = generateChordalPolyline(curveB, seqB, flatB.totalDivs, startB, flatB);
+
+            // Resample to match segment counts
+            const sA = pointsA.length > 0 ? pointsA.length - 1 : 0;
+            const sB = pointsB.length > 0 ? pointsB.length - 1 : 0;
+            if (sA > 0 && sB > 0 && sA !== sB) {
+                const target = lcm(sA, sB);
+                const thresh = flatHybrid.approxResampleThreshold ?? 20000;
+                if ((thresh === 0) || (target > thresh)) {
+                    const cnt = (thresh === 0) ? 20000 : thresh;
+                    pointsA = resamplePolylineApprox(pointsA, cnt);
+                    pointsB = resamplePolylineApprox(pointsB, cnt);
+                } else {
+                    pointsA = resamplePolyline(pointsA, target);
+                    pointsB = resamplePolyline(pointsB, target);
+                }
+            }
+
+            const weight = flatHybrid.weight;
+            const mode = flatHybrid.interpCurveMode || 'linear';
+            const interpParams = {
+                interpWaveAmplitude: flatHybrid.interpWaveAmplitude,
+                interpWaveFrequency: flatHybrid.interpWaveFrequency,
+                interpWaveAlternateFlip: flatHybrid.interpWaveAlternateFlip,
+                interpBezierBulge: flatHybrid.interpBezierBulge
+            };
+            const hybridPoints = interpolateCurved(pointsA, pointsB, weight, mode, interpParams);
+            this.histogram.update(hybridPoints, {
+                colorMethod: flatHybrid.colorMethod,
+                color: flatHybrid.color,
+                colorEnd: flatHybrid.colorEnd,
+                gradientType: flatHybrid.gradientType,
+                gradientStops: flatHybrid.gradientStops
+            });
+        } catch (e) {
+            // Silently fail — histogram just won't update
+            console.warn('Histogram update failed:', e);
+        }
+        this._histogramDirty = false;
     }
 
     createSlider(key, min, max, step, label) {
