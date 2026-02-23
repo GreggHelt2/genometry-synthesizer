@@ -6,7 +6,7 @@
  * and scale to perform hit testing.
  *
  * Click: select nearest chord segment within tolerance
- * Drag:  select all chord segments within selection rectangle
+ * Drag:  select all chord segments within selection shape (rect or circle)
  * Modifiers: Ctrl/Cmd toggles, Shift adds
  */
 export class ChordPicker {
@@ -18,6 +18,7 @@ export class ChordPicker {
      * @param {string} [options.sourceId='canvas']
      * @param {number} [options.hitTolerance=5] - Pixel tolerance for click picking
      * @param {number} [options.dragThreshold=4] - Pixel movement before drag starts
+     * @param {'rect'|'circle'} [options.selectionShape='rect'] - Drag selection shape
      */
     constructor(canvas, chordSelection, renderer, options = {}) {
         this._canvas = canvas;
@@ -27,12 +28,18 @@ export class ChordPicker {
         this._hitTolerance = options.hitTolerance || 5;
         this._dragThreshold = options.dragThreshold || 4;
 
+        /** @type {'rect'|'circle'|'annulus'} */
+        this.selectionShape = options.selectionShape || 'rect';
+
+        /** @type {'intersects'|'oneEndpoint'|'bothEndpoints'} */
+        this.selectionFilter = options.selectionFilter || 'intersects';
+
         // Drag state
         this._isDragging = false;
         this._dragStart = null;  // {x, y} in canvas CSS coords
         this._dragCurrent = null;
 
-        // Overlay canvas for selection rectangle
+        // Overlay canvas for selection shape
         this._overlay = document.createElement('canvas');
         this._overlay.style.position = 'absolute';
         this._overlay.style.top = '0';
@@ -45,12 +52,14 @@ export class ChordPicker {
         this._onMouseDown = this._onMouseDown.bind(this);
         this._onMouseMove = this._onMouseMove.bind(this);
         this._onMouseUp = this._onMouseUp.bind(this);
+        this._onDblClick = this._onDblClick.bind(this);
 
         this.attach();
     }
 
     attach() {
         this._canvas.addEventListener('mousedown', this._onMouseDown);
+        this._canvas.addEventListener('dblclick', this._onDblClick);
         window.addEventListener('mousemove', this._onMouseMove);
         window.addEventListener('mouseup', this._onMouseUp);
 
@@ -62,6 +71,7 @@ export class ChordPicker {
 
     detach() {
         this._canvas.removeEventListener('mousedown', this._onMouseDown);
+        this._canvas.removeEventListener('dblclick', this._onDblClick);
         window.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('mouseup', this._onMouseUp);
         if (this._overlay.parentElement) {
@@ -88,6 +98,35 @@ export class ChordPicker {
         const worldX = (px - w / 2) / scale;
         const worldY = (py - h / 2) / scale;
         return { x: worldX, y: worldY };
+    }
+
+    /**
+     * Convert a CSS-pixel distance to world units.
+     */
+    _cssDistToWorld(cssDist) {
+        const dpr = window.devicePixelRatio || 1;
+        return (cssDist * dpr) / this._renderer.lastScale;
+    }
+
+    /**
+     * Convert world coordinates to canvas CSS coordinates.
+     */
+    _worldToCss(wx, wy) {
+        const dpr = window.devicePixelRatio || 1;
+        const scale = this._renderer.lastScale;
+        const w = this._renderer.width;
+        const h = this._renderer.height;
+        const px = wx * scale + w / 2;
+        const py = wy * scale + h / 2;
+        return { x: px / dpr, y: py / dpr };
+    }
+
+    /**
+     * Convert a world-space distance to CSS pixels.
+     */
+    _worldDistToCss(worldDist) {
+        const dpr = window.devicePixelRatio || 1;
+        return (worldDist * this._renderer.lastScale) / dpr;
     }
 
     /**
@@ -139,6 +178,39 @@ export class ChordPicker {
     }
 
     /**
+     * Find ALL chord segments within tolerance of a world point.
+     * @param {number} wx - World X
+     * @param {number} wy - World Y
+     * @param {number} toleranceWorld - Tolerance in world units
+     * @returns {Set<number>}
+     */
+    _allSegmentsNear(wx, wy, toleranceWorld) {
+        const renderables = this._renderer.lastRenderables;
+        const indices = new Set();
+
+        for (const item of renderables) {
+            if (item.type !== 'rose' && item.type !== 'hybrid') continue;
+            const pts = item.points;
+            if (!pts || pts.length < 2) continue;
+
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+                const d = this._pointToSegmentDist(wx, wy, x1, y1, x2, y2);
+                if (d < toleranceWorld) {
+                    indices.add(i);
+                }
+            }
+        }
+
+        return indices;
+    }
+
+    /**
      * Find all chord segments that intersect or are enclosed by a world-space rectangle.
      * @param {Object} rect - {x1, y1, x2, y2} in world coords (corners)
      * @returns {Set<number>}
@@ -167,6 +239,87 @@ export class ChordPicker {
                 // Check if either endpoint is inside the rect,
                 // or if the segment intersects the rect
                 if (this._segmentIntersectsRect(x1, y1, x2, y2, minX, minY, maxX, maxY)) {
+                    indices.add(i);
+                }
+            }
+        }
+
+        return indices;
+    }
+
+    /**
+     * Find all chord segments that intersect or are enclosed by a world-space circle.
+     * @param {number} cx - Circle center X in world coords
+     * @param {number} cy - Circle center Y in world coords
+     * @param {number} r - Circle radius in world units
+     * @returns {Set<number>}
+     */
+    _segmentsInCircle(cx, cy, r) {
+        const renderables = this._renderer.lastRenderables;
+        const indices = new Set();
+        const rSq = r * r;
+
+        for (const item of renderables) {
+            if (item.type !== 'rose' && item.type !== 'hybrid') continue;
+            const pts = item.points;
+            if (!pts || pts.length < 2) continue;
+
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+
+                // Segment intersects circle if the closest point on the
+                // segment to the circle center is within radius
+                const dist = this._pointToSegmentDist(cx, cy, x1, y1, x2, y2);
+                if (dist <= r) {
+                    indices.add(i);
+                }
+            }
+        }
+
+        return indices;
+    }
+
+    /**
+     * Find all chord segments that intersect or are enclosed by an annulus.
+     * The annulus is centered at the world origin (0,0).
+     * A segment is selected if ANY part of it lies within the annulus ring.
+     * @param {number} innerR - Inner radius
+     * @param {number} outerR - Outer radius
+     * @returns {Set<number>}
+     */
+    _segmentsInAnnulus(innerR, outerR) {
+        const renderables = this._renderer.lastRenderables;
+        const indices = new Set();
+
+        for (const item of renderables) {
+            if (item.type !== 'rose' && item.type !== 'hybrid') continue;
+            const pts = item.points;
+            if (!pts || pts.length < 2) continue;
+
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+
+                // Closest distance from origin to segment
+                const closestDist = this._pointToSegmentDist(0, 0, x1, y1, x2, y2);
+                // Farthest distance from origin to either endpoint
+                const dist1 = Math.hypot(x1, y1);
+                const dist2 = Math.hypot(x2, y2);
+                const farthestDist = Math.max(dist1, dist2);
+
+                // Segment intersects annulus if:
+                // - closest point to origin is within outer radius AND
+                // - farthest point from origin extends beyond inner radius
+                if (closestDist <= outerR && farthestDist >= innerR) {
                     indices.add(i);
                 }
             }
@@ -253,6 +406,71 @@ export class ChordPicker {
         return false;
     }
 
+    // ── Endpoint Filtering ────────────────────────────────────
+
+    /**
+     * Test if a point is inside the current region.
+     * @param {number} px - World X
+     * @param {number} py - World Y
+     * @param {Object} region - Region descriptor
+     * @returns {boolean}
+     */
+    _pointInRegion(px, py, region) {
+        if (region.type === 'rect') {
+            return px >= region.minX && px <= region.maxX &&
+                py >= region.minY && py <= region.maxY;
+        } else if (region.type === 'circle') {
+            const dx = px - region.cx;
+            const dy = py - region.cy;
+            return dx * dx + dy * dy <= region.r * region.r;
+        } else if (region.type === 'annulus') {
+            const d = Math.hypot(px, py);
+            return d >= region.innerR && d <= region.outerR;
+        }
+        return false;
+    }
+
+    /**
+     * Filter segment indices by endpoint containment in a region.
+     * @param {Set<number>} indices - Intersecting segment indices
+     * @param {Object} region - Region descriptor
+     * @param {'intersects'|'oneEndpoint'|'bothEndpoints'} filter
+     * @returns {Set<number>}
+     */
+    _filterByEndpoints(indices, region, filter) {
+        if (filter === 'intersects') return indices;
+
+        const renderables = this._renderer.lastRenderables;
+        const filtered = new Set();
+
+        for (const item of renderables) {
+            if (item.type !== 'rose' && item.type !== 'hybrid') continue;
+            const pts = item.points;
+            if (!pts || pts.length < 2) continue;
+
+            for (const i of indices) {
+                if (i >= pts.length - 1) continue;
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const x1 = p1.x !== undefined ? p1.x : p1[0];
+                const y1 = p1.y !== undefined ? p1.y : p1[1];
+                const x2 = p2.x !== undefined ? p2.x : p2[0];
+                const y2 = p2.y !== undefined ? p2.y : p2[1];
+
+                const ep1In = this._pointInRegion(x1, y1, region);
+                const ep2In = this._pointInRegion(x2, y2, region);
+
+                if (filter === 'oneEndpoint' && (ep1In || ep2In)) {
+                    filtered.add(i);
+                } else if (filter === 'bothEndpoints' && ep1In && ep2In) {
+                    filtered.add(i);
+                }
+            }
+        }
+
+        return filtered;
+    }
+
     // ── Mouse Handlers ───────────────────────────────────────
 
     _onMouseDown(e) {
@@ -274,7 +492,7 @@ export class ChordPicker {
 
         if (this._isDragging) {
             this._dragCurrent = pos;
-            this._drawSelectionRect();
+            this._drawSelectionOverlay();
         }
     }
 
@@ -286,12 +504,44 @@ export class ChordPicker {
 
         if (this._isDragging && this._dragCurrent) {
             // Drag-to-pick
-            const w1 = this._canvasToWorld(this._dragStart.x, this._dragStart.y);
-            const w2 = this._canvasToWorld(this._dragCurrent.x, this._dragCurrent.y);
-            const indices = this._segmentsInRect({
-                x1: w1.x, y1: w1.y,
-                x2: w2.x, y2: w2.y
-            });
+            let indices;
+            let region;
+
+            if (this.selectionShape === 'circle') {
+                const center = this._canvasToWorld(this._dragStart.x, this._dragStart.y);
+                const cssRadius = Math.hypot(
+                    this._dragCurrent.x - this._dragStart.x,
+                    this._dragCurrent.y - this._dragStart.y
+                );
+                const worldRadius = this._cssDistToWorld(cssRadius);
+                indices = this._segmentsInCircle(center.x, center.y, worldRadius);
+                region = { type: 'circle', cx: center.x, cy: center.y, r: worldRadius };
+            } else if (this.selectionShape === 'annulus') {
+                // Annulus centered at world origin (0,0)
+                const wStart = this._canvasToWorld(this._dragStart.x, this._dragStart.y);
+                const wEnd = this._canvasToWorld(this._dragCurrent.x, this._dragCurrent.y);
+                const rStart = Math.hypot(wStart.x, wStart.y);
+                const rEnd = Math.hypot(wEnd.x, wEnd.y);
+                const innerR = Math.min(rStart, rEnd);
+                const outerR = Math.max(rStart, rEnd);
+                indices = this._segmentsInAnnulus(innerR, outerR);
+                region = { type: 'annulus', innerR, outerR };
+            } else {
+                const w1 = this._canvasToWorld(this._dragStart.x, this._dragStart.y);
+                const w2 = this._canvasToWorld(this._dragCurrent.x, this._dragCurrent.y);
+                indices = this._segmentsInRect({
+                    x1: w1.x, y1: w1.y,
+                    x2: w2.x, y2: w2.y
+                });
+                region = {
+                    type: 'rect',
+                    minX: Math.min(w1.x, w2.x), maxX: Math.max(w1.x, w2.x),
+                    minY: Math.min(w1.y, w2.y), maxY: Math.max(w1.y, w2.y)
+                };
+            }
+
+            // Apply endpoint filter
+            indices = this._filterByEndpoints(indices, region, this.selectionFilter);
 
             if (indices.size > 0) {
                 if (isShift || isCtrlCmd) {
@@ -303,7 +553,7 @@ export class ChordPicker {
                 this._chordSelection.clear(this._sourceId);
             }
 
-            this._clearSelectionRect();
+            this._clearSelectionOverlay();
         } else {
             // Click-to-pick
             const pos = this._getCanvasCoords(e);
@@ -332,9 +582,45 @@ export class ChordPicker {
         this._isDragging = false;
     }
 
-    // ── Selection Rectangle Overlay ──────────────────────────
+    /**
+     * Double-click selects ALL chord segments within hit tolerance.
+     */
+    _onDblClick(e) {
+        if (e.button !== 0) return;
+        const isCtrlCmd = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
 
-    _drawSelectionRect() {
+        const pos = this._getCanvasCoords(e);
+        const world = this._canvasToWorld(pos.x, pos.y);
+        const scale = this._renderer.lastScale;
+        const dpr = window.devicePixelRatio || 1;
+        const toleranceWorld = (this._hitTolerance * dpr) / scale;
+
+        const indices = this._allSegmentsNear(world.x, world.y, toleranceWorld);
+
+        if (indices.size > 0) {
+            if (isCtrlCmd) {
+                // Toggle all found
+                for (const i of indices) {
+                    if (this._chordSelection.indices.has(i)) {
+                        this._chordSelection.remove([i], this._sourceId);
+                    } else {
+                        this._chordSelection.add([i], this._sourceId);
+                    }
+                }
+            } else if (isShift) {
+                this._chordSelection.add(indices, this._sourceId);
+            } else {
+                this._chordSelection.set(indices, this._sourceId);
+            }
+        } else if (!isCtrlCmd && !isShift) {
+            this._chordSelection.clear(this._sourceId);
+        }
+    }
+
+    // ── Selection Overlay ────────────────────────────────────
+
+    _drawSelectionOverlay() {
         if (!this._dragStart || !this._dragCurrent) return;
 
         const rect = this._canvas.getBoundingClientRect();
@@ -348,20 +634,62 @@ export class ChordPicker {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
 
-        const x = Math.min(this._dragStart.x, this._dragCurrent.x);
-        const y = Math.min(this._dragStart.y, this._dragCurrent.y);
-        const w = Math.abs(this._dragCurrent.x - this._dragStart.x);
-        const h = Math.abs(this._dragCurrent.y - this._dragStart.y);
+        if (this.selectionShape === 'circle') {
+            const radius = Math.hypot(
+                this._dragCurrent.x - this._dragStart.x,
+                this._dragCurrent.y - this._dragStart.y
+            );
+            ctx.beginPath();
+            ctx.arc(this._dragStart.x, this._dragStart.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+        } else if (this.selectionShape === 'annulus') {
+            // Annulus centered at world origin
+            const originCss = this._worldToCss(0, 0);
+            const wStart = this._canvasToWorld(this._dragStart.x, this._dragStart.y);
+            const wEnd = this._canvasToWorld(this._dragCurrent.x, this._dragCurrent.y);
+            const rStart = Math.hypot(wStart.x, wStart.y);
+            const rEnd = Math.hypot(wEnd.x, wEnd.y);
+            const innerR = this._worldDistToCss(Math.min(rStart, rEnd));
+            const outerR = this._worldDistToCss(Math.max(rStart, rEnd));
 
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(x, y, w, h);
+            // Draw filled annulus using even-odd rule
+            ctx.beginPath();
+            ctx.arc(originCss.x, originCss.y, outerR, 0, Math.PI * 2);
+            ctx.arc(originCss.x, originCss.y, innerR, 0, Math.PI * 2, true);
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
+            ctx.fill('evenodd');
+
+            // Stroke both circles
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(originCss.x, originCss.y, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(originCss.x, originCss.y, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            const x = Math.min(this._dragStart.x, this._dragCurrent.x);
+            const y = Math.min(this._dragStart.y, this._dragCurrent.y);
+            const w = Math.abs(this._dragCurrent.x - this._dragStart.x);
+            const h = Math.abs(this._dragCurrent.y - this._dragStart.y);
+
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(x, y, w, h);
+        }
     }
 
-    _clearSelectionRect() {
+    _clearSelectionOverlay() {
         const ctx = this._overlay.getContext('2d');
         ctx.clearRect(0, 0, this._overlay.width, this._overlay.height);
     }

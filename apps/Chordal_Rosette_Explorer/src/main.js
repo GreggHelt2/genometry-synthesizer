@@ -386,6 +386,30 @@ class App {
             sourceId: 'canvas-hybrid'
         });
 
+        // Sync selection shape across all pickers
+        this.chordSelection.addEventListener('shapechange', (e) => {
+            const shape = e.detail.shape;
+            this.pickerA.selectionShape = shape;
+            this.pickerB.selectionShape = shape;
+            this.pickerHybrid.selectionShape = shape;
+        });
+
+        // Sync hit tolerance across all pickers
+        this.chordSelection.addEventListener('tolerancechange', (e) => {
+            const tol = e.detail.tolerance;
+            this.pickerA._hitTolerance = tol;
+            this.pickerB._hitTolerance = tol;
+            this.pickerHybrid._hitTolerance = tol;
+        });
+
+        // Sync selection filter across all pickers
+        this.chordSelection.addEventListener('filterchange', (e) => {
+            const filter = e.detail.filter;
+            this.pickerA.selectionFilter = filter;
+            this.pickerB.selectionFilter = filter;
+            this.pickerHybrid.selectionFilter = filter;
+        });
+
         // Initial Resize
         this.handleResize();
         window.addEventListener('resize', () => this.handleResize());

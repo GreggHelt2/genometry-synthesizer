@@ -87,6 +87,28 @@ export class GlobalRenderingModule {
             onChange: (val) => this.dispatch(this.keys.backgroundColor, val)
         });
         this.container.appendChild(this.controls.backgroundColor.getElement());
+
+        // 5. Selection Hit Tolerance (global, via ChordSelection)
+        const chordSel = this.orchestrator?.chordSelection;
+        if (chordSel) {
+            this.controls.hitTolerance = new ParamNumber({
+                key: 'hitTolerance',
+                label: 'Selection Hit Tolerance',
+                min: 1,
+                max: 30,
+                step: 1,
+                value: chordSel.hitTolerance,
+                onChange: (val) => chordSel.setHitTolerance(val)
+            });
+            this.container.appendChild(this.controls.hitTolerance.getElement());
+
+            // Sync if changed from elsewhere
+            chordSel.addEventListener('tolerancechange', (e) => {
+                if (this.controls.hitTolerance) {
+                    this.controls.hitTolerance.setValue(e.detail.tolerance);
+                }
+            });
+        }
     }
 
     createSlider(key, min, max, step, label) {

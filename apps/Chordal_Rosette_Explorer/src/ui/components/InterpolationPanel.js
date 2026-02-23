@@ -25,6 +25,7 @@ export class InterpolationPanel extends Panel {
     constructor(id, title, options = {}) {
         super(id, title);
         this._options = options;
+        this.chordSelection = options.chordSelection || null;
 
         // UI State Persistence
         this.uiState = {

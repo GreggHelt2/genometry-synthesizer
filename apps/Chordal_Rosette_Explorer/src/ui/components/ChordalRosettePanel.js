@@ -23,6 +23,7 @@ export class ChordalRosettePanel extends Panel {
         super(id, title);
         this.roseId = roseId; // 'rosetteA' or 'rosetteB'
         this._options = options;
+        this.chordSelection = options.chordSelection || null;
 
         // UI State Tracking
         this.uiState = {

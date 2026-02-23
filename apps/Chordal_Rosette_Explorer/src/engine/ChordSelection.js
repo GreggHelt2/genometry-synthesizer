@@ -17,6 +17,12 @@ export class ChordSelection extends EventTarget {
         this._indices = new Set();
         /** @type {boolean} */
         this._linked = false;
+        /** @type {'rect'|'circle'|'annulus'} */
+        this._selectionShape = 'rect';
+        /** @type {number} Hit tolerance in CSS pixels */
+        this._hitTolerance = 5;
+        /** @type {'intersects'|'oneEndpoint'|'bothEndpoints'} */
+        this._selectionFilter = 'intersects';
     }
 
     // ── Getters ──────────────────────────────────────────────
@@ -29,6 +35,15 @@ export class ChordSelection extends EventTarget {
 
     /** @returns {boolean} Whether highlighting is linked across all renderers. */
     get linked() { return this._linked; }
+
+    /** @returns {'rect'|'circle'|'annulus'} Current drag selection shape. */
+    get selectionShape() { return this._selectionShape; }
+
+    /** @returns {number} Hit tolerance in CSS pixels. */
+    get hitTolerance() { return this._hitTolerance; }
+
+    /** @returns {'intersects'|'oneEndpoint'|'bothEndpoints'} Region filter mode. */
+    get selectionFilter() { return this._selectionFilter; }
 
     // ── Selection Operations ─────────────────────────────────
 
@@ -117,6 +132,45 @@ export class ChordSelection extends EventTarget {
         if (this._linked === linked) return;
         this._linked = linked;
         this._emit(source);
+    }
+
+    /**
+     * Set drag selection shape and emit shapechange.
+     * @param {'rect'|'circle'} shape
+     * @param {string} [source='unknown']
+     */
+    setSelectionShape(shape, source = 'unknown') {
+        if (this._selectionShape === shape) return;
+        this._selectionShape = shape;
+        this.dispatchEvent(new CustomEvent('shapechange', {
+            detail: { shape, source }
+        }));
+    }
+
+    /**
+     * Set hit tolerance and emit tolerancechange.
+     * @param {number} tolerance - CSS pixel tolerance
+     * @param {string} [source='unknown']
+     */
+    setHitTolerance(tolerance, source = 'unknown') {
+        if (this._hitTolerance === tolerance) return;
+        this._hitTolerance = tolerance;
+        this.dispatchEvent(new CustomEvent('tolerancechange', {
+            detail: { tolerance, source }
+        }));
+    }
+
+    /**
+     * Set region selection filter mode and emit filterchange.
+     * @param {'intersects'|'oneEndpoint'|'bothEndpoints'} filter
+     * @param {string} [source='unknown']
+     */
+    setSelectionFilter(filter, source = 'unknown') {
+        if (this._selectionFilter === filter) return;
+        this._selectionFilter = filter;
+        this.dispatchEvent(new CustomEvent('filterchange', {
+            detail: { filter, source }
+        }));
     }
 
     // ── Internal ─────────────────────────────────────────────

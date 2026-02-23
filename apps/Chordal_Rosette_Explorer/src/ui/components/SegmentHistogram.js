@@ -49,7 +49,7 @@ export class SegmentHistogram {
         this.canvas.setAttribute('tabindex', '0');
         row.appendChild(this.canvas);
 
-        // Right subpanel: stats + highlight controls
+        // Right subpanel: stats + shape buttons
         this._sidePanel = createElement('div', 'flex flex-col justify-between');
         this._sidePanel.style.minWidth = '72px';
         this._sidePanel.style.fontSize = '12px';
@@ -59,6 +59,84 @@ export class SegmentHistogram {
         // Stats section (top of side panel)
         this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
         this._sidePanel.appendChild(this.statsDiv);
+
+        // Selection shape toggle buttons (bottom of side panel)
+        if (this._chordSelection) {
+            const rectSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`;
+            const circleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>`;
+            const annulusSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/></svg>`;
+
+            const shapeBtns = createElement('div', 'flex gap-1 justify-end mt-1');
+
+            this._rectBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
+            this._rectBtn.innerHTML = rectSvg;
+            this._rectBtn.title = 'Rectangle';
+            this._rectBtn.style.lineHeight = '0';
+            this._rectBtn.style.cursor = 'pointer';
+            this._rectBtn.addEventListener('click', () => {
+                this._chordSelection.setSelectionShape('rect', this._sourceId);
+            });
+            shapeBtns.appendChild(this._rectBtn);
+
+            this._circleBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
+            this._circleBtn.innerHTML = circleSvg;
+            this._circleBtn.title = 'Circle';
+            this._circleBtn.style.lineHeight = '0';
+            this._circleBtn.style.cursor = 'pointer';
+            this._circleBtn.addEventListener('click', () => {
+                this._chordSelection.setSelectionShape('circle', this._sourceId);
+            });
+            shapeBtns.appendChild(this._circleBtn);
+
+            this._annulusBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
+            this._annulusBtn.innerHTML = annulusSvg;
+            this._annulusBtn.title = 'Annulus';
+            this._annulusBtn.style.lineHeight = '0';
+            this._annulusBtn.style.cursor = 'pointer';
+            this._annulusBtn.addEventListener('click', () => {
+                this._chordSelection.setSelectionShape('annulus', this._sourceId);
+            });
+            shapeBtns.appendChild(this._annulusBtn);
+
+            this._sidePanel.appendChild(shapeBtns);
+
+            // Region filter mode buttons (below shape buttons)
+            // Line only = intersects, line+1dot = one endpoint, line+2dots = both endpoints
+            const lineSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>`;
+            const lineOneDotSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
+            const lineTwoDotsSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="4" cy="20" r="3" fill="currentColor"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
+
+            const filterBtns = createElement('div', 'flex gap-1 justify-end mt-0');
+
+            const makeFilterBtn = (svg, filter, title) => {
+                const btn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
+                btn.innerHTML = svg;
+                btn.title = title;
+                btn.style.lineHeight = '0';
+                btn.style.cursor = 'pointer';
+                btn.addEventListener('click', () => {
+                    this._chordSelection.setSelectionFilter(filter, this._sourceId);
+                });
+                filterBtns.appendChild(btn);
+                return btn;
+            };
+
+            this._filterIntersectsBtn = makeFilterBtn(lineSvg, 'intersects', 'Intersect');
+            this._filterOneEndpointBtn = makeFilterBtn(lineOneDotSvg, 'oneEndpoint', '1|2 Endpoint');
+            this._filterBothEndpointsBtn = makeFilterBtn(lineTwoDotsSvg, 'bothEndpoints', '2 Endpoint');
+
+            this._sidePanel.appendChild(filterBtns);
+
+            // Set initial state and listen for changes
+            this._updateShapeButtons(this._chordSelection.selectionShape);
+            this._updateFilterButtons(this._chordSelection.selectionFilter);
+            this._chordSelection.addEventListener('shapechange', (e) => {
+                this._updateShapeButtons(e.detail.shape);
+            });
+            this._chordSelection.addEventListener('filterchange', (e) => {
+                this._updateFilterButtons(e.detail.filter);
+            });
+        }
 
         this._selectedBins = new Set();
         this._activeBin = -1;
@@ -631,6 +709,44 @@ export class SegmentHistogram {
         }
     }
 
+
+    /**
+     * Update visual state of selection shape toggle buttons.
+     * @param {'rect'|'circle'} shape
+     */
+    _updateShapeButtons(shape) {
+        const activeClasses = ['text-green-400', 'bg-gray-700', 'border-green-400'];
+        const inactiveClasses = ['text-gray-500', 'border-transparent'];
+
+        const update = (btn, isActive) => {
+            if (!btn) return;
+            btn.classList.remove(...activeClasses, ...inactiveClasses);
+            btn.classList.add(...(isActive ? activeClasses : inactiveClasses));
+        };
+
+        update(this._rectBtn, shape === 'rect');
+        update(this._circleBtn, shape === 'circle');
+        update(this._annulusBtn, shape === 'annulus');
+    }
+
+    /**
+     * Update visual state of region filter mode buttons.
+     * @param {'intersects'|'oneEndpoint'|'bothEndpoints'} filter
+     */
+    _updateFilterButtons(filter) {
+        const activeClasses = ['text-green-400', 'bg-gray-700', 'border-green-400'];
+        const inactiveClasses = ['text-gray-500', 'border-transparent'];
+
+        const update = (btn, isActive) => {
+            if (!btn) return;
+            btn.classList.remove(...activeClasses, ...inactiveClasses);
+            btn.classList.add(...(isActive ? activeClasses : inactiveClasses));
+        };
+
+        update(this._filterIntersectsBtn, filter === 'intersects');
+        update(this._filterOneEndpointBtn, filter === 'oneEndpoint');
+        update(this._filterBothEndpointsBtn, filter === 'bothEndpoints');
+    }
 
     dispose() {
         if (this._resizeObserver) {
