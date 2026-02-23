@@ -719,6 +719,19 @@ export class CanvasRenderer {
             const ipColorMethod = hybridParams.interpPathsColorMethod || 'solid';
             const ipBaseColor = hybridParams.interpPathsColor || '#888888';
 
+            // When 'Selected Only' is on, restrict to selected chord endpoints.
+            // A segment index i connects point[i] → point[i+1], so we need
+            // interpolation paths for both point i and point i+1.
+            const selectedOnly = hybridParams.interpPathsSelectedOnly;
+            let selectedSet = null;
+            if (selectedOnly && state.app?.segmentHighlight?.segmentIndices) {
+                selectedSet = new Set();
+                for (const segIdx of state.app.segmentHighlight.segmentIndices) {
+                    selectedSet.add(segIdx);      // start point of chord
+                    selectedSet.add(segIdx + 1);   // end point of chord
+                }
+            }
+
             renderables.filter(r => r.type === 'hybrid').forEach(item => {
                 if (!item.pointsA || !item.pointsB) return;
                 const n = Math.min(item.pointsA.length, item.pointsB.length);
@@ -793,34 +806,65 @@ export class CanvasRenderer {
                 if (pathMode === 'linear') {
                     // Draw straight lines
                     for (let i = 0; i < n; i++) {
+                        if (selectedSet && !selectedSet.has(i)) continue;
                         const pA = item.pointsA[i], pB = item.pointsB[i];
                         const xA = pA.x !== undefined ? pA.x : pA[0];
                         const yA = pA.y !== undefined ? pA.y : pA[1];
                         const xB = pB.x !== undefined ? pB.x : pB[0];
                         const yB = pB.y !== undefined ? pB.y : pB[1];
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(xA, yA);
-                        this.ctx.lineTo(xB, yB);
-                        this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
-                        this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                        const ipLW = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                        const color = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
                         this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
-                        this.ctx.stroke();
+
+                        const dx = xB - xA, dy = yB - yA;
+                        if (dx * dx + dy * dy < 1e-8) {
+                            // Stable point — draw a dot
+                            this.ctx.beginPath();
+                            this.ctx.arc(xA, yA, ipLW, 0, Math.PI * 2);
+                            this.ctx.fillStyle = color;
+                            this.ctx.fill();
+                        } else {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(xA, yA);
+                            this.ctx.lineTo(xB, yB);
+                            this.ctx.strokeStyle = color;
+                            this.ctx.lineWidth = ipLW;
+                            this.ctx.stroke();
+                        }
                     }
                 } else {
                     // Draw curved paths by sampling the curve
                     const curves = sampleInterpCurves(item.pointsA, item.pointsB, pathMode, pathParams, pathDetail);
                     for (let i = 0; i < curves.length; i++) {
+                        if (selectedSet && !selectedSet.has(i)) continue;
                         const curvePts = curves[i];
-                        if (curvePts.length < 2) continue;
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(curvePts[0].x, curvePts[0].y);
-                        for (let j = 1; j < curvePts.length; j++) {
-                            this.ctx.lineTo(curvePts[j].x, curvePts[j].y);
-                        }
-                        this.ctx.strokeStyle = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
-                        this.ctx.lineWidth = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
+                        const color = (lineColors && lineColors[i]) ? lineColors[i] : ipBaseColor;
+                        const ipLW = (hybridParams.interpPathsLineWidth || 1) * lineWidthScale;
                         this.ctx.globalAlpha = hybridParams.interpPathsOpacity ?? 0.3;
-                        this.ctx.stroke();
+
+                        // Check if curve is degenerate (all points same)
+                        let isStable = curvePts.length < 2;
+                        if (!isStable && curvePts.length >= 2) {
+                            const dx = curvePts[curvePts.length - 1].x - curvePts[0].x;
+                            const dy = curvePts[curvePts.length - 1].y - curvePts[0].y;
+                            isStable = dx * dx + dy * dy < 1e-8;
+                        }
+
+                        if (isStable && curvePts.length >= 1) {
+                            this.ctx.beginPath();
+                            this.ctx.arc(curvePts[0].x, curvePts[0].y, ipLW, 0, Math.PI * 2);
+                            this.ctx.fillStyle = color;
+                            this.ctx.fill();
+                        } else if (curvePts.length >= 2) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(curvePts[0].x, curvePts[0].y);
+                            for (let j = 1; j < curvePts.length; j++) {
+                                this.ctx.lineTo(curvePts[j].x, curvePts[j].y);
+                            }
+                            this.ctx.strokeStyle = color;
+                            this.ctx.lineWidth = ipLW;
+                            this.ctx.stroke();
+                        }
                     }
                 }
             });

@@ -321,6 +321,15 @@ export class HybridAppearanceSection {
             dispatchDeep('showInterpPaths', val, 'hybrid');
         });
 
+        // 'Selected Only' toggle — restrict interp paths to selected chords
+        this.interpPathsSelectedOnlyControl = new ParamToggle({
+            key: 'interpPathsSelectedOnly',
+            label: 'Selected Chords Only',
+            value: false,
+            onChange: (val) => dispatchDeep('interpPathsSelectedOnly', val, 'hybrid')
+        });
+        this.interpPathsAccordion.append(this.interpPathsSelectedOnlyControl.getElement());
+
         // --- Interpolation Curve Mode controls ---
         const curveContainer = createElement('div', 'flex flex-col gap-1 mt-2');
 
@@ -474,6 +483,7 @@ export class HybridAppearanceSection {
         if (this.interpWaveFrequencyControl) this.interpWaveFrequencyControl.instance.setValue(flatParams.interpWaveFrequency ?? 1);
         if (this.interpWaveAlternateFlipControl) this.interpWaveAlternateFlipControl.setValue(flatParams.interpWaveAlternateFlip || false);
         if (this.interpBezierBulgeControl) this.interpBezierBulgeControl.instance.setValue(flatParams.interpBezierBulge ?? 0.3);
+        if (this.interpPathsSelectedOnlyControl) this.interpPathsSelectedOnlyControl.setValue(flatParams.interpPathsSelectedOnly || false);
         this.updateInterpCurveVisibility(curveMode);
 
         // 8. General

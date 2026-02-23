@@ -268,6 +268,7 @@ export function flattenHybridParams(hybridState) {
         interpPathsGradientType: ipc.type,
         interpPathsGradientPreset: ipcp['gradient-preset']?.preset,
         interpPathsGradientStops: ipcp['gradient-custom']?.stops,
+        interpPathsSelectedOnly: interpPaths.selectedOnly ?? false,
 
         // Source Underlays (A/B)
         underlayColorA: srcAcp.solid?.color,
@@ -509,6 +510,7 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     interpPathsGradientType: ['interpPaths', 'coloring', 'type'],
     interpPathsGradientPreset: ['interpPaths', 'coloring', 'params', 'gradient-preset', 'preset'],
     interpPathsGradientStops: ['interpPaths', 'coloring', 'params', 'gradient-custom', 'stops'],
+    interpPathsSelectedOnly: ['interpPaths', 'selectedOnly'],
 
     // Source A underlay appearance
     underlayColorA: ['sourceA', 'coloring', 'params', 'solid', 'color'],
