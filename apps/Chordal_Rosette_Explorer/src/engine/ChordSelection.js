@@ -173,6 +173,159 @@ export class ChordSelection extends EventTarget {
         }));
     }
 
+    // ── Chain Operations ─────────────────────────────────────
+
+    /**
+     * Compute contiguous chains from current selection, with circular wrapping.
+     * A chain is a maximal contiguous run of selected indices.
+     * If indices 0 and maxIndex are both selected, they are merged into one
+     * wrapped chain with start > end (e.g. {start: 8, end: 2}).
+     * @param {number} maxIndex - Maximum valid segment index (for wrap detection)
+     * @returns {Array<{start: number, end: number}>} Chains
+     */
+    getChains(maxIndex) {
+        if (this._indices.size === 0) return [];
+        const n = maxIndex + 1;
+        // All selected → single full chain
+        if (this._indices.size >= n) return [{ start: 0, end: maxIndex }];
+
+        const sorted = [...this._indices].sort((a, b) => a - b);
+        const chains = [];
+        let start = sorted[0];
+        let end = sorted[0];
+        for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i] === end + 1) {
+                end = sorted[i];
+            } else {
+                chains.push({ start, end });
+                start = sorted[i];
+                end = sorted[i];
+            }
+        }
+        chains.push({ start, end });
+
+        // Circular merge: if first chain starts at 0 and last ends at maxIndex,
+        // they form one wrapped chain. The wrapped chain's "start" is the last
+        // chain's start (backward growth edge) and "end" is the first chain's
+        // end (forward growth edge).
+        if (chains.length > 1 && chains[0].start === 0 && chains[chains.length - 1].end === maxIndex) {
+            const first = chains.shift();
+            const last = chains.pop();
+            chains.push({ start: last.start, end: first.end });
+        }
+
+        return chains;
+    }
+
+    /**
+     * Grow all chains forward by one segment (with circular wrapping).
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    growForward(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        const n = maxIndex + 1;
+        let changed = false;
+        for (const c of chains) {
+            const next = (c.end + 1) % n;
+            if (!this._indices.has(next)) {
+                this._indices.add(next);
+                changed = true;
+            }
+        }
+        if (changed) this._emit(source);
+    }
+
+    /**
+     * Grow all chains backward by one segment (with circular wrapping).
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    growBackward(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        const n = maxIndex + 1;
+        let changed = false;
+        for (const c of chains) {
+            const prev = (c.start - 1 + n) % n;
+            if (!this._indices.has(prev)) {
+                this._indices.add(prev);
+                changed = true;
+            }
+        }
+        if (changed) this._emit(source);
+    }
+
+    /**
+     * Grow all chains in both directions (with circular wrapping).
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    growBoth(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        const n = maxIndex + 1;
+        let changed = false;
+        for (const c of chains) {
+            const prev = (c.start - 1 + n) % n;
+            if (!this._indices.has(prev)) {
+                this._indices.add(prev);
+                changed = true;
+            }
+            const next = (c.end + 1) % n;
+            if (!this._indices.has(next)) {
+                this._indices.add(next);
+                changed = true;
+            }
+        }
+        if (changed) this._emit(source);
+    }
+
+    /**
+     * Shrink all chains from their end (remove last segment).
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    shrinkFromEnd(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        for (const c of chains) {
+            this._indices.delete(c.end);
+        }
+        this._emit(source);
+    }
+
+    /**
+     * Shrink all chains from their start (remove first segment).
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    shrinkFromStart(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        for (const c of chains) {
+            this._indices.delete(c.start);
+        }
+        this._emit(source);
+    }
+
+    /**
+     * Shrink all chains from both ends.
+     * Single-segment chains are removed entirely.
+     * @param {number} maxIndex - Maximum valid segment index
+     * @param {string} [source='keyboard']
+     */
+    shrinkBoth(maxIndex, source = 'keyboard') {
+        const chains = this.getChains(maxIndex);
+        if (chains.length === 0) return;
+        for (const c of chains) {
+            this._indices.delete(c.start);
+            this._indices.delete(c.end);
+        }
+        this._emit(source);
+    }
+
     // ── Internal ─────────────────────────────────────────────
 
     /** @private Emit a 'change' CustomEvent */

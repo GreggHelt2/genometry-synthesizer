@@ -409,6 +409,41 @@ class App {
             this.pickerB.selectionFilter = filter;
             this.pickerHybrid.selectionFilter = filter;
         });
+        // Chord chain grow/shrink keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+            // Skip if user is typing in an input
+            const tag = document.activeElement?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            const key = e.key;
+            const chainKeys = ['_', '+', ')', '0', '-', '='];
+            if (!chainKeys.includes(key)) return;
+
+            // Prevent default to avoid browser shortcuts
+            e.preventDefault();
+
+            // Compute maxIndex across all renderers
+            let maxIndex = 0;
+            for (const renderer of [this.rosetteRendererA, this.rosetteRendererB, this.hybridRenderer]) {
+                const renderables = renderer?.lastRenderables;
+                if (!renderables) continue;
+                for (const item of renderables) {
+                    if (item.type !== 'rose' && item.type !== 'hybrid') continue;
+                    if (item.points && item.points.length > 1) {
+                        maxIndex = Math.max(maxIndex, item.points.length - 2);
+                    }
+                }
+            }
+
+            switch (key) {
+                case '_': this.chordSelection.growBackward(maxIndex, 'keyboard'); break;
+                case '+': this.chordSelection.growForward(maxIndex, 'keyboard'); break;
+                case ')': this.chordSelection.growBoth(maxIndex, 'keyboard'); break;
+                case '0': this.chordSelection.shrinkFromStart(maxIndex, 'keyboard'); break;
+                case '-': this.chordSelection.shrinkFromEnd(maxIndex, 'keyboard'); break;
+                case '=': this.chordSelection.shrinkBoth(maxIndex, 'keyboard'); break;
+            }
+        });
 
         // Initial Resize
         this.handleResize();
