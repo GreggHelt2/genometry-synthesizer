@@ -33,11 +33,21 @@ export class SegmentHistogram {
         });
         this.container.appendChild(this.label);
 
-        // Horizontal layout: [Canvas] [Right Subpanel]
+        // Horizontal layout: [Left Stats] [Canvas] [Right Buttons]
         const row = createElement('div', 'flex gap-2');
         this.container.appendChild(row);
 
-        // Canvas (left, flexible width) — tabindex makes it focusable for keyboard events
+        // Left subpanel: stats
+        this._leftPanel = createElement('div', 'flex flex-col justify-center');
+        this._leftPanel.style.minWidth = '62px';
+        this._leftPanel.style.fontSize = '11px';
+        this._leftPanel.style.fontFamily = 'monospace';
+        row.appendChild(this._leftPanel);
+
+        this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
+        this._leftPanel.appendChild(this.statsDiv);
+
+        // Canvas (center, flexible width)
         this.canvas = createElement('canvas', 'rounded');
         this.canvas.style.flex = '1';
         this.canvas.style.minWidth = '0';
@@ -49,85 +59,119 @@ export class SegmentHistogram {
         this.canvas.setAttribute('tabindex', '0');
         row.appendChild(this.canvas);
 
-        // Right subpanel: stats + shape buttons
+        // Right subpanel: mode toggles at top, chain transport at bottom
         this._sidePanel = createElement('div', 'flex flex-col justify-between');
-        this._sidePanel.style.minWidth = '72px';
-        this._sidePanel.style.fontSize = '12px';
-        this._sidePanel.style.fontFamily = 'monospace';
+        this._sidePanel.style.minWidth = '52px';
         row.appendChild(this._sidePanel);
 
-        // Stats section (top of side panel)
-        this.statsDiv = createElement('div', 'text-gray-400 leading-relaxed');
-        this._sidePanel.appendChild(this.statsDiv);
+        // Track maxIndex for chain operations
+        this._maxIndex = 0;
 
-        // Selection shape toggle buttons (bottom of side panel)
         if (this._chordSelection) {
-            const rectSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`;
-            const circleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>`;
-            const annulusSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/></svg>`;
-
-            const shapeBtns = createElement('div', 'flex gap-1 justify-end mt-1');
-
-            this._rectBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
-            this._rectBtn.innerHTML = rectSvg;
-            this._rectBtn.title = 'Rectangle';
-            this._rectBtn.style.lineHeight = '0';
-            this._rectBtn.style.cursor = 'pointer';
-            this._rectBtn.addEventListener('click', () => {
-                this._chordSelection.setSelectionShape('rect', this._sourceId);
-            });
-            shapeBtns.appendChild(this._rectBtn);
-
-            this._circleBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
-            this._circleBtn.innerHTML = circleSvg;
-            this._circleBtn.title = 'Circle';
-            this._circleBtn.style.lineHeight = '0';
-            this._circleBtn.style.cursor = 'pointer';
-            this._circleBtn.addEventListener('click', () => {
-                this._chordSelection.setSelectionShape('circle', this._sourceId);
-            });
-            shapeBtns.appendChild(this._circleBtn);
-
-            this._annulusBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
-            this._annulusBtn.innerHTML = annulusSvg;
-            this._annulusBtn.title = 'Annulus';
-            this._annulusBtn.style.lineHeight = '0';
-            this._annulusBtn.style.cursor = 'pointer';
-            this._annulusBtn.addEventListener('click', () => {
-                this._chordSelection.setSelectionShape('annulus', this._sourceId);
-            });
-            shapeBtns.appendChild(this._annulusBtn);
-
-            this._sidePanel.appendChild(shapeBtns);
-
-            // Region filter mode buttons (below shape buttons)
-            // Line only = intersects, line+1dot = one endpoint, line+2dots = both endpoints
-            const lineSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>`;
-            const lineOneDotSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
-            const lineTwoDotsSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="4" cy="20" r="3" fill="currentColor"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
-
-            const filterBtns = createElement('div', 'flex gap-1 justify-end mt-0');
-
-            const makeFilterBtn = (svg, filter, title) => {
+            // Helper to create icon buttons consistently (for mode toggles)
+            const makeBtn = (svg, title, onClick) => {
                 const btn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border');
                 btn.innerHTML = svg;
                 btn.title = title;
                 btn.style.lineHeight = '0';
                 btn.style.cursor = 'pointer';
-                btn.addEventListener('click', () => {
-                    this._chordSelection.setSelectionFilter(filter, this._sourceId);
-                });
-                filterBtns.appendChild(btn);
+                btn.addEventListener('click', onClick);
                 return btn;
             };
 
-            this._filterIntersectsBtn = makeFilterBtn(lineSvg, 'intersects', 'Intersect');
-            this._filterOneEndpointBtn = makeFilterBtn(lineOneDotSvg, 'oneEndpoint', '1|2 Endpoint');
-            this._filterBothEndpointsBtn = makeFilterBtn(lineTwoDotsSvg, 'bothEndpoints', '2 Endpoint');
+            // Helper for chain transport (action) buttons — grayer, with mousedown auto-repeat
+            const makeActionBtn = (svg, title, onClick) => {
+                const btn = createElement('button', 'p-1 rounded hover:bg-gray-600 transition-colors border border-gray-600 text-gray-400');
+                btn.innerHTML = svg;
+                btn.title = title;
+                btn.style.lineHeight = '0';
+                btn.style.cursor = 'pointer';
 
-            this._sidePanel.appendChild(filterBtns);
+                let intervalId = null;
+                const flash = () => {
+                    btn.classList.remove('text-gray-400', 'border-gray-600');
+                    btn.classList.add('text-white', 'border-white');
+                    setTimeout(() => {
+                        btn.classList.remove('text-white', 'border-white');
+                        btn.classList.add('text-gray-400', 'border-gray-600');
+                    }, 80);
+                };
+                const stop = () => {
+                    if (intervalId !== null) {
+                        clearInterval(intervalId);
+                        intervalId = null;
+                    }
+                };
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    onClick(e);
+                    flash();
+                    stop();
+                    intervalId = setInterval(() => {
+                        onClick(e);
+                        flash();
+                    }, 150);
+                });
+                btn.addEventListener('mouseup', stop);
+                btn.addEventListener('mouseleave', stop);
+                return btn;
+            };
 
-            // Set initial state and listen for changes
+            // ── Top group: mode toggle buttons ──
+            const modeGroup = createElement('div', 'flex flex-col gap-1');
+
+            // ── Row 1: Selection shape buttons ──
+            const rectSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`;
+            const circleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>`;
+            const annulusSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/></svg>`;
+
+            const shapeBtns = createElement('div', 'flex gap-1 justify-end');
+            this._rectBtn = makeBtn(rectSvg, 'Rectangle', () => this._chordSelection.setSelectionShape('rect', this._sourceId));
+            this._circleBtn = makeBtn(circleSvg, 'Circle', () => this._chordSelection.setSelectionShape('circle', this._sourceId));
+            this._annulusBtn = makeBtn(annulusSvg, 'Annulus', () => this._chordSelection.setSelectionShape('annulus', this._sourceId));
+            shapeBtns.append(this._rectBtn, this._circleBtn, this._annulusBtn);
+            modeGroup.appendChild(shapeBtns);
+
+            // ── Row 2: Intersect filter buttons ──
+            const lineSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>`;
+            const lineOneDotSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
+            const lineTwoDotsSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="4" cy="20" r="3" fill="currentColor"/><circle cx="20" cy="4" r="3" fill="currentColor"/></svg>`;
+
+            const filterBtns = createElement('div', 'flex gap-1 justify-end');
+            this._filterIntersectsBtn = makeBtn(lineSvg, 'Intersect', () => this._chordSelection.setSelectionFilter('intersects', this._sourceId));
+            this._filterOneEndpointBtn = makeBtn(lineOneDotSvg, '1|2 Endpoint', () => this._chordSelection.setSelectionFilter('oneEndpoint', this._sourceId));
+            this._filterBothEndpointsBtn = makeBtn(lineTwoDotsSvg, '2 Endpoint', () => this._chordSelection.setSelectionFilter('bothEndpoints', this._sourceId));
+            filterBtns.append(this._filterIntersectsBtn, this._filterOneEndpointBtn, this._filterBothEndpointsBtn);
+            modeGroup.appendChild(filterBtns);
+            this._sidePanel.appendChild(modeGroup);
+
+            // ── Row 3: Grow chain buttons ──
+            const growBothSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="12" x2="2" y2="12"/><polyline points="6,7 2,12 6,17"/><line x1="12" y1="12" x2="22" y2="12"/><polyline points="18,7 22,12 18,17"/></svg>`;
+            const growBackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"/><polyline points="6,7 2,12 6,17"/></svg>`;
+            const growFwdSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="18,7 22,12 18,17"/></svg>`;
+
+            // ── Bottom group: chain transport buttons ──
+            const chainGroup = createElement('div', 'flex flex-col gap-1');
+
+            const growBtns = createElement('div', 'flex gap-1 justify-end');
+            growBtns.appendChild(makeActionBtn(growBothSvg, 'Grow both (Shift+0)', () => this._chordSelection.growBoth(this._maxIndex, this._sourceId)));
+            growBtns.appendChild(makeActionBtn(growBackSvg, 'Grow backward (Shift+-)', () => this._chordSelection.growBackward(this._maxIndex, this._sourceId)));
+            growBtns.appendChild(makeActionBtn(growFwdSvg, 'Grow forward (Shift+=)', () => this._chordSelection.growForward(this._maxIndex, this._sourceId)));
+            chainGroup.appendChild(growBtns);
+
+            // ── Row 4: Shrink chain buttons ──
+            const shrinkBothSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="10" y2="12"/><polyline points="5,7 10,12 5,17"/><line x1="22" y1="12" x2="14" y2="12"/><polyline points="19,7 14,12 19,17"/></svg>`;
+            const shrinkStartSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="5,7 10,12 5,17"/></svg>`;
+            const shrinkEndSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="19,7 14,12 19,17"/></svg>`;
+
+            const shrinkBtns = createElement('div', 'flex gap-1 justify-end');
+            shrinkBtns.appendChild(makeActionBtn(shrinkBothSvg, 'Shrink both (=)', () => this._chordSelection.shrinkBoth(this._maxIndex, this._sourceId)));
+            shrinkBtns.appendChild(makeActionBtn(shrinkStartSvg, 'Shrink start (0)', () => this._chordSelection.shrinkFromStart(this._maxIndex, this._sourceId)));
+            shrinkBtns.appendChild(makeActionBtn(shrinkEndSvg, 'Shrink end (-)', () => this._chordSelection.shrinkFromEnd(this._maxIndex, this._sourceId)));
+            chainGroup.appendChild(shrinkBtns);
+            this._sidePanel.appendChild(chainGroup);
+
+            // Initial state and listeners
             this._updateShapeButtons(this._chordSelection.selectionShape);
             this._updateFilterButtons(this._chordSelection.selectionFilter);
             this._chordSelection.addEventListener('shapechange', (e) => {
@@ -187,6 +231,7 @@ export class SegmentHistogram {
     update(points, colorOptions) {
         this._colorOptions = colorOptions || null;
         this._lengths = this._computeSegmentLengths(points);
+        this._maxIndex = (points && points.length > 1) ? points.length - 2 : 0;
         this._computeBins();
         this._redraw();
         this._updateStats();
