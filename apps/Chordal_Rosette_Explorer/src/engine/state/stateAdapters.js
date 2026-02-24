@@ -434,7 +434,11 @@ const FLAT_KEY_TO_PATH = {
 
     // Top-level type selectors
     curveType: ['curve', 'type'],
-    sequencerType: ['sequencer', 'type']
+    sequencerType: ['sequencer', 'type'],
+
+    // Rhodonea curve-specific (static mapping to avoid fallback warning
+    // when link visuals iterate controls while a non-Rhodonea curve is active)
+    allowDoubleTrace: ['curve', 'params', 'Rhodonea', 'allowDoubleTrace']
 };
 
 /**
