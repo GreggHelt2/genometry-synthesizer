@@ -11,6 +11,7 @@ import { SnapshotModal } from './ui/components/SnapshotModal.js';
 import { SnapshotSidebar } from './ui/components/SnapshotSidebar.js';
 import { ChordSelection } from './engine/ChordSelection.js';
 import { ChordPicker } from './ui/interactions/ChordPicker.js';
+import { Accordion } from './ui/components/Accordion.js';
 
 // Application Bootstrapper
 class App {
@@ -187,6 +188,14 @@ class App {
 
         const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v4.2' });
         header.appendChild(titleText);
+
+        // Collapse All button
+        const collapseBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
+            textContent: '⏶ Collapse All',
+            title: 'Collapse all accordion panels'
+        });
+        collapseBtn.addEventListener('click', () => Accordion.collapseAll());
+        header.appendChild(collapseBtn);
 
         // Snapshot Controls Container
         const snapControls = createElement('div', 'flex gap-2');

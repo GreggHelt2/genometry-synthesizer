@@ -1,20 +1,34 @@
 import { createElement } from '../utils/dom.js';
 
 export class Accordion {
+    /** @type {Accordion[]} */
+    static _instances = [];
     constructor(title, isOpen = false, onToggle = null, id = null) {
         this.title = title;
         this.isOpen = isOpen;
         this.onToggle = onToggle;
         this.id = id;
         this.element = this.render();
+        Accordion._instances.push(this);
     }
 
     toggle() {
         this.isOpen = !this.isOpen;
         this.content.style.display = this.isOpen ? 'block' : 'none';
-        // Open: Down (0deg), Closed: Right (-90deg)
         this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
         if (this.onToggle) this.onToggle(this.isOpen, this.id);
+    }
+
+    /** Collapse this accordion if it is open. */
+    collapse() {
+        if (this.isOpen) this.toggle();
+    }
+
+    /** Collapse all registered accordion instances. */
+    static collapseAll() {
+        for (const acc of Accordion._instances) {
+            acc.collapse();
+        }
     }
 
     setTitle(newTitle) {

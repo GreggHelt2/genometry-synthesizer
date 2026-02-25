@@ -246,7 +246,7 @@ export class CanvasRenderer {
                 this.polylineLayer.drawVertices(item.points, {
                     color: roseParams.vertexColor,
                     colors: vertexColors,
-                    radius: roseParams.vertexRadius,
+                    radius: (roseParams.vertexRadius || 2) * lineWidthScale,
                     opacity: roseParams.vertexOpacity
                 });
             });
@@ -878,7 +878,7 @@ export class CanvasRenderer {
             renderables.filter(r => r.type === 'hybrid').forEach(item => {
                 this.polylineLayer.drawVertices(item.points, {
                     color: hybridParams.vertexColor,
-                    radius: hybridParams.vertexRadius,
+                    radius: (hybridParams.vertexRadius || 2) * lineWidthScale,
                     opacity: hybridParams.vertexOpacity
                 });
             });
