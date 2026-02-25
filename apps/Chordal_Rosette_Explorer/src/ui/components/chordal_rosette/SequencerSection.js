@@ -51,8 +51,29 @@ export class SequencerSection {
             value: 'Cyclic Additive Group Modulo N',
             onChange: (val) => {
                 dispatchDeep('sequencerType', val, this.roseId);
+            },
+            onLinkToggle: (isActive) => {
+                const myKey = getLinkKey('sequencerType', this.roseId);
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = getLinkKey('sequencerType', otherRoseId);
+
+                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    const linked = linkManager.toggleLink(myKey, otherKey);
+                    if (linked !== isActive) {
+                        this.sequencerSelect.setLinkActive(linked);
+                    }
+                });
             }
         });
+
+        // Initialize link state
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = getLinkKey('sequencerType', this.roseId);
+            if (linkManager.isLinked(myKey)) {
+                this.sequencerSelect.setLinkActive(true);
+            }
+        });
+
         this.accordion.append(this.sequencerSelect.getElement());
         this.controls.sequencerType = this.sequencerSelect;
 
@@ -114,6 +135,12 @@ export class SequencerSection {
 
     updateLinkVisuals() {
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            // Sequencer type select
+            if (this.controls.sequencerType) {
+                const seqKey = getLinkKey('sequencerType', this.roseId);
+                this.controls.sequencerType.setLinkActive(linkManager.isLinked(seqKey));
+            }
+
             // Static controls
             if (this.controls.totalDivs) {
                 const fullKey = getLinkKey('totalDivs', this.roseId);

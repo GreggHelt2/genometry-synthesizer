@@ -50,8 +50,29 @@ export class CoreParamsSection {
             value: 'Rhodonea',
             onChange: (val) => {
                 dispatchDeep('curveType', val, this.roseId);
+            },
+            onLinkToggle: (isActive) => {
+                const myKey = getLinkKey('curveType', this.roseId);
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = getLinkKey('curveType', otherRoseId);
+
+                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    const linked = linkManager.toggleLink(myKey, otherKey);
+                    if (linked !== isActive) {
+                        this.curveTypeSelect.setLinkActive(linked);
+                    }
+                });
             }
         });
+
+        // Initialize link state
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = getLinkKey('curveType', this.roseId);
+            if (linkManager.isLinked(myKey)) {
+                this.curveTypeSelect.setLinkActive(true);
+            }
+        });
+
         this.accordion.append(this.curveTypeSelect.getElement());
         this.controls.curveType = this.curveTypeSelect;
 

@@ -86,8 +86,10 @@ export class LayerRenderingModule {
                 onChange: (val) => {
                     this.dispatch(this.keys.connectMode, val);
                     this.updateConnectModeVisibility(val);
-                }
+                },
+                onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.connectMode, isActive, this.controls.connectMode)
             });
+            this.initLinkState(this.keys.connectMode, this.controls.connectMode);
             this.container.appendChild(this.controls.connectMode.getElement());
 
             // Details (Shared)
@@ -144,8 +146,10 @@ export class LayerRenderingModule {
             onChange: (val) => {
                 this.dispatch(this.keys.colorMethod, val);
                 this.updateVisibility(val);
-            }
+            },
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.colorMethod, isActive, this.controls.colorMethod)
         });
+        this.initLinkState(this.keys.colorMethod, this.controls.colorMethod);
         this.container.appendChild(this.controls.colorMethod.getElement());
 
         // 2. Gradient Type (Hidden for solid)
@@ -161,8 +165,10 @@ export class LayerRenderingModule {
             label: 'Gradient Type',
             options: gradientTypes,
             value: '2-point',
-            onChange: (val) => this.dispatch(this.keys.gradientType, val)
+            onChange: (val) => this.dispatch(this.keys.gradientType, val),
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.gradientType, isActive, this.controls.gradientType)
         });
+        this.initLinkState(this.keys.gradientType, this.controls.gradientType);
         this.container.appendChild(this.controls.gradientType.getElement());
 
         // 3. Start Color
@@ -219,8 +225,10 @@ export class LayerRenderingModule {
             label: 'Blend Mode',
             options: blendModes,
             value: 'source-over',
-            onChange: (val) => this.dispatch(this.keys.blendMode, val)
+            onChange: (val) => this.dispatch(this.keys.blendMode, val),
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.blendMode, isActive, this.controls.blendMode)
         });
+        this.initLinkState(this.keys.blendMode, this.controls.blendMode);
         this.container.appendChild(this.controls.blendMode.getElement());
 
         // 6. Size (Line Width / Radius)
