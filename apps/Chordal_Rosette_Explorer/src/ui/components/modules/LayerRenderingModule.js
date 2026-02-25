@@ -58,7 +58,7 @@ export class LayerRenderingModule {
                 label: toggleConfig.label || 'Show',
                 value: toggleConfig.value !== undefined ? toggleConfig.value : true,
                 onChange: (val) => this.dispatch(toggleConfig.key, val),
-                onLinkToggle: (isActive) => this.handleLinkToggle(toggleConfig.key, isActive, this.controls.showToggle)
+                onLinkToggle: () => this.handleLinkToggle(toggleConfig.key)
             });
             this.initLinkState(toggleConfig.key, this.controls.showToggle);
             this.container.appendChild(this.controls.showToggle.getElement());
@@ -87,7 +87,8 @@ export class LayerRenderingModule {
                     this.dispatch(this.keys.connectMode, val);
                     this.updateConnectModeVisibility(val);
                 },
-                onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.connectMode, isActive, this.controls.connectMode)
+                onLinkToggle: () => this.handleLinkToggle(this.keys.connectMode),
+                onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.connectMode, this.controls.connectMode)
             });
             this.initLinkState(this.keys.connectMode, this.controls.connectMode);
             this.container.appendChild(this.controls.connectMode.getElement());
@@ -107,8 +108,11 @@ export class LayerRenderingModule {
                 key: this.keys.waveAlternateFlip,
                 label: 'Alternate Wave Mirror',
                 value: false,
-                onChange: (val) => this.dispatch(this.keys.waveAlternateFlip, val)
+                onChange: (val) => this.dispatch(this.keys.waveAlternateFlip, val),
+                onLinkToggle: () => this.handleLinkToggle(this.keys.waveAlternateFlip),
+                onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.waveAlternateFlip, this.controls.waveAlternateFlip)
             });
+            this.initLinkState(this.keys.waveAlternateFlip, this.controls.waveAlternateFlip);
             this.container.appendChild(this.controls.waveAlternateFlip.getElement());
 
             // KB Spline Params
@@ -147,7 +151,8 @@ export class LayerRenderingModule {
                 this.dispatch(this.keys.colorMethod, val);
                 this.updateVisibility(val);
             },
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.colorMethod, isActive, this.controls.colorMethod)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.colorMethod),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.colorMethod, this.controls.colorMethod)
         });
         this.initLinkState(this.keys.colorMethod, this.controls.colorMethod);
         this.container.appendChild(this.controls.colorMethod.getElement());
@@ -166,7 +171,8 @@ export class LayerRenderingModule {
             options: gradientTypes,
             value: '2-point',
             onChange: (val) => this.dispatch(this.keys.gradientType, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.gradientType, isActive, this.controls.gradientType)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.gradientType),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.gradientType, this.controls.gradientType)
         });
         this.initLinkState(this.keys.gradientType, this.controls.gradientType);
         this.container.appendChild(this.controls.gradientType.getElement());
@@ -177,7 +183,8 @@ export class LayerRenderingModule {
             label: 'Color',
             value: '#ffffff',
             onChange: (val) => this.dispatch(this.keys.color, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.color, isActive, this.controls.color)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.color),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.color, this.controls.color)
         });
         this.initLinkState(this.keys.color, this.controls.color);
         this.container.appendChild(this.controls.color.getElement());
@@ -188,7 +195,8 @@ export class LayerRenderingModule {
             label: 'End Color',
             value: '#000000',
             onChange: (val) => this.dispatch(this.keys.colorEnd, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.colorEnd, isActive, this.controls.colorEnd)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.colorEnd),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.colorEnd, this.controls.colorEnd)
         });
         this.initLinkState(this.keys.colorEnd, this.controls.colorEnd);
         this.container.appendChild(this.controls.colorEnd.getElement());
@@ -199,7 +207,8 @@ export class LayerRenderingModule {
             label: 'Gradient Editor',
             value: [],
             onChange: (val) => this.dispatch(this.keys.gradientStops, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.gradientStops, isActive, this.controls.gradientStops)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.gradientStops),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.gradientStops, this.controls.gradientStops)
         });
         this.initLinkState(this.keys.gradientStops, this.controls.gradientStops);
         this.container.appendChild(this.controls.gradientStops.getElement());
@@ -232,7 +241,8 @@ export class LayerRenderingModule {
             options: blendModes,
             value: 'source-over',
             onChange: (val) => this.dispatch(this.keys.blendMode, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.blendMode, isActive, this.controls.blendMode)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.blendMode),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.blendMode, this.controls.blendMode)
         });
         this.initLinkState(this.keys.blendMode, this.controls.blendMode);
         this.container.appendChild(this.controls.blendMode.getElement());
@@ -254,7 +264,7 @@ export class LayerRenderingModule {
             label: 'Anti-aliasing',
             value: true,
             onChange: (val) => this.dispatch(this.keys.antiAlias, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.antiAlias, isActive, this.controls.antiAlias)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.antiAlias)
         });
         this.initLinkState(this.keys.antiAlias, this.controls.antiAlias);
         this.container.appendChild(this.controls.antiAlias.getElement());
@@ -311,24 +321,42 @@ export class LayerRenderingModule {
         this.controls.splineAlpha.container.style.display = isCatmull ? 'flex' : 'none';
     }
 
-    handleLinkToggle(key, isActive, control) {
-        const myKey = getLinkKey(key, this.roseId);
-        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = getLinkKey(key, otherRoseId);
+    handleLinkToggle(key) {
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const linked = linkManager.toggleLink(myKey, otherKey);
-            if (linked !== isActive) {
-                control.setLinkActive(linked);
+            if (linkManager.isTriLinked(keyA, keyB, keyH)) {
+                // Currently 3-way: single-click removes ALL links (works from any panel)
+                linkManager.removeLink(keyA, keyB);
+                linkManager.removeLink(keyA, keyH);
+                linkManager.removeLink(keyB, keyH);
+                linkManager.notifyListeners();
+            } else if (this.roseId !== 'hybrid') {
+                // From A/B panel only: toggle 2-way A↔B
+                linkManager.toggleLink(keyA, keyB);
             }
+            // From Hybrid when not tri-linked: no-op (use double-click to activate 3-way)
+        });
+    }
+
+    handleTriLinkToggle(key, control) {
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
+
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            linkManager.toggleTriLink(keyA, keyB, keyH);
         });
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (linkManager.isLinked(myKey)) {
-                control.setLinkActive(true);
+            const level = linkManager.getLinkLevel(myKey);
+            if (level > 0) {
+                control.setLinkLevel(level);
             }
         });
     }
@@ -342,7 +370,8 @@ export class LayerRenderingModule {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, paramGui)
+            onLinkToggle: () => this.handleLinkToggle(key),
+            onTriLinkToggle: () => this.handleTriLinkToggle(key, paramGui)
         });
 
         this.initLinkState(key, paramGui);
@@ -364,7 +393,13 @@ export class LayerRenderingModule {
                 let instance = control;
                 if (control.instance) instance = control.instance;
 
-                if (instance && typeof instance.setLinkActive === 'function') {
+                if (instance && typeof instance.setLinkLevel === 'function') {
+                    const paramKey = this.keys[k];
+                    if (paramKey) {
+                        const fullKey = getLinkKey(paramKey, this.roseId);
+                        instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
+                    }
+                } else if (instance && typeof instance.setLinkActive === 'function') {
                     const paramKey = this.keys[k];
                     if (paramKey) {
                         const fullKey = getLinkKey(paramKey, this.roseId);

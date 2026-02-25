@@ -51,16 +51,13 @@ export class CoreParamsSection {
             onChange: (val) => {
                 dispatchDeep('curveType', val, this.roseId);
             },
-            onLinkToggle: (isActive) => {
+            onLinkToggle: () => {
                 const myKey = getLinkKey('curveType', this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey('curveType', otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        this.curveTypeSelect.setLinkActive(linked);
-                    }
+                    linkManager.toggleLink(myKey, otherKey);
                 });
             }
         });
@@ -137,16 +134,13 @@ export class CoreParamsSection {
             onChange: (val) => {
                 dispatchDeep(key, val, this.roseId);
             },
-            onLinkToggle: (isActive) => {
+            onLinkToggle: () => {
                 const myKey = getLinkKey(key, this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        toggle.setLinkActive(linked);
-                    }
+                    linkManager.toggleLink(myKey, otherKey);
                 });
             }
         });
@@ -179,16 +173,13 @@ export class CoreParamsSection {
             onChange: (val) => {
                 dispatchDeep(key, val, this.roseId);
             },
-            onLinkToggle: (isActive) => {
+            onLinkToggle: () => {
                 const myKey = getLinkKey(key, this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        paramGui.setLinkActive(linked);
-                    }
+                    linkManager.toggleLink(myKey, otherKey);
                 });
             },
             allowFloat: allowFloat
@@ -217,10 +208,12 @@ export class CoreParamsSection {
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             Object.keys(this.controls).forEach(key => {
                 const control = this.controls[key];
-                if (control && typeof control.setLinkActive === 'function') {
+                if (control && typeof control.setLinkLevel === 'function') {
                     const fullKey = getLinkKey(key, this.roseId);
-                    const isLinked = linkManager.isLinked(fullKey);
-                    control.setLinkActive(isLinked);
+                    control.setLinkLevel(linkManager.getLinkLevel(fullKey));
+                } else if (control && typeof control.setLinkActive === 'function') {
+                    const fullKey = getLinkKey(key, this.roseId);
+                    control.setLinkActive(linkManager.isLinked(fullKey));
                 }
             });
         });

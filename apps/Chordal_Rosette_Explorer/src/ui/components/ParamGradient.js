@@ -1,6 +1,7 @@
 import { createElement } from '../utils/dom.js';
 import { ColorUtils } from '../../engine/math/ColorUtils.js';
 import { SimpleColorPicker } from './SimpleColorPicker.js';
+import { LINK_ICON_2, LINK_ICON_3 } from './linkIcons.js';
 
 export class ParamGradient {
     /**
@@ -11,10 +12,11 @@ export class ParamGradient {
      * @param {Function} props.onChange - Callback with new stops array
      * @param {Function} props.onLinkToggle - Optional link toggle callback
      */
-    constructor({ key, label, value, onChange, onLinkToggle }) {
+    constructor({ key, label, value, onChange, onLinkToggle, onTriLinkToggle }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
+        this.onTriLinkToggle = onTriLinkToggle;
 
         // Internal State
         // Ensure default alpha if missing
@@ -30,6 +32,7 @@ export class ParamGradient {
         }));
 
         this.isLinked = false;
+        this.linkLevel = 0;
         this.draggedStopIndex = -1;
         this.dragStartX = 0;
         this.isDragging = false;
@@ -58,10 +61,15 @@ export class ParamGradient {
         this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
-        this.linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+        this.linkBtn.innerHTML = LINK_ICON_2;
 
-        if (this.onLinkToggle) {
+        if (this.onLinkToggle || this.onTriLinkToggle) {
             this.linkBtn.addEventListener('click', () => this.toggleLink());
+            this.linkBtn.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.onTriLinkToggle) this.onTriLinkToggle();
+            });
         } else {
             this.linkBtn.classList.add('invisible');
         }
@@ -381,9 +389,7 @@ export class ParamGradient {
 
     getElement() { return this.container; }
     toggleLink() {
-        this.isLinked = !this.isLinked;
-        this.updateLinkVisuals();
-        if (this.onLinkToggle) this.onLinkToggle(this.isLinked);
+        if (this.onLinkToggle) this.onLinkToggle();
     }
     updateLinkVisuals() {
         if (this.isLinked) {
@@ -395,9 +401,19 @@ export class ParamGradient {
         }
     }
     setLinkActive(isActive) {
-        if (this.isLinked !== isActive) {
-            this.isLinked = isActive;
-            this.updateLinkVisuals();
+        this.setLinkLevel(isActive ? 2 : 0);
+    }
+
+    setLinkLevel(level) {
+        this.linkLevel = level;
+        this.isLinked = level > 0;
+        this.linkBtn.innerHTML = (level === 3) ? LINK_ICON_3 : LINK_ICON_2;
+        if (level > 0) {
+            this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
+        } else {
+            this.linkBtn.classList.add('text-gray-500', 'border-transparent');
+            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
         }
     }
 }

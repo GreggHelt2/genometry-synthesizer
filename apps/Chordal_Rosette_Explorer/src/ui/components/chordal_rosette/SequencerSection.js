@@ -52,16 +52,13 @@ export class SequencerSection {
             onChange: (val) => {
                 dispatchDeep('sequencerType', val, this.roseId);
             },
-            onLinkToggle: (isActive) => {
+            onLinkToggle: () => {
                 const myKey = getLinkKey('sequencerType', this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey('sequencerType', otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        this.sequencerSelect.setLinkActive(linked);
-                    }
+                    linkManager.toggleLink(myKey, otherKey);
                 });
             }
         });
@@ -101,16 +98,13 @@ export class SequencerSection {
             onChange: (val) => {
                 dispatchDeep(key, val, this.roseId);
             },
-            onLinkToggle: (isActive) => {
+            onLinkToggle: () => {
                 const myKey = getLinkKey(key, this.roseId);
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
                 import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    const linked = linkManager.toggleLink(myKey, otherKey);
-                    if (linked !== isActive) {
-                        paramGui.setLinkActive(linked);
-                    }
+                    linkManager.toggleLink(myKey, otherKey);
                 });
             }
         });
@@ -138,13 +132,13 @@ export class SequencerSection {
             // Sequencer type select
             if (this.controls.sequencerType) {
                 const seqKey = getLinkKey('sequencerType', this.roseId);
-                this.controls.sequencerType.setLinkActive(linkManager.isLinked(seqKey));
+                this.controls.sequencerType.setLinkLevel(linkManager.getLinkLevel(seqKey));
             }
 
             // Static controls
             if (this.controls.totalDivs) {
                 const fullKey = getLinkKey('totalDivs', this.roseId);
-                this.controls.totalDivs.setLinkActive(linkManager.isLinked(fullKey));
+                this.controls.totalDivs.setLinkLevel(linkManager.getLinkLevel(fullKey));
             }
 
             // Dynamic controls
@@ -153,7 +147,7 @@ export class SequencerSection {
                     const control = this.sequencerControls[key];
                     if (control && control.instance) {
                         const fullKey = getLinkKey(key, this.roseId);
-                        control.instance.setLinkActive(linkManager.isLinked(fullKey));
+                        control.instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
                     }
                 });
             }

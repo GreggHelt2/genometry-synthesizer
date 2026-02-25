@@ -2,14 +2,16 @@ import { createElement } from '../utils/dom.js';
 import { WaveformSelector } from './WaveformSelector.js';
 import { AnimationController } from '../../logic/AnimationController.js';
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+import { LINK_ICON_2, LINK_ICON_3 } from './linkIcons.js';
 
 
 
 export class ParamNumber {
-    constructor({ key, label, min, max, step, value, onChange, onLinkToggle, hardLimits }) {
+    constructor({ key, label, min, max, step, value, onChange, onLinkToggle, onTriLinkToggle, hardLimits }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
+        this.onTriLinkToggle = onTriLinkToggle;
         this.min = min;
         this.max = max;
         this.step = step;
@@ -18,6 +20,7 @@ export class ParamNumber {
         // Internal state tracking to avoid echo-back loops
         this.lastValue = value;
         this.isLinked = false;
+        this.linkLevel = 0;
 
         this.animationController = new AnimationController((val) => {
             // Callback from animation loop
@@ -186,12 +189,18 @@ export class ParamNumber {
         this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
-        // Link Icon (Chain)
-        this.linkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+        this.linkBtn.innerHTML = LINK_ICON_2;
 
-        this.linkBtn.addEventListener('click', () => {
-            this.toggleLink();
-        });
+        if (this.onLinkToggle || this.onTriLinkToggle) {
+            this.linkBtn.addEventListener('click', () => {
+                if (this.onLinkToggle) this.toggleLink();
+            });
+            this.linkBtn.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.onTriLinkToggle) this.onTriLinkToggle();
+            });
+        }
 
         // 5. Play/Pause Button (Moved to Main Row)
         this.playBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
@@ -336,25 +345,28 @@ export class ParamNumber {
     }
 
     toggleLink() {
-        this.isLinked = !this.isLinked;
-        this.updateLinkVisuals();
+        // Don't manage state here — linkManager notifications handle visuals via setLinkLevel
         if (this.onLinkToggle) {
-            this.onLinkToggle(this.isLinked);
+            this.onLinkToggle();
         }
     }
 
     setLinkActive(isActive) {
-        this.isLinked = isActive;
-        this.updateLinkVisuals();
+        this.setLinkLevel(isActive ? 2 : 0);
     }
 
-    updateLinkVisuals() {
-        if (this.isLinked) {
-            this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
-            this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
-        } else {
-            this.linkBtn.classList.add('text-gray-500', 'border-transparent');
-            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+    setLinkLevel(level) {
+        this.linkLevel = level;
+        this.isLinked = level > 0;
+        if (this.linkBtn) {
+            this.linkBtn.innerHTML = (level === 3) ? LINK_ICON_3 : LINK_ICON_2;
+            if (level > 0) {
+                this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
+                this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
+            } else {
+                this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+                this.linkBtn.classList.add('text-gray-500', 'border-transparent');
+            }
         }
     }
 
@@ -472,18 +484,8 @@ export class ParamNumber {
     // ... (rest of methods)
 
     updateLinkVisuals() {
-        if (!this.linkBtn) return;
-
-        // Visual toggle: Green vs Gray
-        if (this.isLinked) {
-            this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
-            this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
-        } else {
-            this.linkBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
-            this.linkBtn.classList.add('text-gray-500', 'border-transparent');
-        }
-
-
+        // Delegate to setLinkLevel for consistency
+        this.setLinkLevel(this.linkLevel);
     }
 
     toggleAnimationPanel() {

@@ -203,6 +203,53 @@ export class LinkManager {
         return this.links.has(key) && this.links.get(key).size > 0;
     }
 
+    /**
+     * Toggle three-way linking between A, B, and Hybrid.
+     * If all 3 edges exist, removes them all. Otherwise, creates all 3.
+     * @returns {boolean} true if now tri-linked, false if unlinked
+     */
+    toggleTriLink(keyA, keyB, keyH) {
+        if (this.isTriLinked(keyA, keyB, keyH)) {
+            // Remove all 3 edges
+            this.removeLink(keyA, keyB);
+            this.removeLink(keyA, keyH);
+            this.removeLink(keyB, keyH);
+            return false;
+        } else {
+            // Create all 3 edges and sync values
+            this.addLink(keyA, keyB);
+            this.addLink(keyA, keyH);
+            this.addLink(keyB, keyH);
+            // Sync all to keyA's value
+            this.sync(keyA, keyB);
+            this.sync(keyA, keyH);
+            return true;
+        }
+    }
+
+    /**
+     * Check if all three keys are mutually linked (3 edges).
+     */
+    isTriLinked(keyA, keyB, keyH) {
+        return this.areLinked(keyA, keyB)
+            && this.areLinked(keyA, keyH)
+            && this.areLinked(keyB, keyH);
+    }
+
+    /**
+     * Get the link level for a key: 0 (unlinked), 2 (pairwise), or 3 (tri-linked).
+     * Returns 3 if the key has 2+ neighbors (i.e. connected to both others).
+     * Returns 2 if the key has exactly 1 neighbor.
+     * Returns 0 if not linked at all.
+     */
+    getLinkLevel(key) {
+        if (!this.links.has(key)) return 0;
+        const size = this.links.get(key).size;
+        if (size >= 2) return 3;
+        if (size === 1) return 2;
+        return 0;
+    }
+
     // --- Persistence Methods ---
 
     /**

@@ -36,6 +36,11 @@ export class InterpolationPanel extends Panel {
         this.renderContent();
         store.subscribe(this.updateUI.bind(this));
 
+        // Subscribe to linkManager for cross-panel link visual updates
+        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            linkManager.subscribe(this.updateLinkVisuals.bind(this));
+        });
+
         // Initial UI update to sync with default state
         this.updateUI(store.getState());
     }
@@ -366,5 +371,11 @@ export class InterpolationPanel extends Panel {
                 param.setAnimationConfig(savedState[param.key]);
             }
         });
+    }
+
+    updateLinkVisuals() {
+        if (this.appearanceSection && this.appearanceSection.updateLinkVisuals) {
+            this.appearanceSection.updateLinkVisuals();
+        }
     }
 }

@@ -51,7 +51,7 @@ export class CosetVizSection {
             label: 'Show All Cosets',
             value: false,
             onChange: (val) => this.dispatch('showAllCosets', val),
-            onLinkToggle: (isActive) => this.handleLinkToggle('showAllCosets', isActive, this.controls.showAllCosets)
+            onLinkToggle: () => this.handleLinkToggle('showAllCosets')
         });
         this.initLinkState('showAllCosets', this.controls.showAllCosets);
         this.accordion.append(this.controls.showAllCosets.getElement());
@@ -90,7 +90,7 @@ export class CosetVizSection {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, paramGui)
+            onLinkToggle: () => this.handleLinkToggle(key)
         });
 
         this.initLinkState(key, paramGui);
@@ -105,24 +105,22 @@ export class CosetVizSection {
         };
     }
 
-    handleLinkToggle(key, isActive, control) {
+    handleLinkToggle(key) {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const linked = linkManager.toggleLink(myKey, otherKey);
-            if (linked !== isActive) {
-                control.setLinkActive(linked);
-            }
+            linkManager.toggleLink(myKey, otherKey);
         });
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (linkManager.isLinked(myKey)) {
-                control.setLinkActive(true);
+            const level = linkManager.getLinkLevel(myKey);
+            if (level > 0) {
+                control.setLinkLevel(level);
             }
         });
     }
@@ -137,7 +135,10 @@ export class CosetVizSection {
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
             Object.values(linkableControls).forEach(({ stateKey, control }) => {
-                if (control && typeof control.setLinkActive === 'function') {
+                if (control && typeof control.setLinkLevel === 'function') {
+                    const fullKey = getLinkKey(stateKey, this.roseId);
+                    control.setLinkLevel(linkManager.getLinkLevel(fullKey));
+                } else if (control && typeof control.setLinkActive === 'function') {
                     const fullKey = getLinkKey(stateKey, this.roseId);
                     control.setLinkActive(linkManager.isLinked(fullKey));
                 }

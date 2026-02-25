@@ -59,7 +59,7 @@ export class GlobalRenderingModule {
             label: 'Auto Scale',
             value: false,
             onChange: (val) => this.dispatch(this.keys.autoScale, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.autoScale, isActive, this.controls.autoScale)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.autoScale)
         });
         this.initLinkState(this.keys.autoScale, this.controls.autoScale);
         this.container.appendChild(this.controls.autoScale.getElement());
@@ -70,7 +70,7 @@ export class GlobalRenderingModule {
             label: 'Scale Line Width',
             value: true,
             onChange: (val) => this.dispatch(this.keys.scaleLineWidth, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.scaleLineWidth, isActive, this.controls.scaleLineWidth)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.scaleLineWidth)
         });
         this.initLinkState(this.keys.scaleLineWidth, this.controls.scaleLineWidth);
         this.container.appendChild(this.controls.scaleLineWidth.getElement());
@@ -120,7 +120,7 @@ export class GlobalRenderingModule {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, paramGui)
+            onLinkToggle: () => this.handleLinkToggle(key)
         });
 
         this.initLinkState(key, paramGui);
@@ -135,24 +135,22 @@ export class GlobalRenderingModule {
         };
     }
 
-    handleLinkToggle(key, isActive, control) {
+    handleLinkToggle(key) {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const linked = linkManager.toggleLink(myKey, otherKey);
-            if (linked !== isActive) {
-                control.setLinkActive(linked);
-            }
+            linkManager.toggleLink(myKey, otherKey);
         });
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (linkManager.isLinked(myKey)) {
-                control.setLinkActive(true);
+            const level = linkManager.getLinkLevel(myKey);
+            if (level > 0) {
+                control.setLinkLevel(level);
             }
         });
     }
@@ -164,7 +162,13 @@ export class GlobalRenderingModule {
                 let instance = control;
                 if (control.instance) instance = control.instance;
 
-                if (instance && typeof instance.setLinkActive === 'function') {
+                if (instance && typeof instance.setLinkLevel === 'function') {
+                    const paramKey = this.keys[k];
+                    if (paramKey) {
+                        const fullKey = getLinkKey(paramKey, this.roseId);
+                        instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
+                    }
+                } else if (instance && typeof instance.setLinkActive === 'function') {
                     const paramKey = this.keys[k];
                     if (paramKey) {
                         const fullKey = getLinkKey(paramKey, this.roseId);

@@ -499,4 +499,17 @@ export class HybridAppearanceSection {
         if (this.baseCurveEyeA) this.baseCurveEyeA.setActive(flatParams.showBaseCurveA || false);
         if (this.baseCurveEyeB) this.baseCurveEyeB.setActive(flatParams.showBaseCurveB || false);
     }
+
+    updateLinkVisuals() {
+        const modules = [
+            this.hybridVizModule,
+            this.underlayModuleA, this.underlayModuleB,
+            this.baseCurveModuleA, this.baseCurveModuleB,
+            this.fillModule, this.vertexModule,
+            this.interpPathsModule, this.generalModule
+        ];
+        modules.forEach(m => {
+            if (m && m.updateLinkVisuals) m.updateLinkVisuals();
+        });
+    }
 }

@@ -182,24 +182,22 @@ export class AppearanceSection {
         this.generalAccordion.append(this.generalModule.container);
     }
 
-    handleLinkToggle(key, isActive, control) {
+    handleLinkToggle(key) {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
 
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const linked = linkManager.toggleLink(myKey, otherKey);
-            if (linked !== isActive) {
-                control.setLinkActive(linked);
-            }
+            linkManager.toggleLink(myKey, otherKey);
         });
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
         import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            if (linkManager.isLinked(myKey)) {
-                control.setLinkActive(true);
+            const level = linkManager.getLinkLevel(myKey);
+            if (level > 0) {
+                control.setLinkLevel(level);
             }
         });
     }
@@ -256,7 +254,7 @@ export class AppearanceSection {
             onChange: (val) => {
                 dispatchDeep(key, val, this.roseId);
             },
-            onLinkToggle: (isActive) => this.handleLinkToggle(key, isActive, control)
+            onLinkToggle: () => this.handleLinkToggle(key)
         });
 
         this.initLinkState(key, control);
