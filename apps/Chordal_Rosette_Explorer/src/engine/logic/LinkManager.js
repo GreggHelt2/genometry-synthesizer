@@ -287,6 +287,12 @@ export class LinkManager {
             }
         });
     }
+
+    /** Remove all links and notify listeners */
+    clearAll() {
+        this.links.clear();
+        this.notifyListeners();
+    }
 }
 
 export const linkManager = new LinkManager();

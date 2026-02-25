@@ -96,6 +96,13 @@ class Store {
         this.isDirty = true;
         this.notify();
     }
+
+    /** Reset all state to factory defaults */
+    reset() {
+        this.state = JSON.parse(JSON.stringify(DEFAULTS));
+        this.isDirty = true;
+        this.notify({ type: 'RESET' });
+    }
 }
 
 // Singleton instance

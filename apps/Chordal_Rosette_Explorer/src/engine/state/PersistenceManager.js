@@ -222,6 +222,16 @@ export class PersistenceManager {
         }
     }
 
+    /** Clear auto-saved state from localStorage */
+    clearAutoSave() {
+        localStorage.removeItem(STORAGE_KEY);
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+        }
+        console.log('[PersistenceManager] Auto-save cleared.');
+    }
+
     async listSnapshots() {
         return await this.dbAdapter.getAllMetadata();
     }

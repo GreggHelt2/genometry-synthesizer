@@ -273,6 +273,21 @@ class App {
             }
         };
 
+        // New (Reset) Button
+        const newBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
+            textContent: 'New',
+            title: 'Reset all parameters to defaults'
+        });
+        newBtn.onclick = () => {
+            if (!confirm('Reset all parameters to defaults? Unsaved changes will be lost.')) return;
+            store.reset();
+            import('./engine/logic/LinkManager.js').then(({ linkManager }) => {
+                linkManager.clearAll();
+            });
+            persistenceManager.clearAutoSave();
+        };
+
+        snapControls.appendChild(newBtn);
         snapControls.appendChild(saveGroup);
         snapControls.appendChild(sidebarBtn);
         header.appendChild(snapControls);
