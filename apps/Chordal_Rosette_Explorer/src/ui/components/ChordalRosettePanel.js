@@ -272,5 +272,8 @@ export class ChordalRosettePanel extends Panel {
         if (this.cosetVizSection && this.cosetVizSection.updateLinkVisuals) {
             this.cosetVizSection.updateLinkVisuals();
         }
+        if (this.specialPointsSection && this.specialPointsSection.updateLinkVisuals) {
+            this.specialPointsSection.updateLinkVisuals();
+        }
     }
 }

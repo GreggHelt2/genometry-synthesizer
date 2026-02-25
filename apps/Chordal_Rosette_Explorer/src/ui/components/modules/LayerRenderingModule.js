@@ -176,8 +176,10 @@ export class LayerRenderingModule {
             key: this.keys.color,
             label: 'Color',
             value: '#ffffff',
-            onChange: (val) => this.dispatch(this.keys.color, val)
+            onChange: (val) => this.dispatch(this.keys.color, val),
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.color, isActive, this.controls.color)
         });
+        this.initLinkState(this.keys.color, this.controls.color);
         this.container.appendChild(this.controls.color.getElement());
 
         // 4. End Color (Hidden for solid)
@@ -185,8 +187,10 @@ export class LayerRenderingModule {
             key: this.keys.colorEnd,
             label: 'End Color',
             value: '#000000',
-            onChange: (val) => this.dispatch(this.keys.colorEnd, val)
+            onChange: (val) => this.dispatch(this.keys.colorEnd, val),
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.colorEnd, isActive, this.controls.colorEnd)
         });
+        this.initLinkState(this.keys.colorEnd, this.controls.colorEnd);
         this.container.appendChild(this.controls.colorEnd.getElement());
 
         // 4b. Custom Gradient (Grapick)
@@ -194,8 +198,10 @@ export class LayerRenderingModule {
             key: this.keys.gradientStops,
             label: 'Gradient Editor',
             value: [],
-            onChange: (val) => this.dispatch(this.keys.gradientStops, val)
+            onChange: (val) => this.dispatch(this.keys.gradientStops, val),
+            onLinkToggle: (isActive) => this.handleLinkToggle(this.keys.gradientStops, isActive, this.controls.gradientStops)
         });
+        this.initLinkState(this.keys.gradientStops, this.controls.gradientStops);
         this.container.appendChild(this.controls.gradientStops.getElement());
 
 

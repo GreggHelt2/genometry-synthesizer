@@ -77,8 +77,10 @@ export class SpecialPointsSection {
             key: 'zeroPointsColor',
             label: 'Color',
             value: '#FF4444',
-            onChange: (val) => this.dispatch('zeroPointsColor', val)
+            onChange: (val) => this.dispatch('zeroPointsColor', val),
+            onLinkToggle: (isActive) => this.handleLinkToggle('zeroPointsColor', isActive, this.controls.zeroPointsColor)
         });
+        this.initLinkState('zeroPointsColor', this.controls.zeroPointsColor);
         this.accordion.append(this.controls.zeroPointsColor.getElement());
 
         this.controls.zeroPointsSize = new ParamNumber({
@@ -112,8 +114,10 @@ export class SpecialPointsSection {
             key: 'doublePointsColor',
             label: 'Color',
             value: '#FFD700',
-            onChange: (val) => this.dispatch('doublePointsColor', val)
+            onChange: (val) => this.dispatch('doublePointsColor', val),
+            onLinkToggle: (isActive) => this.handleLinkToggle('doublePointsColor', isActive, this.controls.doublePointsColor)
         });
+        this.initLinkState('doublePointsColor', this.controls.doublePointsColor);
         this.accordion.append(this.controls.doublePointsColor.getElement());
 
         this.controls.doublePointsSize = new ParamNumber({
@@ -147,8 +151,10 @@ export class SpecialPointsSection {
             key: 'boundaryPointsColor',
             label: 'Color',
             value: '#44FF44',
-            onChange: (val) => this.dispatch('boundaryPointsColor', val)
+            onChange: (val) => this.dispatch('boundaryPointsColor', val),
+            onLinkToggle: (isActive) => this.handleLinkToggle('boundaryPointsColor', isActive, this.controls.boundaryPointsColor)
         });
+        this.initLinkState('boundaryPointsColor', this.controls.boundaryPointsColor);
         this.accordion.append(this.controls.boundaryPointsColor.getElement());
 
         this.controls.boundaryPointsSize = new ParamNumber({
@@ -186,6 +192,40 @@ export class SpecialPointsSection {
 
     dispatch(key, val) {
         dispatchDeep(key, val, this.roseId);
+    }
+
+    handleLinkToggle(key, isActive, control) {
+        const myKey = getLinkKey(key, this.roseId);
+        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+        const otherKey = getLinkKey(key, otherRoseId);
+
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const linked = linkManager.toggleLink(myKey, otherKey);
+            if (linked !== isActive) {
+                control.setLinkActive(linked);
+            }
+        });
+    }
+
+    initLinkState(key, control) {
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = getLinkKey(key, this.roseId);
+            if (linkManager.isLinked(myKey)) {
+                control.setLinkActive(true);
+            }
+        });
+    }
+
+    updateLinkVisuals() {
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            Object.keys(this.controls).forEach(key => {
+                const control = this.controls[key];
+                if (control && typeof control.setLinkActive === 'function') {
+                    const fullKey = getLinkKey(key, this.roseId);
+                    control.setLinkActive(linkManager.isLinked(fullKey));
+                }
+            });
+        });
     }
 
     /**
