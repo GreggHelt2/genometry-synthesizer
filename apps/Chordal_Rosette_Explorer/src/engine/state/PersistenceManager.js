@@ -232,7 +232,7 @@ export class PersistenceManager {
         const allSnapshots = await this.dbAdapter.getAllMetadata();
         const exportData = {
             exportedAt: new Date().toISOString(),
-            appVersion: '4.2',
+            appVersion: '4.9',
             snapshots: allSnapshots.map(snap => {
                 // Strip the local auto-increment id; it's meaningless outside this browser
                 const { id, ...rest } = snap;
