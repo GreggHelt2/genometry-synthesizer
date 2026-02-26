@@ -222,6 +222,79 @@ export class PersistenceManager {
         }
     }
 
+    // --- Snapshot Import/Export API ---
+
+    /**
+     * Export all snapshots from IndexedDB as a JSON file download.
+     * @returns {Promise<number>} Count of exported snapshots.
+     */
+    async exportAllSnapshots() {
+        const allSnapshots = await this.dbAdapter.getAllMetadata();
+        const exportData = {
+            exportedAt: new Date().toISOString(),
+            appVersion: '4.2',
+            snapshots: allSnapshots.map(snap => {
+                // Strip the local auto-increment id; it's meaningless outside this browser
+                const { id, ...rest } = snap;
+                return rest;
+            })
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chordal_rosette_snapshots_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        const count = exportData.snapshots.length;
+        console.log(`[PersistenceManager] Exported ${count} snapshots.`);
+        return count;
+    }
+
+    /**
+     * Import snapshots from a parsed JSON object. Skips snapshots whose name
+     * already exists in IndexedDB.
+     * @param {object} jsonData - Parsed JSON with { snapshots: [...] }
+     * @returns {Promise<{ total: number, added: number, skipped: number }>}
+     */
+    async importSnapshots(jsonData) {
+        if (!jsonData || !Array.isArray(jsonData.snapshots)) {
+            throw new Error('Invalid snapshot file: expected { snapshots: [...] }');
+        }
+
+        const snapshots = jsonData.snapshots;
+        let added = 0;
+        let skipped = 0;
+
+        for (const snap of snapshots) {
+            if (!snap.name) {
+                console.warn('[PersistenceManager] Skipping snapshot with no name.');
+                skipped++;
+                continue;
+            }
+
+            const exists = await this.dbAdapter.nameExists(snap.name);
+            if (exists) {
+                console.log(`[PersistenceManager] Skipping '${snap.name}' (name conflict).`);
+                skipped++;
+                continue;
+            }
+
+            // Strip any stale id from the imported data so IndexedDB auto-generates a new one
+            const { id, ...cleanSnap } = snap;
+            await this.dbAdapter.save(cleanSnap);
+            added++;
+            console.log(`[PersistenceManager] Imported '${snap.name}'.`);
+        }
+
+        const result = { total: snapshots.length, added, skipped };
+        console.log(`[PersistenceManager] Import complete: ${result.total} total, ${result.added} added, ${result.skipped} skipped.`);
+        return result;
+    }
+
     /** Clear auto-saved state from localStorage */
     clearAutoSave() {
         localStorage.removeItem(STORAGE_KEY);

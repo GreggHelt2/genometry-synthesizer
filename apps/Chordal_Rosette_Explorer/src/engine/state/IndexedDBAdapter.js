@@ -113,6 +113,25 @@ export class IndexedDBAdapter {
     }
 
     /**
+     * Checks if a snapshot with the given name already exists.
+     * Uses getKey for efficiency (doesn't load data).
+     * @param {string} name
+     * @returns {Promise<boolean>}
+     */
+    async nameExists(name) {
+        await this.open();
+        return new Promise((resolve, reject) => {
+            const tx = this.db.transaction([this.storeName], 'readonly');
+            const store = tx.objectStore(this.storeName);
+            const index = store.index('name');
+            const request = index.getKey(name);
+
+            request.onsuccess = () => resolve(request.result !== undefined);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    /**
      * Retrieves all snapshots, but only minimal metadata.
      * returns Array of { id, name, timestamp, tags }
      * We purposefully exclude the heavy 'state' blob for the list view.

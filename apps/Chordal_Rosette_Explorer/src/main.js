@@ -287,7 +287,63 @@ class App {
             persistenceManager.clearAutoSave();
         };
 
+        // Export All Snapshots Button
+        const exportBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
+            textContent: '⬇ Export',
+            title: 'Download all snapshots as JSON'
+        });
+        exportBtn.onclick = async () => {
+            try {
+                const count = await persistenceManager.exportAllSnapshots();
+                const msg = `Exported ${count} snapshot${count !== 1 ? 's' : ''}.`;
+                console.log(`[App] ${msg}`);
+                this.showDiagnostic(msg);
+            } catch (err) {
+                console.error('Export failed:', err);
+                this.showDiagnostic('Export failed: ' + err.message, true);
+            }
+        };
+
+        // Import Snapshots Button
+        const importBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
+            textContent: '⬆ Import',
+            title: 'Load snapshots from JSON file'
+        });
+        importBtn.onclick = () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.style.display = 'none';
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const jsonData = JSON.parse(text);
+                    const result = await persistenceManager.importSnapshots(jsonData);
+
+                    // Refresh sidebar if present
+                    if (this.sidebar) {
+                        const list = await persistenceManager.listSnapshots();
+                        this.sidebar.updateList(list);
+                    }
+
+                    const msg = `Loaded ${result.total} total: ${result.added} added, ${result.skipped} skipped (name conflict).`;
+                    console.log(`[App] ${msg}`);
+                    this.showDiagnostic(msg);
+                } catch (err) {
+                    console.error('Import failed:', err);
+                    this.showDiagnostic('Import failed: ' + err.message, true);
+                }
+                fileInput.remove();
+            };
+            document.body.appendChild(fileInput);
+            fileInput.click();
+        };
+
         snapControls.appendChild(newBtn);
+        snapControls.appendChild(exportBtn);
+        snapControls.appendChild(importBtn);
         snapControls.appendChild(saveGroup);
         snapControls.appendChild(sidebarBtn);
         header.appendChild(snapControls);
@@ -387,8 +443,28 @@ class App {
         });
 
         // 3. Footer Row
-        const footer = createElement('div', 'h-6 bg-gray-900 border-t border-gray-700 flex items-center justify-center text-xs text-gray-500', { textContent: 'Ready' });
-        app.appendChild(footer);
+        this.footer = createElement('div', 'h-6 bg-gray-900 border-t border-gray-700 flex items-center justify-center text-xs text-gray-500', { textContent: 'Ready' });
+        app.appendChild(this.footer);
+    }
+
+    /**
+     * Show a diagnostic message in the footer bar.
+     * Reverts to 'Ready' after a timeout.
+     * @param {string} message
+     * @param {boolean} isError - If true, shows in red
+     */
+    showDiagnostic(message, isError = false) {
+        if (!this.footer) return;
+        this.footer.textContent = message;
+        this.footer.classList.remove('text-gray-500', 'text-green-400', 'text-red-400');
+        this.footer.classList.add(isError ? 'text-red-400' : 'text-green-400');
+
+        clearTimeout(this._diagnosticTimeout);
+        this._diagnosticTimeout = setTimeout(() => {
+            this.footer.textContent = 'Ready';
+            this.footer.classList.remove('text-green-400', 'text-red-400');
+            this.footer.classList.add('text-gray-500');
+        }, 5000);
     }
 
     initRenderer() {
