@@ -17,6 +17,7 @@ export const DEFAULTS = {
             type: 'Rhodonea',
             params: {
                 'Rhodonea': { n: 3, d: 4, A: 200, c: 0, rot: 0 },
+                'Blended Rhodonea': { blend: 0.5, n1: 3, d1: 1, A1: 100, c1: 0, rot1: 0, allowDoubleTrace1: false, n2: 5, d2: 2, A2: 100, c2: 0, rot2: 0, allowDoubleTrace2: false },
                 'Circle': { radius: 100, rot: 0 },
                 'Epitrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
                 'Hypotrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
@@ -164,6 +165,7 @@ export const DEFAULTS = {
             type: 'Rhodonea',
             params: {
                 'Rhodonea': { n: 3, d: 4, A: 200, c: 0, rot: 0 },
+                'Blended Rhodonea': { blend: 0.5, n1: 3, d1: 1, A1: 100, c1: 0, rot1: 0, allowDoubleTrace1: false, n2: 5, d2: 2, A2: 100, c2: 0, rot2: 0, allowDoubleTrace2: false },
                 'Circle': { radius: 100, rot: 0 },
                 'Epitrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
                 'Hypotrochoid': { R: 100, r: 20, d: 50, A: 100, rot: 0 },
