@@ -139,6 +139,7 @@ export const DEFAULTS = {
         },
         rendering: {
             autoScale: false,
+            autoScaleRatio: 0.9,
             scaleLineWidth: true,
             connectMode: 'straight',
             connectDetail: 20,
@@ -287,6 +288,7 @@ export const DEFAULTS = {
         },
         rendering: {
             autoScale: false,
+            autoScaleRatio: 0.9,
             scaleLineWidth: true,
             connectMode: 'straight',
             connectDetail: 20,
@@ -529,6 +531,7 @@ export const DEFAULTS = {
         },
         rendering: {
             autoScale: false,
+            autoScaleRatio: 0.9,
             scaleLineWidth: true,
             connectMode: 'straight',
             connectDetail: 20,

@@ -10,6 +10,7 @@ export class GlobalRenderingModule {
         this.roseId = roseId;
         this.keys = Object.assign({
             autoScale: 'autoScale',
+            autoScaleRatio: 'autoScaleRatio',
             scaleLineWidth: 'scaleLineWidth',
             backgroundOpacity: 'backgroundOpacity',
             backgroundColor: 'backgroundColor'
@@ -63,6 +64,10 @@ export class GlobalRenderingModule {
         });
         this.initLinkState(this.keys.autoScale, this.controls.autoScale);
         this.container.appendChild(this.controls.autoScale.getElement());
+
+        // 1b. Auto Scale Ratio
+        this.controls.autoScaleRatio = this.createSlider(this.keys.autoScaleRatio, 0.5, 1.5, 0.01, 'Auto Scale Ratio');
+        this.container.appendChild(this.controls.autoScaleRatio.container);
 
         // 2. Scale Line Width
         this.controls.scaleLineWidth = new ParamToggle({
@@ -185,6 +190,7 @@ export class GlobalRenderingModule {
 
     update(params) {
         if (this.controls.autoScale) this.controls.autoScale.setValue(params[this.keys.autoScale] || false);
+        if (this.controls.autoScaleRatio) this.controls.autoScaleRatio.instance.setValue(params[this.keys.autoScaleRatio] ?? 0.9);
         if (this.controls.scaleLineWidth) this.controls.scaleLineWidth.setValue(params[this.keys.scaleLineWidth] !== false);
         if (this.controls.backgroundOpacity) this.controls.backgroundOpacity.instance.setValue(params[this.keys.backgroundOpacity] ?? 0);
         if (this.controls.backgroundColor) this.controls.backgroundColor.setValue(params[this.keys.backgroundColor] || '#000000');

@@ -123,6 +123,7 @@ export function flattenRoseParams(roseState) {
 
         // Rendering
         autoScale: rendering.autoScale,
+        autoScaleRatio: rendering.autoScaleRatio,
         scaleLineWidth: rendering.scaleLineWidth,
         connectMode: rendering.connectMode,
         connectDetail: rendering.connectDetail,
@@ -321,6 +322,7 @@ export function flattenHybridParams(hybridState) {
 
         // Rendering
         autoScale: rendering.autoScale,
+        autoScaleRatio: rendering.autoScaleRatio,
         scaleLineWidth: rendering.scaleLineWidth,
         connectMode: rendering.connectMode,
         connectDetail: rendering.connectDetail,
@@ -414,6 +416,7 @@ const FLAT_KEY_TO_PATH = {
 
     // Rendering
     autoScale: ['rendering', 'autoScale'],
+    autoScaleRatio: ['rendering', 'autoScaleRatio'],
     scaleLineWidth: ['rendering', 'scaleLineWidth'],
     connectMode: ['rendering', 'connectMode'],
     connectDetail: ['rendering', 'connectDetail'],
@@ -569,6 +572,7 @@ const HYBRID_FLAT_KEY_TO_PATH = {
 
     // Rendering
     autoScale: ['rendering', 'autoScale'],
+    autoScaleRatio: ['rendering', 'autoScaleRatio'],
     scaleLineWidth: ['rendering', 'scaleLineWidth'],
     connectMode: ['rendering', 'connectMode'],
     connectDetail: ['rendering', 'connectDetail'],

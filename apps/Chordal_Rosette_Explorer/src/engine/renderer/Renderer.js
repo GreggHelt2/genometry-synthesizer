@@ -89,14 +89,15 @@ export class CanvasRenderer {
         return maxExtent;
     }
 
-    setupCamera(maxExtent, autoScale) {
+    setupCamera(maxExtent, autoScale, autoScaleRatio = 0.9) {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.translate(Math.floor(this.width / 2), Math.floor(this.height / 2));
 
         let scale;
         if (autoScale && maxExtent !== null && maxExtent > 0) {
             const canvasRadius = Math.min(this.width, this.height) / 2;
-            const targetRadius = canvasRadius * 0.9;
+            const ratio = (typeof autoScaleRatio === 'number') ? autoScaleRatio : 0.9;
+            const targetRadius = canvasRadius * ratio;
             scale = targetRadius / maxExtent;
             this.ctx.scale(scale, scale);
         } else {
@@ -201,7 +202,7 @@ export class CanvasRenderer {
 
 
         const maxExtent = this.getMaxExtent(renderables);
-        const activeScale = this.setupCamera(maxExtent, roseParams.autoScale);
+        const activeScale = this.setupCamera(maxExtent, roseParams.autoScale, roseParams.autoScaleRatio);
         const lineWidthScale = (roseParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
 
 
@@ -691,7 +692,7 @@ export class CanvasRenderer {
 
         // --- 2. Camera Phase ---
         const maxExtent = this.getMaxExtent(renderables);
-        const activeScale = this.setupCamera(maxExtent, hybridParams.autoScale);
+        const activeScale = this.setupCamera(maxExtent, hybridParams.autoScale, hybridParams.autoScaleRatio);
         const lineWidthScale = (hybridParams.scaleLineWidth !== false) ? 1 : (1 / activeScale);
 
         // --- 3. Draw Phase ---
