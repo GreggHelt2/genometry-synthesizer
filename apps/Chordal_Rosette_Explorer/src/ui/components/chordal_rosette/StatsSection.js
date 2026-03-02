@@ -19,6 +19,35 @@ export class StatsSection {
 
         this.accordion = new Accordion('Info', false, this.handleToggle.bind(this), `${this.roseId}-stats`);
 
+        // Add Camera Button to save canvas
+        const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`;
+        this.accordion.addHeaderAction(cameraSvg, () => {
+            const canvas = this.orchestrator.canvas;
+            if (!canvas) return;
+
+            // Generate filename: {name}_{RosetteA|B}_{timestamp}.png
+            const appNameInput = document.querySelector('input[placeholder="Snapshot Name..."]');
+            const snapName = (appNameInput && appNameInput.value.trim() !== '') ? appNameInput.value.trim() : 'untitled';
+            const timestamp = new Date().toISOString().replace(/T/, ':').replace(/\..+/, '').replace(/-/g, '-').replace(/:/g, '-'); // Fallback if app isn't ready, but let's use the explicit formatting
+
+            // Format time: YYYY-MM-DD:HH-mm-ss
+            const now = new Date();
+            const yy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mnn = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${yy}-${mm}-${dd}:${hh}-${mnn}-${ss}`;
+
+            const filename = `${snapName}_${this.roseId === 'rosetteA' ? 'RosetteA' : 'RosetteB'}_${timeStr}.png`;
+
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }, `Save ${this.roseId === 'rosetteA' ? 'Rosette A' : 'Rosette B'} Image`);
+
         // Register for persistence
         if (orchestrator.registerAccordion) {
             orchestrator.registerAccordion(`${this.roseId}-stats`, this.accordion);

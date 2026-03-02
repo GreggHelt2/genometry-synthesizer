@@ -128,6 +128,24 @@ class App {
 
         // 4. Force Persistence to disk so this becomes the new "Current Session"
         persistenceManager.forceSave();
+
+        // 5. Update Save Input
+        if (this.saveInput) {
+            this.saveInput.value = payload.name;
+        }
+    }
+
+    /** Helper for image downloaded filenames */
+    static getFormattedTimestamp() {
+        // Returns equivalent of YYYY-MM-DD:HH-mm-ss
+        const now = new Date();
+        const yy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mnn = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        return `${yy}-${mm}-${dd}:${hh}-${mnn}-${ss}`;
     }
 
     getCompositeThumbnail() {
@@ -204,13 +222,13 @@ class App {
         const saveGroup = createElement('div', 'flex items-center gap-2 bg-gray-800 rounded p-0.5 border border-gray-700');
 
         // Save Input
-        const saveInput = createElement('input', 'bg-transparent border-none text-xs text-white px-2 py-1 w-32 focus:outline-none placeholder-gray-500', {
+        this.saveInput = createElement('input', 'bg-transparent border-none text-xs text-white px-2 py-1 w-32 focus:outline-none placeholder-gray-500', {
             type: 'text',
             placeholder: 'Snapshot Name...'
         });
 
         // Allow Enter key to save
-        saveInput.addEventListener('keydown', async (e) => {
+        this.saveInput.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter') {
                 saveBtn.click();
             }
@@ -220,7 +238,7 @@ class App {
         const saveBtn = createElement('button', 'px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white transition-colors', { textContent: 'Save' });
         saveBtn.onclick = async () => {
             try {
-                const name = saveInput.value;
+                const name = this.saveInput.value;
                 if (name && name.trim()) {
                     // Capture Thumbnail
                     const thumb = this.getCompositeThumbnail();
@@ -240,7 +258,6 @@ class App {
                     setTimeout(() => {
                         saveBtn.textContent = originalText;
                         saveBtn.classList.remove('text-green-400');
-                        saveInput.value = ''; // Clear input
                     }, 1500);
                 } else {
                     alert('Please enter a snapshot name.');
@@ -251,7 +268,7 @@ class App {
             }
         };
 
-        saveGroup.appendChild(saveInput);
+        saveGroup.appendChild(this.saveInput);
         saveGroup.appendChild(saveBtn);
 
         // Toggle Sidebar Button
@@ -285,6 +302,7 @@ class App {
                 linkManager.clearAll();
             });
             persistenceManager.clearAutoSave();
+            this.saveInput.value = `defaults_${App.getFormattedTimestamp()}`;
         };
 
         // Export All Snapshots Button

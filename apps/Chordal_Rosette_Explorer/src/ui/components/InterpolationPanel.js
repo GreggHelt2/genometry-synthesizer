@@ -79,6 +79,39 @@ export class InterpolationPanel extends Panel {
 
         // Info Accordion
         this.infoAccordion = new Accordion('Hybrid Info', false, this.handleAccordionToggle.bind(this), 'hybrid-info');
+
+        // Add Camera Button to save canvas
+        const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`;
+        this.infoAccordion.addHeaderAction(cameraSvg, () => {
+            const canvas = this.canvas;
+            if (!canvas) return;
+
+            // Generate filename: {name}_Hybrid={weight}_{timestamp}.png
+            const appNameInput = document.querySelector('input[placeholder="Snapshot Name..."]');
+            const snapName = (appNameInput && appNameInput.value.trim() !== '') ? appNameInput.value.trim() : 'untitled';
+
+            // Extract weight
+            const state = store.getState();
+            const weight = (state.hybrid && state.hybrid.mix) ? state.hybrid.mix.weight : 0.5;
+
+            // Format time: YYYY-MM-DD:HH-mm-ss
+            const now = new Date();
+            const yy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mnn = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${yy}-${mm}-${dd}:${hh}-${mnn}-${ss}`;
+
+            const filename = `${snapName}_Hybrid=${weight}_${timeStr}.png`;
+
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }, `Save Hybrid Image`);
+
         this.accordions.set('hybrid-info', this.infoAccordion);
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
