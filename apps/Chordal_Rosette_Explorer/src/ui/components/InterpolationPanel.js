@@ -51,8 +51,8 @@ export class InterpolationPanel extends Panel {
         import('../../engine/state/PersistenceManager.js').then(({ persistenceManager }) => {
             persistenceManager.save();
         });
-        // If Hybrid Info accordion re-opened and histogram is dirty, update now
-        if (isOpen && id === 'hybrid-info' && this._histogramDirty && this._lastHistogramArgs) {
+        // If Chord Selection accordion re-opened and histogram is dirty, update now
+        if (isOpen && id === 'hybrid-chord-analysis' && this._histogramDirty && this._lastHistogramArgs) {
             this._updateHistogram(...this._lastHistogramArgs);
         }
     }
@@ -116,14 +116,32 @@ export class InterpolationPanel extends Panel {
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
 
+        this.controlsContainer.appendChild(this.infoAccordion.element);
+
+        // Chord Selection & Analysis Accordion (separate from Hybrid Info)
+        this.chordAccordion = new Accordion('Chord Selection & Analysis', false, this.handleAccordionToggle.bind(this), 'hybrid-chord-analysis');
+        this.accordions.set('hybrid-chord-analysis', this.chordAccordion);
+
         // Chord Length Histogram for hybrid
         this.histogram = new SegmentHistogram({
             chordSelection: this._options.chordSelection || null,
             sourceId: 'histogram-hybrid'
         });
-        this.infoAccordion.append(this.histogram.element);
+        this.chordAccordion.append(this.histogram.element);
 
-        this.controlsContainer.appendChild(this.infoAccordion.element);
+        // Selection Highlight Color Picker
+        const chordSelection = this._options.chordSelection || null;
+        if (chordSelection) {
+            this.selectionColorPicker = new ParamColor({
+                key: 'selectionColor',
+                label: 'Selection Color',
+                value: chordSelection.highlightColor,
+                onChange: (val) => chordSelection.setHighlightColor(val, 'color-picker-hybrid')
+            });
+            this.chordAccordion.append(this.selectionColorPicker.getElement());
+        }
+
+        this.controlsContainer.appendChild(this.chordAccordion.element);
 
         // 1. Animation Section
         this.animationSection = new HybridAnimationSection(this);
@@ -273,10 +291,10 @@ export class InterpolationPanel extends Panel {
             <div class="text-[10px] text-gray-500">${detail}</div>
         `;
 
-        // Update segment length histogram (skip if accordion is collapsed)
+        // Update segment length histogram (skip if chord accordion is collapsed)
         if (this.histogram) {
             this._lastHistogramArgs = [flatA, flatB, flatHybrid, kA, kB];
-            if (!this.infoAccordion.isOpen) {
+            if (!this.chordAccordion.isOpen) {
                 this._histogramDirty = true;
                 return;
             }

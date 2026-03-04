@@ -384,7 +384,7 @@ class App {
                 type: ACTIONS.SET_DEEP,
                 path: ['app', 'segmentHighlight'],
                 value: indices.size > 0
-                    ? { segmentIndices: [...indices], linked, color: '#ffff00' }
+                    ? { segmentIndices: [...indices], linked, color: this.chordSelection.highlightColor }
                     : null,
                 meta: { transient: true }
             });

@@ -5,6 +5,7 @@ import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { gcd, getLinesToClose } from '../../../engine/math/MathOps.js';
 import { generateChordalPolyline } from '../../../engine/math/chordal_rosette.js';
 import { SegmentHistogram } from '../SegmentHistogram.js';
+import { ParamColor } from '../ParamColor.js';
 
 export class StatsSection {
     /**
@@ -56,12 +57,30 @@ export class StatsSection {
         this.content = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.accordion.append(this.content);
 
+        // Chord Selection & Analysis Accordion (separate from Info)
+        this.chordAccordion = new Accordion('Chord Selection & Analysis', false, this.handleChordToggle.bind(this), `${this.roseId}-chord-analysis`);
+        if (orchestrator.registerAccordion) {
+            orchestrator.registerAccordion(`${this.roseId}-chord-analysis`, this.chordAccordion);
+        }
+
         // Chord Length Histogram
         this.histogram = new SegmentHistogram({
             chordSelection: options.chordSelection || null,
             sourceId: `histogram-${roseId}`
         });
-        this.accordion.append(this.histogram.element);
+        this.chordAccordion.append(this.histogram.element);
+
+        // Selection Highlight Color Picker
+        this._chordSelection = options.chordSelection || null;
+        if (this._chordSelection) {
+            this.selectionColorPicker = new ParamColor({
+                key: 'selectionColor',
+                label: 'Selection Color',
+                value: this._chordSelection.highlightColor,
+                onChange: (val) => this._chordSelection.setHighlightColor(val, `color-picker-${roseId}`)
+            });
+            this.chordAccordion.append(this.selectionColorPicker.getElement());
+        }
 
         // Deferred histogram update state
         this._histogramDirty = false;
@@ -74,6 +93,12 @@ export class StatsSection {
         if (this.orchestrator.handleAccordionToggle) {
             this.orchestrator.handleAccordionToggle(isOpen, id);
         }
+    }
+
+    handleChordToggle(isOpen, id) {
+        if (this.orchestrator.handleAccordionToggle) {
+            this.orchestrator.handleAccordionToggle(isOpen, id);
+        }
         // If re-opened and histogram is dirty, update now
         if (isOpen && this._histogramDirty && this._lastParams) {
             this._updateHistogram(this._lastParams, this._lastK);
@@ -81,7 +106,13 @@ export class StatsSection {
     }
 
     get element() {
-        return this.accordion.element;
+        // Return a fragment-like wrapper containing both accordions
+        if (!this._wrapper) {
+            this._wrapper = createElement('div', '');
+            this._wrapper.appendChild(this.accordion.element);
+            this._wrapper.appendChild(this.chordAccordion.element);
+        }
+        return this._wrapper;
     }
 
     /**
@@ -193,11 +224,11 @@ export class StatsSection {
             ${coprimeString}
         `;
 
-        // Update segment length histogram (skip if accordion is collapsed)
+        // Update segment length histogram (skip if chord accordion is collapsed)
         if (this.histogram) {
             this._lastParams = params;
             this._lastK = k;
-            if (!this.accordion.isOpen) {
+            if (!this.chordAccordion.isOpen) {
                 this._histogramDirty = true;
                 return;
             }

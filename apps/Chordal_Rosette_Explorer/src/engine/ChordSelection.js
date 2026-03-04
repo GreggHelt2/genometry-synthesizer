@@ -23,6 +23,8 @@ export class ChordSelection extends EventTarget {
         this._hitTolerance = 5;
         /** @type {'intersects'|'oneEndpoint'|'bothEndpoints'} */
         this._selectionFilter = 'intersects';
+        /** @type {string} Highlight color for selected chords */
+        this._highlightColor = '#ffff00';
     }
 
     // ── Getters ──────────────────────────────────────────────
@@ -44,6 +46,9 @@ export class ChordSelection extends EventTarget {
 
     /** @returns {'intersects'|'oneEndpoint'|'bothEndpoints'} Region filter mode. */
     get selectionFilter() { return this._selectionFilter; }
+
+    /** @returns {string} Current highlight color for selections. */
+    get highlightColor() { return this._highlightColor; }
 
     // ── Selection Operations ─────────────────────────────────
 
@@ -171,6 +176,23 @@ export class ChordSelection extends EventTarget {
         this.dispatchEvent(new CustomEvent('filterchange', {
             detail: { filter, source }
         }));
+    }
+
+    /**
+     * Set highlight color and emit colorchange.
+     * @param {string} color - Hex color string
+     * @param {string} [source='unknown']
+     */
+    setHighlightColor(color, source = 'unknown') {
+        if (this._highlightColor === color) return;
+        this._highlightColor = color;
+        this.dispatchEvent(new CustomEvent('colorchange', {
+            detail: { color, source }
+        }));
+        // Re-emit change so the renderer picks up the new color
+        if (this._indices.size > 0) {
+            this._emit(source);
+        }
     }
 
     // ── Chain Operations ─────────────────────────────────────

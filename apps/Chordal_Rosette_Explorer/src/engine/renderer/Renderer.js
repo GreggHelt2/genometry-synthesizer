@@ -102,6 +102,7 @@ export class CanvasRenderer {
             this.ctx.scale(scale, scale);
         } else {
             scale = Math.min(this.width, this.height) / 500;
+            this.ctx.scale(scale, scale);
         }
 
         this.lastScale = scale;

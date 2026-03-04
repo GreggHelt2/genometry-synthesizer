@@ -197,6 +197,12 @@ export class SegmentHistogram {
                 // Always redraw to update selection overlays
                 this._redraw();
             });
+
+            // Sync highlight color when ChordSelection color changes
+            this._chordSelection.addEventListener('colorchange', (e) => {
+                this.highlightColor = e.detail.color;
+                this._redraw();
+            });
         }
 
         this._resizeObserver = new ResizeObserver(() => this._redraw());

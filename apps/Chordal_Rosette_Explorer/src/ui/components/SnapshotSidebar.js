@@ -113,12 +113,16 @@ export class SnapshotSidebar {
 
         // Header
         const header = createElement('div', 'p-4 border-b border-gray-700 flex justify-between items-center flex-none');
+        const titleRow = createElement('div', 'flex items-center gap-2');
         const title = createElement('h2', 'text-lg font-bold text-white', { textContent: 'Snapshots' });
+        this.countBadge = createElement('span', 'text-xs text-gray-400 font-mono');
+        titleRow.appendChild(title);
+        titleRow.appendChild(this.countBadge);
 
         const closeBtn = createElement('button', 'text-gray-400 hover:text-white', { textContent: '✕' });
         closeBtn.onclick = () => this.toggle(false);
 
-        header.appendChild(title);
+        header.appendChild(titleRow);
         header.appendChild(closeBtn);
         wrapper.appendChild(header);
 
@@ -225,6 +229,18 @@ export class SnapshotSidebar {
         this.selectedIndex = -1;
 
         this.renderSnapshots(filtered);
+        this.updateCountBadge();
+    }
+
+    updateCountBadge() {
+        if (!this.countBadge) return;
+        const total = this.allSnapshots.length;
+        const shown = this.filteredSnapshots.length;
+        if (this.filterQuery && this.filterQuery.trim() !== '') {
+            this.countBadge.textContent = `(${shown}/${total})`;
+        } else {
+            this.countBadge.textContent = `(${total})`;
+        }
     }
 
     matchesDeepSearch(obj, targetKey, targetValue) {
