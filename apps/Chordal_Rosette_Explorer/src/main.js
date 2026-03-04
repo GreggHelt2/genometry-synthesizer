@@ -133,6 +133,12 @@ class App {
         if (this.saveInput) {
             this.saveInput.value = payload.name;
         }
+
+        // 6. Restore selection highlight color
+        const loadedColor = payload.state?.app?.selectionHighlightColor;
+        if (loadedColor && this.chordSelection) {
+            this.chordSelection.setHighlightColor(loadedColor, 'snapshot-load');
+        }
     }
 
     /** Helper for image downloaded filenames */
@@ -378,6 +384,14 @@ class App {
 
         // Centralized chord selection model
         this.chordSelection = new ChordSelection();
+
+        // Initialize highlight color from persisted state
+        const initialState = store.getState();
+        const persistedColor = initialState.app?.selectionHighlightColor;
+        if (persistedColor) {
+            this.chordSelection.setHighlightColor(persistedColor, 'init');
+        }
+
         this.chordSelection.addEventListener('change', (e) => {
             const { indices, linked } = e.detail;
             store.dispatch({
@@ -526,6 +540,15 @@ class App {
             this.pickerA.selectionFilter = filter;
             this.pickerB.selectionFilter = filter;
             this.pickerHybrid.selectionFilter = filter;
+        });
+
+        // Persist selection highlight color to store
+        this.chordSelection.addEventListener('colorchange', (e) => {
+            store.dispatch({
+                type: ACTIONS.SET_DEEP,
+                path: ['app', 'selectionHighlightColor'],
+                value: e.detail.color
+            });
         });
         // Chord chain grow/shrink keyboard shortcuts
         window.addEventListener('keydown', (e) => {

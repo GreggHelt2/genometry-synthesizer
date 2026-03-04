@@ -80,6 +80,11 @@ export class StatsSection {
                 onChange: (val) => this._chordSelection.setHighlightColor(val, `color-picker-${roseId}`)
             });
             this.chordAccordion.append(this.selectionColorPicker.getElement());
+
+            // Sync picker when color changes externally (e.g. snapshot load)
+            this._chordSelection.addEventListener('colorchange', (e) => {
+                this.selectionColorPicker.setValue(e.detail.color);
+            });
         }
 
         // Deferred histogram update state

@@ -552,6 +552,7 @@ export const DEFAULTS = {
 
     app: {
         isRecording: false,
-        segmentHighlight: null
+        segmentHighlight: null,
+        selectionHighlightColor: '#ffff00'
     }
 };
