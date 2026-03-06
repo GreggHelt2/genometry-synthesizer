@@ -206,6 +206,9 @@ export function flattenHybridParams(hybridState) {
     const bv = hybridState.blendedVertices || {};
     const bvc = bv.coloring || {};
     const bvcp = bvc.params || {};
+    const br = hybridState.blendedRosette || {};
+    const brc = br.coloring || {};
+    const brcp = brc.params || {};
 
     return {
         // Mix
@@ -323,6 +326,14 @@ export function flattenHybridParams(hybridState) {
         blendedVertexOpacity: bv.opacity,
         blendedVertexBlendMode: bv.blendMode,
         blendedVertexColorMethod: bvc.method,
+
+        showBlendedRosette: br.visible,
+        blendedRosetteColor: brcp.solid?.color,
+        blendedRosetteLineWidth: br.lineWidth,
+        blendedRosetteOpacity: br.opacity,
+        blendedRosetteBlendMode: br.blendMode,
+        blendedRosetteAntiAlias: br.antiAlias,
+        blendedRosetteColorMethod: brc.method,
 
         // Coset
         matchCosetsByLCM: coset.matchCosetsByLCM,
@@ -590,6 +601,15 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     blendedVertexColorMethod: ['blendedVertices', 'coloring', 'method'],
     blendedVertexOpacity: ['blendedVertices', 'opacity'],
     blendedVertexBlendMode: ['blendedVertices', 'blendMode'],
+
+    // Blended Rosette
+    showBlendedRosette: ['blendedRosette', 'visible'],
+    blendedRosetteColor: ['blendedRosette', 'coloring', 'params', 'solid', 'color'],
+    blendedRosetteColorMethod: ['blendedRosette', 'coloring', 'method'],
+    blendedRosetteLineWidth: ['blendedRosette', 'lineWidth'],
+    blendedRosetteOpacity: ['blendedRosette', 'opacity'],
+    blendedRosetteBlendMode: ['blendedRosette', 'blendMode'],
+    blendedRosetteAntiAlias: ['blendedRosette', 'antiAlias'],
 
     // Coset
     matchCosetsByLCM: ['coset', 'matchCosetsByLCM'],

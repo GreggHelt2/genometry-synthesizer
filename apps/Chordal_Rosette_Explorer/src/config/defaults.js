@@ -557,6 +557,29 @@ export const DEFAULTS = {
                 }
             }
         },
+        blendedRosette: {
+            visible: false,
+            opacity: 0.6,
+            lineWidth: 1,
+            blendMode: 'source-over',
+            antiAlias: true,
+            coloring: {
+                method: 'solid',
+                type: '2-point',
+                source: 'length',
+                params: {
+                    'solid': { color: '#00FF88' },
+                    'gradient-2point': { colorStart: '#00FF88', colorEnd: '#ffffff' },
+                    'gradient-custom': {
+                        stops: [
+                            { color: '#ffffff', position: 0, alpha: 1 },
+                            { color: '#00FF88', position: 1, alpha: 1 }
+                        ]
+                    },
+                    'gradient-preset': { preset: 'rainbow' }
+                }
+            }
+        },
         coset: {
             matchCosetsByLCM: false,
             index: 0,

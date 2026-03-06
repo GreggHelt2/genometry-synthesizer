@@ -670,6 +670,50 @@ export class CanvasRenderer {
             kB = gcd(roseParamsB.step, roseParamsB.totalDivs);
         }
 
+        // Blended Chordal Rosette — chords on the blended curve using A's sequencer
+        if (hybridParams.showBlendedRosette && curveA && curveB) {
+            const w = hybridParams.weight ?? 0.5;
+            const blendedCurve = {
+                getRadiansToClosure: () => Math.max(
+                    curveA.getRadiansToClosure(),
+                    curveB.getRadiansToClosure()
+                ),
+                getPoint: (t) => {
+                    const pA = curveA.getPoint(t);
+                    const pB = curveB.getPoint(t);
+                    const ax = pA.x !== undefined ? pA.x : pA[0];
+                    const ay = pA.y !== undefined ? pA.y : pA[1];
+                    const bx = pB.x !== undefined ? pB.x : pB[0];
+                    const by = pB.y !== undefined ? pB.y : pB[1];
+                    return {
+                        x: (1 - w) * ax + w * bx,
+                        y: (1 - w) * ay + w * by
+                    };
+                }
+            };
+            const indicesBlend = this.getDrawIndices(kA, roseParamsA);
+            indicesBlend.forEach(idx => {
+                const sub = (cosetsA && kA > 1)
+                    ? cosetsA[idx % cosetsA.length]
+                    : idx;
+                const points = generateChordalPolyline(blendedCurve, sequencerA, roseParamsA.totalDivs, sub, roseParamsA);
+                renderables.push({
+                    type: 'blendedRosette',
+                    points: points,
+                    options: {
+                        color: hybridParams.blendedRosetteColor || '#00FF88',
+                        colorMethod: hybridParams.blendedRosetteColorMethod || 'solid',
+                        width: hybridParams.blendedRosetteLineWidth,
+                        opacity: hybridParams.blendedRosetteOpacity,
+                        blendMode: hybridParams.blendedRosetteBlendMode,
+                        antiAlias: hybridParams.blendedRosetteAntiAlias
+                    },
+                    params: roseParamsA,
+                    seed: sub
+                });
+            });
+        }
+
         const useLCM = hybridParams.matchCosetsByLCM;
         const ringsLCM = lcm(kA, kB);
         const isExactMatch = (kA === kB && kA > 1);
@@ -739,6 +783,16 @@ export class CanvasRenderer {
             if (item.type === 'baseCurve') {
                 this.drawRenderableBaseCurve(item.points, item.options, lineWidthScale);
             } else if (item.type === 'underlay') {
+                const drawParams = {
+                    color: item.options.color,
+                    colorMethod: item.options.colorMethod,
+                    lineWidth: item.options.width,
+                    opacity: item.options.opacity,
+                    blendMode: item.options.blendMode,
+                    antiAlias: item.options.antiAlias
+                };
+                this.drawRenderableRose(item.points, drawParams, 'white', lineWidthScale);
+            } else if (item.type === 'blendedRosette') {
                 const drawParams = {
                     color: item.options.color,
                     colorMethod: item.options.colorMethod,

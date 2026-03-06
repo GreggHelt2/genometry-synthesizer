@@ -256,6 +256,25 @@ export class HybridAppearanceSection {
         // --- Sub-accordion 2: Blended Chordal Rosette ---
         this.blendedRosetteAccordion = new Accordion('Blended Chordal Rosette', false, handleToggle, 'hybrid-blended-rosette');
         this.accordions.set('hybrid-blended-rosette', this.blendedRosetteAccordion);
+
+        this.blendedRosetteModule = new LayerRenderingModule(
+            this.orchestrator,
+            'hybrid',
+            null,
+            {
+                colorMethod: 'blendedRosetteColorMethod',
+                color: 'blendedRosetteColor',
+                blendMode: 'blendedRosetteBlendMode',
+                opacity: 'blendedRosetteOpacity',
+                size: 'blendedRosetteLineWidth',
+                antiAlias: 'blendedRosetteAntiAlias'
+            },
+            {
+                sizeLabel: 'Line Width',
+                showToggle: { key: 'showBlendedRosette', label: 'Show Blended Rosette' }
+            }
+        );
+        this.blendedRosetteAccordion.append(this.blendedRosetteModule.container);
         this.blendedVizAccordion.append(this.blendedRosetteAccordion.element);
 
         // --- Sub-accordion 3: Blended Chordal Vertices ---
@@ -285,6 +304,9 @@ export class HybridAppearanceSection {
         this.baseCurveEyeBlend = this.blendedVizAccordion.addLabeledEyeToggle(false, (val) => {
             dispatchDeep('showBaseCurveBlend', val, 'hybrid');
         }, 'Crv');
+        this.blendedRosetteEye = this.blendedVizAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showBlendedRosette', val, 'hybrid');
+        }, 'Rst');
         this.blendedVerticesEye = this.blendedVizAccordion.addLabeledEyeToggle(false, (val) => {
             dispatchDeep('showBlendedVertices', val, 'hybrid');
         }, 'Vtx');
@@ -539,6 +561,7 @@ export class HybridAppearanceSection {
         if (this.baseCurveModuleA) this.baseCurveModuleA.update(flatParams);
         if (this.baseCurveModuleB) this.baseCurveModuleB.update(flatParams);
         if (this.baseCurveModuleBlend) this.baseCurveModuleBlend.update(flatParams);
+        if (this.blendedRosetteModule) this.blendedRosetteModule.update(flatParams);
         if (this.blendedVerticesModule) this.blendedVerticesModule.update(flatParams);
 
         // 5. Fill
@@ -574,6 +597,7 @@ export class HybridAppearanceSection {
         if (this.baseCurveEyeA) this.baseCurveEyeA.setActive(flatParams.showBaseCurveA || false);
         if (this.baseCurveEyeB) this.baseCurveEyeB.setActive(flatParams.showBaseCurveB || false);
         if (this.baseCurveEyeBlend) this.baseCurveEyeBlend.setActive(flatParams.showBaseCurveBlend || false);
+        if (this.blendedRosetteEye) this.blendedRosetteEye.setActive(flatParams.showBlendedRosette || false);
         if (this.blendedVerticesEye) this.blendedVerticesEye.setActive(flatParams.showBlendedVertices || false);
     }
 
@@ -582,7 +606,7 @@ export class HybridAppearanceSection {
             this.hybridVizModule,
             this.underlayModuleA, this.underlayModuleB,
             this.baseCurveModuleA, this.baseCurveModuleB, this.baseCurveModuleBlend,
-            this.blendedVerticesModule,
+            this.blendedRosetteModule, this.blendedVerticesModule,
             this.fillModule, this.vertexModule,
             this.interpPathsModule, this.generalModule
         ];
