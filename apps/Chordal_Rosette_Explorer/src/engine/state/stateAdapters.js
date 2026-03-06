@@ -200,6 +200,12 @@ export function flattenHybridParams(hybridState) {
     const bcB = hybridState.baseCurveB || {};
     const bcBc = bcB.coloring || {};
     const bcBcp = bcBc.params || {};
+    const bcBl = hybridState.baseCurveBlend || {};
+    const bcBlc = bcBl.coloring || {};
+    const bcBlcp = bcBlc.params || {};
+    const bv = hybridState.blendedVertices || {};
+    const bvc = bv.coloring || {};
+    const bvcp = bvc.params || {};
 
     return {
         // Mix
@@ -302,6 +308,21 @@ export function flattenHybridParams(hybridState) {
         baseCurveBlendModeB: bcB.blendMode,
         baseCurveAntiAliasB: bcB.antiAlias,
         baseCurveColorMethodB: bcBc.method,
+
+        showBaseCurveBlend: bcBl.visible,
+        baseCurveLineWidthBlend: bcBl.lineWidth,
+        baseCurveColorBlend: bcBlcp.solid?.color,
+        baseCurveOpacityBlend: bcBl.opacity,
+        baseCurveBlendModeBlend: bcBl.blendMode,
+        baseCurveAntiAliasBlend: bcBl.antiAlias,
+        baseCurveColorMethodBlend: bcBlc.method,
+
+        showBlendedVertices: bv.visible,
+        blendedVertexRadius: bv.radius,
+        blendedVertexColor: bvcp.solid?.color,
+        blendedVertexOpacity: bv.opacity,
+        blendedVertexBlendMode: bv.blendMode,
+        blendedVertexColorMethod: bvc.method,
 
         // Coset
         matchCosetsByLCM: coset.matchCosetsByLCM,
@@ -552,6 +573,23 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     baseCurveOpacityB: ['baseCurveB', 'opacity'],
     baseCurveBlendModeB: ['baseCurveB', 'blendMode'],
     baseCurveAntiAliasB: ['baseCurveB', 'antiAlias'],
+
+    // Base Curve Blend
+    showBaseCurveBlend: ['baseCurveBlend', 'visible'],
+    baseCurveLineWidthBlend: ['baseCurveBlend', 'lineWidth'],
+    baseCurveColorBlend: ['baseCurveBlend', 'coloring', 'params', 'solid', 'color'],
+    baseCurveColorMethodBlend: ['baseCurveBlend', 'coloring', 'method'],
+    baseCurveOpacityBlend: ['baseCurveBlend', 'opacity'],
+    baseCurveBlendModeBlend: ['baseCurveBlend', 'blendMode'],
+    baseCurveAntiAliasBlend: ['baseCurveBlend', 'antiAlias'],
+
+    // Blended Vertices
+    showBlendedVertices: ['blendedVertices', 'visible'],
+    blendedVertexRadius: ['blendedVertices', 'radius'],
+    blendedVertexColor: ['blendedVertices', 'coloring', 'params', 'solid', 'color'],
+    blendedVertexColorMethod: ['blendedVertices', 'coloring', 'method'],
+    blendedVertexOpacity: ['blendedVertices', 'opacity'],
+    blendedVertexBlendMode: ['blendedVertices', 'blendMode'],
 
     // Coset
     matchCosetsByLCM: ['coset', 'matchCosetsByLCM'],

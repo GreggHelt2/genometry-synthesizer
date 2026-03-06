@@ -512,6 +512,51 @@ export const DEFAULTS = {
                 }
             }
         },
+        baseCurveBlend: {
+            visible: false,
+            opacity: 0.5,
+            lineWidth: 1.5,
+            blendMode: 'source-over',
+            antiAlias: true,
+            coloring: {
+                method: 'solid',
+                type: '2-point',
+                source: 'length',
+                params: {
+                    'solid': { color: '#00FF88' },
+                    'gradient-2point': { colorStart: '#00FF88', colorEnd: '#ffffff' },
+                    'gradient-custom': {
+                        stops: [
+                            { color: '#ffffff', position: 0, alpha: 1 },
+                            { color: '#00FF88', position: 1, alpha: 1 }
+                        ]
+                    },
+                    'gradient-preset': { preset: 'rainbow' }
+                }
+            }
+        },
+        blendedVertices: {
+            visible: false,
+            opacity: 1,
+            radius: 3,
+            blendMode: 'source-over',
+            coloring: {
+                method: 'solid',
+                type: '2-point',
+                source: 'length',
+                params: {
+                    'solid': { color: '#00FFCC' },
+                    'gradient-2point': { colorStart: '#00FFCC', colorEnd: '#ffffff' },
+                    'gradient-custom': {
+                        stops: [
+                            { color: '#ffffff', position: 0, alpha: 1 },
+                            { color: '#00FFCC', position: 1, alpha: 1 }
+                        ]
+                    },
+                    'gradient-preset': { preset: 'rainbow' }
+                }
+            }
+        },
         coset: {
             matchCosetsByLCM: false,
             index: 0,

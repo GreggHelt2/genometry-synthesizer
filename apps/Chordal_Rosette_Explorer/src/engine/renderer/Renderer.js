@@ -561,6 +561,44 @@ export class CanvasRenderer {
         if (hybridParams.showBaseCurveA) collectBaseCurve(roseParamsA, hybridParams, 'A');
         if (hybridParams.showBaseCurveB) collectBaseCurve(roseParamsB, hybridParams, 'B');
 
+        // Blended base curve: ((1 - weight) * curveA) + (weight * curveB)
+        if (hybridParams.showBaseCurveBlend) {
+            const curveA = this.createCurve(roseParamsA);
+            const curveB = this.createCurve(roseParamsB);
+            if (curveA && curveB) {
+                const w = hybridParams.weight ?? 0.5;
+                const radA = curveA.getRadiansToClosure();
+                const radB = curveB.getRadiansToClosure();
+                const totalRad = Math.max(radA, radB);
+                const sampleCount = Math.min(50000, Math.ceil(totalRad * 100));
+                const step = totalRad / sampleCount;
+                const blendedPoints = [];
+                for (let i = 0; i <= sampleCount; i++) {
+                    const t = i * step;
+                    const pA = curveA.getPoint(t);
+                    const pB = curveB.getPoint(t);
+                    const ax = pA.x !== undefined ? pA.x : pA[0];
+                    const ay = pA.y !== undefined ? pA.y : pA[1];
+                    const bx = pB.x !== undefined ? pB.x : pB[0];
+                    const by = pB.y !== undefined ? pB.y : pB[1];
+                    blendedPoints.push({
+                        x: (1 - w) * ax + w * bx,
+                        y: (1 - w) * ay + w * by
+                    });
+                }
+                renderables.push({
+                    type: 'baseCurve',
+                    points: blendedPoints,
+                    options: {
+                        color: hybridParams.baseCurveColorBlend,
+                        width: hybridParams.baseCurveLineWidthBlend,
+                        opacity: hybridParams.baseCurveOpacityBlend,
+                        blendMode: hybridParams.baseCurveBlendModeBlend
+                    }
+                });
+            }
+        }
+
         // Underlays (Base Chordal Rendering)
         const collectUnderlay = (roseFlat, options) => {
             const curve = this.createCurve(roseFlat);
@@ -886,7 +924,43 @@ export class CanvasRenderer {
             });
             this.ctx.globalCompositeOperation = 'source-over';
         }
-        // Coincident Indices Points
+
+        // Blended Chordal Vertices — vertices at sequence division points on the blended curve
+        if (hybridParams.showBlendedVertices) {
+            const curveA = this.createCurve(roseParamsA);
+            const curveB = this.createCurve(roseParamsB);
+            if (curveA && curveB) {
+                const w = hybridParams.weight ?? 0.5;
+                const totalDivs = roseParamsA.totalDivs || 360;
+                const radA = curveA.getRadiansToClosure();
+                const radB = curveB.getRadiansToClosure();
+                const totalRad = Math.max(radA, radB);
+
+                // Compute blended vertex positions at each division point
+                const blendedVerts = [];
+                for (let i = 0; i < totalDivs; i++) {
+                    const t = (totalRad * i) / totalDivs;
+                    const pA = curveA.getPoint(t);
+                    const pB = curveB.getPoint(t);
+                    const ax = pA.x !== undefined ? pA.x : pA[0];
+                    const ay = pA.y !== undefined ? pA.y : pA[1];
+                    const bx = pB.x !== undefined ? pB.x : pB[0];
+                    const by = pB.y !== undefined ? pB.y : pB[1];
+                    blendedVerts.push({
+                        x: (1 - w) * ax + w * bx,
+                        y: (1 - w) * ay + w * by
+                    });
+                }
+
+                this.ctx.globalCompositeOperation = hybridParams.blendedVertexBlendMode || 'source-over';
+                this.polylineLayer.drawVertices(blendedVerts, {
+                    color: hybridParams.blendedVertexColor || '#00FFCC',
+                    radius: (hybridParams.blendedVertexRadius || 3) * lineWidthScale,
+                    opacity: hybridParams.blendedVertexOpacity ?? 1
+                });
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+        }
         if (hybridParams.showCoincidentIndices) {
             const ADDITIVE_TYPE = 'Cyclic Additive Group Modulo N';
             const seqTypeA = roseParamsA.sequencerType || '';

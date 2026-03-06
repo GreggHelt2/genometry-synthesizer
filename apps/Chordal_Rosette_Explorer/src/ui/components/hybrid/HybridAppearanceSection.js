@@ -27,6 +27,9 @@ export class HybridAppearanceSection {
         // 4. Base Curve Rendering
         this.renderBaseCurve();
 
+        // 4b. Blended Visualization
+        this.renderBlendedVisualization();
+
         // 5. Fill Rendering
         this.renderFill();
 
@@ -215,6 +218,76 @@ export class HybridAppearanceSection {
         this.baseCurveEyeB = this.baseCurveVizAccordion.addLabeledEyeToggle(false, (val) => {
             dispatchDeep('showBaseCurveB', val, 'hybrid');
         }, 'B');
+    }
+
+    renderBlendedVisualization() {
+        const handleToggle = (isOpen, id) => {
+            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
+        };
+
+        // Parent accordion
+        this.blendedVizAccordion = new Accordion('Blended Visualization', false, handleToggle, 'hybrid-blended-viz');
+        this.accordions.set('hybrid-blended-viz', this.blendedVizAccordion);
+        this.orchestrator.controlsContainer.appendChild(this.blendedVizAccordion.element);
+
+        // --- Sub-accordion 1: Blended Curve ---
+        this.blendedCurveAccordion = new Accordion('Blended Curve', false, handleToggle, 'hybrid-blended-curve');
+        this.accordions.set('hybrid-blended-curve', this.blendedCurveAccordion);
+
+        this.baseCurveModuleBlend = new LayerRenderingModule(
+            this.orchestrator,
+            'hybrid',
+            null,
+            {
+                colorMethod: 'baseCurveColorMethodBlend',
+                color: 'baseCurveColorBlend',
+                blendMode: 'baseCurveBlendModeBlend',
+                opacity: 'baseCurveOpacityBlend',
+                size: 'baseCurveLineWidthBlend',
+                antiAlias: 'baseCurveAntiAliasBlend'
+            },
+            {
+                showToggle: { key: 'showBaseCurveBlend', label: 'Show Blended Curve' }
+            }
+        );
+        this.blendedCurveAccordion.append(this.baseCurveModuleBlend.container);
+        this.blendedVizAccordion.append(this.blendedCurveAccordion.element);
+
+        // --- Sub-accordion 2: Blended Chordal Rosette ---
+        this.blendedRosetteAccordion = new Accordion('Blended Chordal Rosette', false, handleToggle, 'hybrid-blended-rosette');
+        this.accordions.set('hybrid-blended-rosette', this.blendedRosetteAccordion);
+        this.blendedVizAccordion.append(this.blendedRosetteAccordion.element);
+
+        // --- Sub-accordion 3: Blended Chordal Vertices ---
+        this.blendedVerticesAccordion = new Accordion('Blended Chordal Vertices', false, handleToggle, 'hybrid-blended-vertices');
+        this.accordions.set('hybrid-blended-vertices', this.blendedVerticesAccordion);
+
+        this.blendedVerticesModule = new LayerRenderingModule(
+            this.orchestrator,
+            'hybrid',
+            null,
+            {
+                colorMethod: 'blendedVertexColorMethod',
+                color: 'blendedVertexColor',
+                blendMode: 'blendedVertexBlendMode',
+                opacity: 'blendedVertexOpacity',
+                size: 'blendedVertexRadius'
+            },
+            {
+                sizeLabel: 'Radius',
+                showToggle: { key: 'showBlendedVertices', label: 'Show Blended Vertices' }
+            }
+        );
+        this.blendedVerticesAccordion.append(this.blendedVerticesModule.container);
+        this.blendedVizAccordion.append(this.blendedVerticesAccordion.element);
+
+        // Eye toggles on parent accordion header
+        this.baseCurveEyeBlend = this.blendedVizAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showBaseCurveBlend', val, 'hybrid');
+        }, 'Crv');
+        this.blendedVerticesEye = this.blendedVizAccordion.addLabeledEyeToggle(false, (val) => {
+            dispatchDeep('showBlendedVertices', val, 'hybrid');
+        }, 'Vtx');
     }
 
     renderFill() {
@@ -465,6 +538,8 @@ export class HybridAppearanceSection {
         // 4. Base Curve
         if (this.baseCurveModuleA) this.baseCurveModuleA.update(flatParams);
         if (this.baseCurveModuleB) this.baseCurveModuleB.update(flatParams);
+        if (this.baseCurveModuleBlend) this.baseCurveModuleBlend.update(flatParams);
+        if (this.blendedVerticesModule) this.blendedVerticesModule.update(flatParams);
 
         // 5. Fill
         if (this.fillModule) this.fillModule.update(flatParams);
@@ -498,13 +573,16 @@ export class HybridAppearanceSection {
         if (this.baseChordalEyeB) this.baseChordalEyeB.setActive(flatParams.showRoseB || false);
         if (this.baseCurveEyeA) this.baseCurveEyeA.setActive(flatParams.showBaseCurveA || false);
         if (this.baseCurveEyeB) this.baseCurveEyeB.setActive(flatParams.showBaseCurveB || false);
+        if (this.baseCurveEyeBlend) this.baseCurveEyeBlend.setActive(flatParams.showBaseCurveBlend || false);
+        if (this.blendedVerticesEye) this.blendedVerticesEye.setActive(flatParams.showBlendedVertices || false);
     }
 
     updateLinkVisuals() {
         const modules = [
             this.hybridVizModule,
             this.underlayModuleA, this.underlayModuleB,
-            this.baseCurveModuleA, this.baseCurveModuleB,
+            this.baseCurveModuleA, this.baseCurveModuleB, this.baseCurveModuleBlend,
+            this.blendedVerticesModule,
             this.fillModule, this.vertexModule,
             this.interpPathsModule, this.generalModule
         ];
