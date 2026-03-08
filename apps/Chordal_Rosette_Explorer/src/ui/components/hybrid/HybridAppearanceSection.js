@@ -298,6 +298,22 @@ export class HybridAppearanceSection {
             }
         );
         this.blendedVerticesAccordion.append(this.blendedVerticesModule.container);
+
+        // Blended vertex label toggle
+        this.blendedVertexLabelsToggle = new ParamToggle({
+            key: 'showBlendedVertexLabels',
+            label: 'Show Labels',
+            value: false,
+            onChange: (val) => {
+                dispatchDeep('showBlendedVertexLabels', val, 'hybrid');
+            }
+        });
+        this.blendedVerticesAccordion.append(this.blendedVertexLabelsToggle.getElement());
+
+        // Blended vertex label font size slider
+        this.blendedVertexLabelFontSizeControl = this.createSlider('blendedVertexLabelFontSize', 5, 30, 1, 'Label Size');
+        this.blendedVerticesAccordion.append(this.blendedVertexLabelFontSizeControl.container);
+
         this.blendedVizAccordion.append(this.blendedVerticesAccordion.element);
 
         // Eye toggles on parent accordion header
@@ -375,6 +391,21 @@ export class HybridAppearanceSection {
             }
         );
         this.vertexAccordion.append(this.vertexModule.container);
+
+        // Hybrid vertex label toggle
+        this.vertexLabelsToggle = new ParamToggle({
+            key: 'showVertexLabels',
+            label: 'Show Labels',
+            value: false,
+            onChange: (val) => {
+                dispatchDeep('showVertexLabels', val, 'hybrid');
+            }
+        });
+        this.vertexAccordion.append(this.vertexLabelsToggle.getElement());
+
+        // Hybrid vertex label font size slider
+        this.vertexLabelFontSizeControl = this.createSlider('vertexLabelFontSize', 5, 30, 1, 'Label Size');
+        this.vertexAccordion.append(this.vertexLabelFontSizeControl.container);
 
         // Eye toggle for vertex visibility
         this.vertexEyeToggle = this.vertexAccordion.addEyeToggle(false, (val) => {
@@ -563,6 +594,10 @@ export class HybridAppearanceSection {
         if (this.baseCurveModuleBlend) this.baseCurveModuleBlend.update(flatParams);
         if (this.blendedRosetteModule) this.blendedRosetteModule.update(flatParams);
         if (this.blendedVerticesModule) this.blendedVerticesModule.update(flatParams);
+        if (this.vertexLabelsToggle) this.vertexLabelsToggle.setValue(flatParams.showVertexLabels || false);
+        if (this.vertexLabelFontSizeControl) this.vertexLabelFontSizeControl.instance.setValue(flatParams.vertexLabelFontSize || 15);
+        if (this.blendedVertexLabelsToggle) this.blendedVertexLabelsToggle.setValue(flatParams.showBlendedVertexLabels || false);
+        if (this.blendedVertexLabelFontSizeControl) this.blendedVertexLabelFontSizeControl.instance.setValue(flatParams.blendedVertexLabelFontSize || 15);
 
         // 5. Fill
         if (this.fillModule) this.fillModule.update(flatParams);

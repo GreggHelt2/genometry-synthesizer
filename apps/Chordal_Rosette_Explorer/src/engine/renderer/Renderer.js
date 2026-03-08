@@ -255,6 +255,17 @@ export class CanvasRenderer {
             this.ctx.globalCompositeOperation = 'source-over';
         }
 
+        // Vertex Labels
+        if (roseParams.showVertices && roseParams.showVertexLabels) {
+            renderables.filter(r => r.type === 'rose').forEach(item => {
+                this.polylineLayer.drawVertexLabels(item.points, {
+                    color: roseParams.vertexColor,
+                    fontSize: (roseParams.vertexLabelFontSize || 15) * lineWidthScale,
+                    opacity: roseParams.vertexOpacity
+                });
+            });
+        }
+
         // --- Special Points Rendering ---
         if (roseParams.showSpecialPoints) {
             const spCurve = this.createCurve(roseParams);
@@ -979,6 +990,17 @@ export class CanvasRenderer {
             this.ctx.globalCompositeOperation = 'source-over';
         }
 
+        // Hybrid Vertex Labels
+        if (hybridParams.showVertices && hybridParams.showVertexLabels) {
+            renderables.filter(r => r.type === 'hybrid').forEach(item => {
+                this.polylineLayer.drawVertexLabels(item.points, {
+                    color: hybridParams.vertexColor,
+                    fontSize: (hybridParams.vertexLabelFontSize || 15) * lineWidthScale,
+                    opacity: hybridParams.vertexOpacity
+                });
+            });
+        }
+
         // Blended Chordal Vertices — vertices at sequence division points on the blended curve
         if (hybridParams.showBlendedVertices) {
             const curveA = this.createCurve(roseParamsA);
@@ -1013,6 +1035,15 @@ export class CanvasRenderer {
                     opacity: hybridParams.blendedVertexOpacity ?? 1
                 });
                 this.ctx.globalCompositeOperation = 'source-over';
+
+                // Blended Vertex Labels
+                if (hybridParams.showBlendedVertexLabels) {
+                    this.polylineLayer.drawVertexLabels(blendedVerts, {
+                        color: hybridParams.blendedVertexColor || '#00FFCC',
+                        fontSize: (hybridParams.blendedVertexLabelFontSize || 15) * lineWidthScale,
+                        opacity: hybridParams.blendedVertexOpacity ?? 1
+                    });
+                }
             }
         }
         if (hybridParams.showCoincidentIndices) {

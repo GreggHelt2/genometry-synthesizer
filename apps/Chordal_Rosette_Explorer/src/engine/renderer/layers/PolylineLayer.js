@@ -442,6 +442,45 @@ export class PolylineLayer {
         this.ctx.globalAlpha = 1; // Reset
     }
 
+    drawVertexLabels(points, style) {
+        if (!points || points.length === 0) return;
+
+        const fontSize = style.fontSize || 10;
+        const color = style.color || 'white';
+        const opacity = style.opacity ?? 1;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity;
+        this.ctx.font = `bold ${fontSize}px sans-serif`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+
+        for (let i = 0; i < points.length; i++) {
+            // Skip closure point (last point coinciding with first) so label "0" stays visible
+            if (i === points.length - 1 && points.length > 1) {
+                const dx = points[i].x - points[0].x;
+                const dy = points[i].y - points[0].y;
+                if (dx * dx + dy * dy < 1) continue;
+            }
+
+            const x = points[i].x;
+            const y = points[i].y;
+            const label = String(i);
+
+            // Dark outline for readability
+            this.ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+            this.ctx.lineWidth = 3;
+            this.ctx.lineJoin = 'round';
+            this.ctx.strokeText(label, x, y);
+
+            // Fill text
+            this.ctx.fillStyle = color;
+            this.ctx.fillText(label, x, y);
+        }
+
+        this.ctx.restore();
+    }
+
     fill(points, style) {
         if (!points || points.length === 0) return;
 

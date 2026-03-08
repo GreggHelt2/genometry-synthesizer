@@ -116,6 +116,8 @@ export const DEFAULTS = {
             radius: 2,
             blendMode: 'source-over',
             antiAlias: true,
+            showLabels: false,
+            labelFontSize: 15,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -265,6 +267,8 @@ export const DEFAULTS = {
             radius: 2,
             blendMode: 'source-over',
             antiAlias: true,
+            showLabels: false,
+            labelFontSize: 15,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -381,6 +385,8 @@ export const DEFAULTS = {
             radius: 2,
             blendMode: 'source-over',
             antiAlias: true,
+            showLabels: false,
+            labelFontSize: 15,
             coloring: {
                 method: 'solid',
                 type: '2-point',
@@ -540,6 +546,8 @@ export const DEFAULTS = {
             opacity: 1,
             radius: 3,
             blendMode: 'source-over',
+            showLabels: false,
+            labelFontSize: 15,
             coloring: {
                 method: 'solid',
                 type: '2-point',

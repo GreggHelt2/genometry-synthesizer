@@ -89,6 +89,22 @@ export class AppearanceSection {
         );
         this.vertexAccordion.append(this.vertexModule.container);
 
+        // Vertex label toggle
+        this.vertexLabelsToggle = new ParamToggle({
+            key: 'showVertexLabels',
+            label: 'Show Labels',
+            value: false,
+            onChange: (val) => {
+                dispatchDeep('showVertexLabels', val, this.roseId);
+            }
+        });
+        this.vertexAccordion.append(this.vertexLabelsToggle.getElement());
+
+        // Vertex label font size slider
+        const fontSizeSlider = this.createSlider('vertexLabelFontSize', 5, 30, 1, 'Label Size');
+        this.vertexLabelFontSizeControl = fontSizeSlider.instance;
+        this.vertexAccordion.append(fontSizeSlider.container);
+
         // Eye toggle for vertex visibility
         this.vertexEyeToggle = this.vertexAccordion.addEyeToggle(false, (val) => {
             dispatchDeep('showVertices', val, this.roseId);
@@ -231,6 +247,8 @@ export class AppearanceSection {
     update(params) {
         if (this.chordalModule) this.chordalModule.update(params);
         if (this.vertexModule) this.vertexModule.update(params);
+        if (this.vertexLabelsToggle) this.vertexLabelsToggle.setValue(params.showVertexLabels || false);
+        if (this.vertexLabelFontSizeControl) this.vertexLabelFontSizeControl.setValue(params.vertexLabelFontSize || 15);
         if (this.baseCurveModule) this.baseCurveModule.update(params);
         if (this.fillModule) this.fillModule.update(params);
 

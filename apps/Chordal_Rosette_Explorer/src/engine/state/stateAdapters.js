@@ -116,6 +116,8 @@ export function flattenRoseParams(roseState) {
         vertexGradientType: vc.type,
         vertexGradientPreset: vcp['gradient-preset']?.preset,
         vertexGradientStops: vcp['gradient-custom']?.stops,
+        showVertexLabels: verts.showLabels,
+        vertexLabelFontSize: verts.labelFontSize,
 
         // Background
         backgroundColor: bg.color,
@@ -266,6 +268,8 @@ export function flattenHybridParams(hybridState) {
         vertexGradientPreset: vcp['gradient-preset']?.preset,
         vertexGradientStops: vcp['gradient-custom']?.stops,
         vertexAntiAlias: verts.antiAlias,
+        showVertexLabels: verts.showLabels,
+        vertexLabelFontSize: verts.labelFontSize,
 
         // Interpolation Paths
         showInterpPaths: interpPaths.visible,
@@ -326,6 +330,8 @@ export function flattenHybridParams(hybridState) {
         blendedVertexOpacity: bv.opacity,
         blendedVertexBlendMode: bv.blendMode,
         blendedVertexColorMethod: bvc.method,
+        showBlendedVertexLabels: bv.showLabels,
+        blendedVertexLabelFontSize: bv.labelFontSize,
 
         showBlendedRosette: br.visible,
         blendedRosetteColor: brcp.solid?.color,
@@ -425,6 +431,8 @@ const FLAT_KEY_TO_PATH = {
     vertexGradientStops: ['vertices', 'coloring', 'params', 'gradient-custom', 'stops'],
     vertexColorEnd: ['vertices', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
     vertexAntiAlias: ['vertices', 'antiAlias'],
+    showVertexLabels: ['vertices', 'showLabels'],
+    vertexLabelFontSize: ['vertices', 'labelFontSize'],
 
     // Background
     backgroundColor: ['background', 'color'],
@@ -537,6 +545,8 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     vertexGradientStops: ['vertices', 'coloring', 'params', 'gradient-custom', 'stops'],
     vertexColorEnd: ['vertices', 'coloring', 'params', 'gradient-2point', 'colorEnd'],
     vertexAntiAlias: ['vertices', 'antiAlias'],
+    showVertexLabels: ['vertices', 'showLabels'],
+    vertexLabelFontSize: ['vertices', 'labelFontSize'],
 
     // Interpolation Paths
     showInterpPaths: ['interpPaths', 'visible'],
@@ -601,6 +611,8 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     blendedVertexColorMethod: ['blendedVertices', 'coloring', 'method'],
     blendedVertexOpacity: ['blendedVertices', 'opacity'],
     blendedVertexBlendMode: ['blendedVertices', 'blendMode'],
+    showBlendedVertexLabels: ['blendedVertices', 'showLabels'],
+    blendedVertexLabelFontSize: ['blendedVertices', 'labelFontSize'],
 
     // Blended Rosette
     showBlendedRosette: ['blendedRosette', 'visible'],
