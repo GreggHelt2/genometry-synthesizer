@@ -114,6 +114,19 @@ export class HybridCoincidentSection {
             this.eyeToggleControl.setActive(flatHybrid.showCoincidentIndices);
         }
 
+        // Update control values regardless of visibility
+        this.pointSizeControl.setValue(flatHybrid.coincidentPointSize ?? 6);
+        this.colorControl.setValue(flatHybrid.coincidentColor ?? '#FFD700');
+        this.opacityControl.setValue(flatHybrid.coincidentOpacity ?? 1.0);
+        this.shapeSelect.setValue(flatHybrid.coincidentShape ?? 'circle');
+
+        // Skip computation entirely when visibility is toggled off
+        if (!flatHybrid.showCoincidentIndices) {
+            this.infoDiv.textContent = 'Coincident Indices: — (hidden)';
+            this.indicesDiv.textContent = '';
+            return;
+        }
+
         // Gray out if not both additive
         this.accordion.element.style.opacity = bothAdditive ? '1' : '0.5';
 
@@ -150,11 +163,5 @@ export class HybridCoincidentSection {
         } else {
             this.indicesDiv.textContent = 'None';
         }
-
-        // Update control values
-        this.pointSizeControl.setValue(flatHybrid.coincidentPointSize ?? 6);
-        this.colorControl.setValue(flatHybrid.coincidentColor ?? '#FFD700');
-        this.opacityControl.setValue(flatHybrid.coincidentOpacity ?? 1.0);
-        this.shapeSelect.setValue(flatHybrid.coincidentShape ?? 'circle');
     }
 }

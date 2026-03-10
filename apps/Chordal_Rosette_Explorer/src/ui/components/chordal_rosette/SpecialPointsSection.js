@@ -261,11 +261,22 @@ export class SpecialPointsSection {
         if (this.controls.doublePointsOpacity) this.controls.doublePointsOpacity.setValue(params.doublePointsOpacity ?? 1);
         if (this.controls.boundaryPointsOpacity) this.controls.boundaryPointsOpacity.setValue(params.boundaryPointsOpacity ?? 1);
 
-        // Update info readout by computing special points
-        this._updateInfo(params);
+        // Skip expensive getSpecialPoints() computation entirely when
+        // special points visibility is toggled off.
+        if (!params.showSpecialPoints) {
+            if (this._updateInfoTimer) clearTimeout(this._updateInfoTimer);
+            this.infoDiv.textContent = 'Zero: — | Double: — | Boundary: — (hidden)';
+            return;
+        }
+
+        // Debounce info readout — getSpecialPoints() is expensive for
+        // Epitrochoid/Hypotrochoid curves and must not run on every slider tick.
+        if (this._updateInfoTimer) clearTimeout(this._updateInfoTimer);
+        this._updateInfoTimer = setTimeout(() => this._updateInfo(params), 300);
     }
 
     _updateInfo(params) {
+        this._updateInfoTimer = null;
         const curveType = params.curveType || 'Rhodonea';
         const CurveClass = CurveRegistry[curveType];
         if (!CurveClass) {

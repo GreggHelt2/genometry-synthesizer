@@ -267,6 +267,8 @@ export class CanvasRenderer {
         }
 
         // --- Special Points Rendering ---
+        // Only compute when visibility is toggled on. getSpecialPoints() is
+        // expensive for Epitrochoid/Hypotrochoid curves (O(n²) grid search).
         if (roseParams.showSpecialPoints) {
             const spCurve = this.createCurve(roseParams);
             if (spCurve) {

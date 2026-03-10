@@ -69,8 +69,12 @@ export class HypotrochoidCurve extends Curve {
     /**
      * Finds special points on this Hypotrochoid curve using Erb's framework.
      * With R/r = p/q (reduced), self-intersections lie on grid t_l = l·π/(p·q).
+     * Results are memoized per instance to avoid redundant O(n²) computation.
      */
     getSpecialPoints() {
+        const sig = this.getSignature();
+        if (this._spCache && this._spCacheSig === sig) return this._spCache;
+
         const totalRad = this.getRadiansToClosure();
         if (totalRad <= 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
 
@@ -138,7 +142,10 @@ export class HypotrochoidCurve extends Curve {
         // --- Boundary Points: numerical peak detection ---
         const boundaryPoints = this._findBoundaryPointsNumerical(totalRad);
 
-        return { zeroPoints, doublePoints, boundaryPoints };
+        const result = { zeroPoints, doublePoints, boundaryPoints };
+        this._spCache = result;
+        this._spCacheSig = sig;
+        return result;
     }
 
     /**
