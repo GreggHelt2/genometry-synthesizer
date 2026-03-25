@@ -334,8 +334,9 @@ export class RhodoneaCurve extends Curve {
                         if (Math.abs(r1 + r2) > 0.01 * Math.max(1, Math.abs(A))) continue;
                         if (Math.abs(r1) < EPS) continue;
 
-                        const x = r1 * Math.cos(theta1);
-                        const y = r1 * Math.sin(theta1);
+                        const pt = this.getPoint(theta1);
+                        const x = pt.x;
+                        const y = pt.y;
 
                         // Deduplicate against existing doubles
                         const posKey = `${Math.round(x / dedupRadius)},${Math.round(y / dedupRadius)}`;
