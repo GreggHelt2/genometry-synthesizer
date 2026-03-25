@@ -198,78 +198,120 @@ export class RhodoneaCurve extends Curve {
     }
 
     /**
-     * Double points (non-origin self-intersections) via Erb's grid enumeration.
-     * 
-     * For r = c + A·sin(k·θ), in Erb's framework (Erb 2018, §2):
-     *   m₁ = d (angular frequency), m₂ = n (radial frequency)
-     *   θ (polar angle) = m₁·t = d·t
-     * 
-     * Grid in θ-space: θ_l = l·π/(2nd), covering [0, totalRad).
-     * When c = 0, only indices l divisible by d correspond to Erb's
-     * time-equidistant nodes t_l = lπ/(2m₁m₂). Every such node is
-     * guaranteed to be a special point (origin, boundary, or double),
-     * so non-Erb indices (l % d ≠ 0) can be safely skipped.
+     * Double points (non-origin self-intersections) via extended Erb analysis.
+     *
+     * For r(θ) = c + A·sin(kθ), self-intersections satisfy r₁² = r₂²:
+     *
+     * TYPE I (r₁ = r₂, θ₁ ≡ θ₂ mod 2π):
+     *   Solutions at Erb grid points θ_l = l·π/(2nd) where l ≡ 0 (mod d).
+     *   These are the same θ-values regardless of c.
+     *   Detected via spatial grouping of coincident Erb nodes.
+     *
+     * TYPE II (r₁ = -r₂, θ₁ ≡ θ₂ + π mod 2π):  [only when c ≠ 0]
+     *   Setting θ₁ - θ₂ = (2j+1)π and applying sum-to-product:
+     *     sin(k·S) = -c / (A·β_j)
+     *   where S = (θ₁+θ₂)/2, β_j = cos(n(2j+1)π/(2d)).
+     *   Exact solutions via arcsin; no grid search needed.
      */
     _findDoublePoints(totalRad, k, EPS, SPATIAL_EPS, zeroPoints, boundaryPoints) {
         const { n, d, A, c } = this;
         if (n === 0 || d === 0) return [];
 
-        const m1 = d;
-        const m2 = n;
-        const gridStep = Math.PI / (2 * m1 * m2);
-        // Must cover the FULL parameter range [0, totalRad), not just [0, 2π)
+        const doubles = [];
+        const foundPositions = new Set();
+        const scaledEPS = SPATIAL_EPS * Math.max(1, Math.abs(A));
+        const dedupRadius = Math.max(scaledEPS, 0.5);
+
+        // === TYPE I: Erb grid intersections (l%d===0) ===
+        const gridStep = Math.PI / (2 * n * d);
         const gridSize = Math.ceil(totalRad / gridStep);
 
-        // Build set of known zero-point θ values for filtering
-        const zeroThetas = new Set(zeroPoints.map(p => Math.round(p.theta * 1e8)));
-
-        // Evaluate grid points (when c=0, only Erb nodes at l%d===0)
-        const skipNonErb = Math.abs(c) < EPS;
-        const gridPoints = [];
+        const erbPoints = [];
         for (let l = 0; l < gridSize; l++) {
-            if (skipNonErb && l % d !== 0) continue;
+            if (l % d !== 0) continue;
             const theta = l * gridStep;
             if (theta >= totalRad - EPS) break;
-
-            // Skip if this is a zero point (origin crossing)
-            const thetaKey = Math.round(theta * 1e8);
-            if (zeroThetas.has(thetaKey)) continue;
-
-            // Check if the radius is ~0 (another way to filter zero points)
             const r = c + A * Math.sin(k * theta);
             if (Math.abs(r) < SPATIAL_EPS) continue;
-
             const pt = this.getPoint(theta);
-            gridPoints.push({ theta, x: pt.x, y: pt.y, r });
+            erbPoints.push({ theta, x: pt.x, y: pt.y });
         }
 
-        // Group by spatial proximity to find doubles
-        const doubles = [];
         const used = new Set();
-
-        for (let i = 0; i < gridPoints.length; i++) {
+        for (let i = 0; i < erbPoints.length; i++) {
             if (used.has(i)) continue;
-            const pi = gridPoints[i];
+            const pi = erbPoints[i];
             const group = [pi];
-
-            for (let j = i + 1; j < gridPoints.length; j++) {
+            for (let j = i + 1; j < erbPoints.length; j++) {
                 if (used.has(j)) continue;
-                const pj = gridPoints[j];
-                const dx = pi.x - pj.x;
-                const dy = pi.y - pj.y;
-                if (Math.sqrt(dx * dx + dy * dy) < SPATIAL_EPS * Math.max(1, Math.abs(A))) {
+                const pj = erbPoints[j];
+                const dx = pi.x - pj.x, dy = pi.y - pj.y;
+                if (Math.sqrt(dx * dx + dy * dy) < scaledEPS) {
                     group.push(pj);
                     used.add(j);
                 }
             }
-
             if (group.length >= 2) {
                 used.add(i);
+                const posKey = `${Math.round(pi.x / dedupRadius)},${Math.round(pi.y / dedupRadius)}`;
+                foundPositions.add(posKey);
                 doubles.push({
                     x: pi.x, y: pi.y,
                     theta1: group[0].theta,
                     theta2: group[1].theta
                 });
+            }
+        }
+
+        // === TYPE II: Analytical offset intersections (only when c ≠ 0) ===
+        if (Math.abs(c) >= EPS) {
+            const maxJ = Math.floor((totalRad / Math.PI - 1) / 2);
+            const pRange = Math.ceil(k * totalRad / (2 * Math.PI)) + 1;
+
+            for (let j = 0; j <= maxJ; j++) {
+                const halfDelta = (2 * j + 1) * Math.PI / 2;
+                const beta = Math.cos(n * (2 * j + 1) * Math.PI / (2 * d));
+
+                if (Math.abs(beta) < EPS) continue;
+                const ratio = -c / (A * beta);
+                if (Math.abs(ratio) > 1 + EPS) continue;
+
+                const clampedRatio = Math.max(-1, Math.min(1, ratio));
+                const base = Math.asin(clampedRatio);
+
+                for (let branch = 0; branch < 2; branch++) {
+                    const anchor = branch === 0 ? base : (Math.PI - base);
+
+                    for (let p = -pRange; p <= pRange; p++) {
+                        const kS = anchor + 2 * Math.PI * p;
+                        const S = kS / k;
+                        const theta1 = S + halfDelta;
+                        const theta2 = S - halfDelta;
+
+                        if (theta1 < -EPS || theta1 >= totalRad + EPS) continue;
+                        if (theta2 < -EPS || theta2 >= totalRad + EPS) continue;
+
+                        // Verify r₁ = -r₂
+                        const r1 = c + A * Math.sin(k * theta1);
+                        const r2 = c + A * Math.sin(k * theta2);
+                        if (Math.abs(r1 + r2) > 0.01 * Math.max(1, Math.abs(A))) continue;
+                        if (Math.abs(r1) < EPS) continue;
+
+                        const x = r1 * Math.cos(theta1);
+                        const y = r1 * Math.sin(theta1);
+
+                        // Deduplicate against existing doubles
+                        const posKey = `${Math.round(x / dedupRadius)},${Math.round(y / dedupRadius)}`;
+                        if (!foundPositions.has(posKey)) {
+                            foundPositions.add(posKey);
+                            doubles.push({
+                                x, y,
+                                theta1: Math.min(theta1, theta2),
+                                theta2: Math.max(theta1, theta2)
+                            });
+                        }
+                    }
+                }
             }
         }
 
