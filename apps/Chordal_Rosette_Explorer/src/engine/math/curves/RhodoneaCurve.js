@@ -200,13 +200,15 @@ export class RhodoneaCurve extends Curve {
     /**
      * Double points (non-origin self-intersections) via Erb's grid enumeration.
      * 
-     * For r = c + A·sin(k·θ), in Erb's framework with m₁ = d, m₂ = n:
-     * All self-intersections lie on the grid t_l = l·π / (2·m₁·m₂)
-     * i.e., θ_l = l·π / (2·n·d)
+     * For r = c + A·sin(k·θ), in Erb's framework (Erb 2018, §2):
+     *   m₁ = d (angular frequency), m₂ = n (radial frequency)
+     *   θ (polar angle) = m₁·t = d·t
      * 
-     * We evaluate the curve at all grid points, filter out zero points
-     * and boundary points, then identify unique spatial positions where
-     * distinct θ values map to the same (x, y).
+     * Grid in θ-space: θ_l = l·π/(2nd), covering [0, totalRad).
+     * When c = 0, only indices l divisible by d correspond to Erb's
+     * time-equidistant nodes t_l = lπ/(2m₁m₂). Every such node is
+     * guaranteed to be a special point (origin, boundary, or double),
+     * so non-Erb indices (l % d ≠ 0) can be safely skipped.
      */
     _findDoublePoints(totalRad, k, EPS, SPATIAL_EPS, zeroPoints, boundaryPoints) {
         const { n, d, A, c } = this;
@@ -221,9 +223,11 @@ export class RhodoneaCurve extends Curve {
         // Build set of known zero-point θ values for filtering
         const zeroThetas = new Set(zeroPoints.map(p => Math.round(p.theta * 1e8)));
 
-        // Evaluate all grid points
+        // Evaluate grid points (when c=0, only Erb nodes at l%d===0)
+        const skipNonErb = Math.abs(c) < EPS;
         const gridPoints = [];
         for (let l = 0; l < gridSize; l++) {
+            if (skipNonErb && l % d !== 0) continue;
             const theta = l * gridStep;
             if (theta >= totalRad - EPS) break;
 
@@ -261,10 +265,8 @@ export class RhodoneaCurve extends Curve {
 
             if (group.length >= 2) {
                 used.add(i);
-                // This is a self-intersection — record the first pair of thetas
                 doubles.push({
-                    x: pi.x,
-                    y: pi.y,
+                    x: pi.x, y: pi.y,
                     theta1: group[0].theta,
                     theta2: group[1].theta
                 });
