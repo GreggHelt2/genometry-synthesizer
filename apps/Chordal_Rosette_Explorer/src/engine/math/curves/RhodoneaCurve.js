@@ -1,5 +1,5 @@
 import { Curve } from './Curve.js';
-import { gcd } from '../MathOps.js';
+import { gcd, solveCRT } from '../MathOps.js';
 
 export class RhodoneaCurve extends Curve {
     /**
@@ -222,44 +222,81 @@ export class RhodoneaCurve extends Curve {
         const scaledEPS = SPATIAL_EPS * Math.max(1, Math.abs(A));
         const dedupRadius = Math.max(scaledEPS, 0.5);
 
-        // === TYPE I: Erb grid intersections (l%d===0) ===
+        // === TYPE I: Fully algebraic Bézout/CRT pairing on Erb grid ===
+        //
+        // In t-space: γ(t) = sin(nt)·(cos(dt), sin(dt)), grid t_L = Lπ/(2dn).
+        // Modular classification (c=0): L%(2d)==0 → zero, L%(2d)==d → boundary.
+        // Collision γ(t₁)=γ(t₂) gives sin²(nt₁)=sin²(nt₂), yielding three CRT cases:
+        //   Case A:  L' ≡ 2d-L (mod 4d) AND L' ≡ L    (mod 4n)  [same r, same angle]
+        //   Case B1: L' ≡ -L   (mod 4d) AND L' ≡ L+2n  (mod 4n)  [opp r, opp angle]
+        //   Case B2: L' ≡ L+2d (mod 4d) AND L' ≡ L+2n  (mod 4n)  [opp r, opp angle]
         const gridStep = Math.PI / (2 * n * d);
         const gridSize = Math.ceil(totalRad / gridStep);
+        const N_full = 4 * d * n;
+        const mod = (a, m) => ((a % m) + m) % m;
 
-        const erbPoints = [];
+        // Build map of double-candidate Erb nodes (skip zeros and boundaries)
+        const erbMap = new Map();
         for (let l = 0; l < gridSize; l++) {
             if (l % d !== 0) continue;
             const theta = l * gridStep;
             if (theta >= totalRad - EPS) break;
-            const r = c + A * Math.sin(k * theta);
-            if (Math.abs(r) < SPATIAL_EPS) continue;
+
+            const L = l / d;  // t-space Erb grid index
+
+            // When c=0: modular classification skips zeros/boundaries
+            // When c≠0: check actual r value (zero/boundary positions shift)
+            if (Math.abs(c) < EPS) {
+                const Lmod = L % (2 * d);
+                if (Lmod === 0 || Lmod === d) continue;
+            } else {
+                const r = c + A * Math.sin(k * theta);
+                if (Math.abs(r) < SPATIAL_EPS) continue;
+            }
+
             const pt = this.getPoint(theta);
-            erbPoints.push({ theta, x: pt.x, y: pt.y });
+            erbMap.set(L, { theta, x: pt.x, y: pt.y });
         }
 
-        const used = new Set();
-        for (let i = 0; i < erbPoints.length; i++) {
-            if (used.has(i)) continue;
-            const pi = erbPoints[i];
-            const group = [pi];
-            for (let j = i + 1; j < erbPoints.length; j++) {
-                if (used.has(j)) continue;
-                const pj = erbPoints[j];
-                const dx = pi.x - pj.x, dy = pi.y - pj.y;
-                if (Math.sqrt(dx * dx + dy * dy) < scaledEPS) {
-                    group.push(pj);
-                    used.add(j);
-                }
+        // Find partners via CRT — no distance testing needed
+        const pairedL = new Set();
+
+        for (const [L, pi] of erbMap) {
+            if (pairedL.has(L)) continue;
+
+            // Three CRT cases from the collision equation
+            const candidates = [];
+
+            // Case A: same sin(nt), same angle direction
+            const cA = solveCRT(mod(L, 4*n), 4*n, mod(2*d-L, 4*d), 4*d);
+            if (cA !== null && cA < N_full && cA !== L) candidates.push(cA);
+
+            // Cases B1/B2: opposite sin(nt), opposite angle
+            // When c≠0, these are handled by the Type II analytical formula
+            if (Math.abs(c) < EPS) {
+                const cB1 = solveCRT(mod(L+2*n, 4*n), 4*n, mod(-L, 4*d), 4*d);
+                if (cB1 !== null && cB1 < N_full && cB1 !== L) candidates.push(cB1);
+
+                const cB2 = solveCRT(mod(L+2*n, 4*n), 4*n, mod(L+2*d, 4*d), 4*d);
+                if (cB2 !== null && cB2 < N_full && cB2 !== L) candidates.push(cB2);
             }
-            if (group.length >= 2) {
-                used.add(i);
+
+            for (const Lp of candidates) {
+                if (pairedL.has(Lp)) continue;
+                if (!erbMap.has(Lp)) continue;
+
+                const pj = erbMap.get(Lp);
+                pairedL.add(L);
+                pairedL.add(Lp);
+
                 const posKey = `${Math.round(pi.x / dedupRadius)},${Math.round(pi.y / dedupRadius)}`;
                 foundPositions.add(posKey);
                 doubles.push({
                     x: pi.x, y: pi.y,
-                    theta1: group[0].theta,
-                    theta2: group[1].theta
+                    theta1: Math.min(pi.theta, pj.theta),
+                    theta2: Math.max(pi.theta, pj.theta)
                 });
+                break;
             }
         }
 

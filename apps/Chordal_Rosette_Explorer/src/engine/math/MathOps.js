@@ -8,6 +8,26 @@ export function gcd(a, b) {
 }
 
 /**
+ * Extended GCD: returns { g, x, y } such that a·x + b·y = g = gcd(a,b).
+ */
+export function extendedGcd(a, b) {
+    if (b === 0) return { g: a, x: 1, y: 0 };
+    const { g, x: x1, y: y1 } = extendedGcd(b, a % b);
+    return { g, x: y1, y: x1 - Math.floor(a / b) * y1 };
+}
+
+/**
+ * Solve CRT: x ≡ r1 (mod m1), x ≡ r2 (mod m2).
+ * Returns x in [0, lcm(m1,m2)) or null if no solution.
+ */
+export function solveCRT(r1, m1, r2, m2) {
+    const { g, x: u } = extendedGcd(m1, m2);
+    if ((r2 - r1) % g !== 0) return null;
+    const lcm = m1 * m2 / g;
+    return (((r1 + m1 * u * ((r2 - r1) / g)) % lcm) + lcm) % lcm;
+}
+
+/**
  * Least Common Multiple
  */
 export function lcm(a, b) {
