@@ -281,6 +281,8 @@ export class EpitrochoidCurve extends Curve {
         return `Epitrochoid:${this.R}:${this.r}:${this.d}:${this.A}:${this.rot}`;
     }
 
+    static supportsSpecialPoints() { return true; }
+
     static getParamsSchema() {
         return [
             { key: 'R', type: 'number', label: 'Fixed Radius (R)', min: 10, max: 300, step: 1 },

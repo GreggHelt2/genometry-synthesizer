@@ -233,6 +233,24 @@ export class SpecialPointsSection {
      * Called from ChordalRosettePanel.updateUI with flattened params.
      */
     update(params) {
+        // Check if current curve type supports special points
+        const curveType = params.curveType || 'Rhodonea';
+        const CurveClass = CurveRegistry[curveType];
+        const supported = CurveClass && CurveClass.supportsSpecialPoints && CurveClass.supportsSpecialPoints();
+
+        // Gray out accordion when curve doesn't support special points
+        const headerEl = this.accordion.element?.querySelector('.accordion-header') ||
+                          this.accordion.element?.firstElementChild;
+        if (headerEl) {
+            headerEl.style.opacity = supported ? '' : '0.4';
+            headerEl.style.pointerEvents = supported ? '' : 'none';
+        }
+        if (!supported) {
+            if (this._updateInfoTimer) clearTimeout(this._updateInfoTimer);
+            this.infoDiv.textContent = `Not supported for ${curveType}`;
+            return;
+        }
+
         // Update eye toggle
         if (this.accordion.setEyeState) {
             this.accordion.setEyeState(params.showSpecialPoints);

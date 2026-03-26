@@ -52,6 +52,15 @@ export class Curve {
     }
 
     /**
+     * Whether this curve class has a real getSpecialPoints() implementation.
+     * Used by the UI to gray out the special points section for unsupported curves.
+     * @returns {boolean}
+     */
+    static supportsSpecialPoints() {
+        return false;
+    }
+
+    /**
      * Returns the schema for the curve's parameters.
      * Used by the UI to dynamically generate controls.
      * @returns {Array<{key: string, type: string, label: string, min: number, max: number, step: number, default: number}>}

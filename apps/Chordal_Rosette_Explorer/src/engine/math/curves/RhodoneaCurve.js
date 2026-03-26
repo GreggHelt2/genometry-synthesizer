@@ -368,6 +368,8 @@ export class RhodoneaCurve extends Curve {
         return result;
     }
 
+    static supportsSpecialPoints() { return true; }
+
     static getParamsSchema() {
         return [
             { key: 'n', type: 'number', label: 'n (Numerator)', min: 1, max: 100, step: 1 },

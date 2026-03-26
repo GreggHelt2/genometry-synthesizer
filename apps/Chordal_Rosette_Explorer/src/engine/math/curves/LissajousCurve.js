@@ -179,6 +179,8 @@ export class LissajousCurve extends Curve {
         return `Lissajous:${this.a}:${this.b}:${this.delta}:${this.A}:${this.rot}`;
     }
 
+    static supportsSpecialPoints() { return true; }
+
     static getParamsSchema() {
         return [
             { key: 'a', type: 'number', label: 'Frequency X (a)', min: 0, max: 20, step: 1 },
