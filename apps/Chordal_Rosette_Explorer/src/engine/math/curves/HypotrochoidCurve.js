@@ -81,19 +81,19 @@ export class HypotrochoidCurve extends Curve {
 
         const Ri = Math.round(this.R);
         const ri = Math.round(this.r);
-        if (ri === 0 || Ri <= ri) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
+        if (ri === 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
 
-        // Erb Phase 1: correct kinematic ratio for hypotrochoid = (R-r)/r
+        // Erb Phase 1: correct kinematic ratio for hypotrochoid = |R-r|/r
         const common = gcd(Ri, ri);
         const p = Ri / common;        // R/gcd(R,r)
         const q = ri / common;        // r/gcd(R,r)
-        const P = p - q;              // (R-r)/gcd(R,r) — Erb's frequency integer
+        const P = Math.abs(p - q);    // |R-r|/gcd(R,r) — Erb's frequency integer
         const Q = q;                  // r/gcd(R,r)
 
         const zeroPoints = this._findZeroPointsAnalytical(totalRad, p);
         const boundaryPoints = this._findBoundaryPointsAnalytical(totalRad, p);
         const doublePoints = P > 0
-            ? this._findDoublePointsSpatialHash(totalRad, P, Q, p, q)
+            ? this._findDoublePointsAlgebraic(totalRad, P, Q, p, q)
             : [];
 
         const result = { zeroPoints, doublePoints, boundaryPoints };
@@ -146,129 +146,115 @@ export class HypotrochoidCurve extends Curve {
     }
 
     /**
-     * Self-intersection detection via Erb's grid + spatial hash + refinement.
-     * Phase 1: Evaluate curve on fine grid θ_l = l·π/(2·P·Q).
-     * Phase 2: Spatial hash finds candidate pairs within generous tolerance.
-     * Phase 3: Iterative sub-grid refinement confirms true intersections.
+     * Self-intersection detection via semi-algebraic Σ/Δ decomposition.
+     *
+     * Collision z(s₁)=z(s₂) in normalized s-space (s=θ/Q) factorizes into:
+     *   Phase condition:   Σ = s₁+s₂ = 2πn/p  (algebraic, 2p-1 discrete values)
+     *   Magnitude condition: sin(qΔ/2) = ±γ·sin(PΔ/2)  where Δ=s₁-s₂
+     *
+     * For γ=1 (pure cycloid): magnitude is modular → exact.
+     * For γ≠1: 1D root-finding via sign-change + bisection → machine precision.
      */
-    _findDoublePointsSpatialHash(totalRad, P, Q, p, q) {
+    _findDoublePointsAlgebraic(totalRad, P, Q, p, q) {
+        const { R, r, d } = this;
+        const gamma = Math.abs(R - r) < 1e-9 ? 0 : d / Math.abs(R - r);
         const scale = (this.A || 100) / 100;
-
-        // Fine grid: π/(2·P·Q), matching Rhodonea convention
-        const gridStep = Math.PI / (2 * P * Q);
-
-        // Evaluate grid points
-        const pts = [];
-        const maxRadius = (this.R - this.r + this.d) * scale;
-        const zeroThresh = 0.001 * Math.max(maxRadius, 1);
-        for (let l = 0; ; l++) {
-            const theta = l * gridStep;
-            if (theta >= totalRad - 1e-9) break;
-            const pt = this.getPoint(theta);
-            const dist = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
-            if (dist < zeroThresh) continue;
-            pts.push({ theta, x: pt.x, y: pt.y });
-        }
-
-        if (pts.length < 2) return [];
-
-        // Compute mean arc-length between adjacent grid points
-        let totalArc = 0;
-        for (let i = 1; i < pts.length; i++) {
-            const dx = pts[i].x - pts[i - 1].x;
-            const dy = pts[i].y - pts[i - 1].y;
-            totalArc += Math.sqrt(dx * dx + dy * dy);
-        }
-        const meanArc = totalArc / (pts.length - 1);
-
-        // Phase 2: candidate search with generous tolerance
-        const candidateEPS = 0.1 * meanArc;
-        const bucketSize = candidateEPS;
-        const minThetaSep = 2 * Math.PI;
-
-        const buckets = new Map();
-        for (const pt of pts) {
-            const bx = Math.floor(pt.x / bucketSize);
-            const by = Math.floor(pt.y / bucketSize);
-            const key = `${bx},${by}`;
-            if (!buckets.has(key)) buckets.set(key, []);
-            buckets.get(key).push(pt);
-        }
-
-        // Phase 3: refine each candidate pair
-        const refineTol = 0.001 * Math.max(meanArc, 1e-6);
-        const doublePoints = [];
+        const maxRadius = (Math.abs(R - r) + d) * scale;
+        const dedupRadius = Math.max(1.0, 0.01 * maxRadius);
         const foundSet = new Set();
-        const processed = new Set();
-        const self = this;
+        const doublePoints = [];
+        const EPS = 1e-9;
 
-        for (const [cellKey, cellEntries] of buckets) {
-            const [cbx, cby] = cellKey.split(',').map(Number);
+        // Scan resolution: oversample both frequencies for Nyquist coverage
+        const N_scan = 8 * Math.max(P, Q, 4);
 
-            for (const pt of cellEntries) {
-                if (processed.has(pt)) continue;
+        // Helper: validate and record an intersection from a (Σ, Δ) pair
+        const tryCandidate = (sigma, rootDelta) => {
+            if (rootDelta < EPS) return;
+            const s1 = (sigma + rootDelta) / 2;
+            const s2 = (sigma - rootDelta) / 2;
+            const theta1 = Q * s1;
+            const theta2 = Q * s2;
+            if (theta1 < -EPS || theta1 >= totalRad + EPS) return;
+            if (theta2 < -EPS || theta2 >= totalRad + EPS) return;
 
-                for (let dxb = -1; dxb <= 1; dxb++) {
-                    for (let dyb = -1; dyb <= 1; dyb++) {
-                        const nk = `${cbx + dxb},${cby + dyb}`;
-                        const neighbors = buckets.get(nk);
-                        if (!neighbors) continue;
+            const pt1 = this.getPoint(theta1);
+            const pt2 = this.getPoint(theta2);
+            const dist = Math.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2);
+            if (dist < 0.01 * Math.max(maxRadius, 1)) {
+                const posKey = `${Math.round(pt1.x / dedupRadius)},${Math.round(pt1.y / dedupRadius)}`;
+                if (!foundSet.has(posKey)) {
+                    foundSet.add(posKey);
+                    doublePoints.push({
+                        x: pt1.x, y: pt1.y,
+                        theta1: Math.min(theta1, theta2),
+                        theta2: Math.max(theta1, theta2)
+                    });
+                }
+            }
+        };
 
-                        for (const other of neighbors) {
-                            if (other === pt || processed.has(other)) continue;
-                            if (Math.abs(other.theta - pt.theta) < minThetaSep) continue;
+        // γ = 1 FAST PATH: Pure hypocycloid (d = R-r).
+        // The most elegant solution — purely algebraic, no scanning or bisection.
+        // sin(qΔ/2) = ±sin(PΔ/2) has closed-form modular solutions:
+        //   Same-sign:  qΔ/2 = π - PΔ/2 + 2πk  →  Δ = 2π(2k+1)/(q+P)
+        //   Opp-sign:   qΔ/2 = PΔ/2 + 2πk       →  Δ = 4πk/(q-P)  [when q ≠ P]
+        if (Math.abs(gamma - 1) < EPS) {
+            for (let n = 1; n < 2 * p; n++) {
+                const sigma = 2 * Math.PI * n / p;
+                const deltaMax = Math.min(sigma, 4 * Math.PI - sigma);
 
-                            const ddx = pt.x - other.x;
-                            const ddy = pt.y - other.y;
-                            if (Math.sqrt(ddx * ddx + ddy * ddy) < candidateEPS) {
-                                let t1 = pt.theta, t2 = other.theta;
-                                let step = gridStep;
-                                let bestDist = Math.sqrt(ddx * ddx + ddy * ddy);
+                // Same-sign solutions: Δ = 2π(2k+1)/(q+P) = 2π(2k+1)/p
+                for (let k = 0; ; k++) {
+                    const delta = 2 * Math.PI * (2 * k + 1) / p;
+                    if (delta >= deltaMax) break;
+                    tryCandidate(sigma, delta);
+                }
 
-                                for (let level = 0; level < 10 && bestDist > refineTol; level++) {
-                                    step /= 3;
-                                    let best_t1 = t1, best_t2 = t2;
-                                    for (let di = -2; di <= 2; di++) {
-                                        for (let dj = -2; dj <= 2; dj++) {
-                                            const tt1 = t1 + di * step;
-                                            const tt2 = t2 + dj * step;
-                                            if (tt1 < 0 || tt1 >= totalRad) continue;
-                                            if (tt2 < 0 || tt2 >= totalRad) continue;
-                                            const p1 = self.getPoint(tt1);
-                                            const p2 = self.getPoint(tt2);
-                                            const d = Math.sqrt(
-                                                (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2
-                                            );
-                                            if (d < bestDist) {
-                                                bestDist = d;
-                                                best_t1 = tt1;
-                                                best_t2 = tt2;
-                                            }
-                                        }
-                                    }
-                                    t1 = best_t1;
-                                    t2 = best_t2;
-                                }
-
-                                if (bestDist < refineTol) {
-                                    const pf = self.getPoint(t1);
-                                    const dedupEPS = refineTol * 10;
-                                    const posKey = `${Math.round(pf.x / dedupEPS)},${Math.round(pf.y / dedupEPS)}`;
-                                    if (!foundSet.has(posKey)) {
-                                        foundSet.add(posKey);
-                                        doublePoints.push({
-                                            x: pf.x, y: pf.y,
-                                            theta1: Math.min(t1, t2),
-                                            theta2: Math.max(t1, t2)
-                                        });
-                                    }
-                                }
-                                processed.add(other);
-                            }
-                        }
+                // Opposite-sign solutions: Δ = 4πk/(q-P) [only if q ≠ P]
+                if (Math.abs(q - P) > EPS) {
+                    for (let k = 1; ; k++) {
+                        const delta = 4 * Math.PI * k / Math.abs(q - P);
+                        if (delta >= deltaMax) break;
+                        tryCandidate(sigma, delta);
                     }
                 }
-                processed.add(pt);
+            }
+            return doublePoints;
+        }
+
+        // GENERAL PATH (γ ≠ 1): Targeted 1D root-finding via sign-change + bisection
+        for (let n = 1; n < 2 * p; n++) {
+            const sigma = 2 * Math.PI * n / p;  // Σ in s-space
+            const sign = (n % 2 === 0) ? 1 : -1;
+
+            // f(Δ) = sin(qΔ/2) - sign·γ·sin(PΔ/2) = 0
+            // Valid range: Δ ∈ (0, min(Σ, 4π-Σ)) ensures both s₁,s₂ ∈ [0,2π)
+            const deltaMax = Math.min(sigma, 4 * Math.PI - sigma);
+            if (deltaMax <= EPS) continue;
+
+            const f = (delta) => Math.sin(q * delta / 2) - sign * gamma * Math.sin(P * delta / 2);
+
+            // Sign-change scan to bracket roots
+            const step = deltaMax / N_scan;
+            let prevVal = f(EPS);
+
+            for (let k = 1; k <= N_scan; k++) {
+                const delta = k * step;
+                const val = f(delta);
+
+                if (prevVal * val < 0) {
+                    // Bracket found — bisection refinement
+                    let lo = (k - 1) * step || EPS;
+                    let hi = delta;
+                    for (let iter = 0; iter < 50; iter++) {
+                        const mid = (lo + hi) / 2;
+                        if (f(mid) * f(lo) < 0) hi = mid;
+                        else lo = mid;
+                    }
+                    tryCandidate(sigma, (lo + hi) / 2);
+                }
+                prevVal = val;
             }
         }
 
