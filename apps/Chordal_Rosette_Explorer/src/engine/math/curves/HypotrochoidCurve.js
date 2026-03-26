@@ -160,7 +160,7 @@ export class HypotrochoidCurve extends Curve {
         const gamma = Math.abs(R - r) < 1e-9 ? 0 : d / Math.abs(R - r);
         const scale = (this.A || 100) / 100;
         const maxRadius = (Math.abs(R - r) + d) * scale;
-        const dedupRadius = Math.max(1.0, 0.01 * maxRadius);
+        const dedupRadius = Math.max(1e-6, 0.01 * maxRadius);
         const foundSet = new Set();
         const doublePoints = [];
         const EPS = 1e-9;
