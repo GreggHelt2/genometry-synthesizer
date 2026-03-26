@@ -193,25 +193,48 @@ export class EpitrochoidCurve extends Curve {
 
         // γ = 1 FAST PATH: Pure epicycloid (d = R+r).
         // The most elegant solution — purely algebraic, no scanning or bisection.
-        // sin(qΔ/2) = ±sin(PΔ/2) has closed-form modular solutions:
-        //   Same-sign:  qΔ/2 = π - PΔ/2 + 2πk  →  Δ = 2π(2k+1)/(q+P)
-        //   Opp-sign:   qΔ/2 = PΔ/2 + 2πk       →  Δ = 4πk/(q-P)  [when q ≠ P]
+        // sin(QΔ/2) = ±sin(PΔ/2) has four families of closed-form modular solutions:
+        //   From sin(QΔ/2) = sin(PΔ/2):
+        //     QΔ/2 = π - PΔ/2 + 2πk  →  Δ = 2π(2k+1)/(Q+P)
+        //     QΔ/2 = PΔ/2 + 2πk      →  Δ = 4πk/|Q-P|  [when Q ≠ P]
+        //   From sin(QΔ/2) = -sin(PΔ/2):
+        //     QΔ/2 = -PΔ/2 + 2πk     →  Δ = 4πk/(Q+P)
+        //     QΔ/2 = π + PΔ/2 + 2πk  →  Δ = 2π(2k+1)/|Q-P|  [when Q ≠ P]
         if (Math.abs(gamma - 1) < EPS) {
+            const sumQP = Q + P;
+            const diffQP = Math.abs(Q - P);
+
             for (let n = 1; n < 2 * p; n++) {
                 const sigma = 2 * Math.PI * n / p;
                 const deltaMax = Math.min(sigma, 4 * Math.PI - sigma);
 
-                // Same-sign solutions: Δ = 2π(2k+1)/(q+P) = 2π(2k+1)/p
+                // Family 1: Δ = 2π(2k+1)/(Q+P)
                 for (let k = 0; ; k++) {
-                    const delta = 2 * Math.PI * (2 * k + 1) / p;
+                    const delta = 2 * Math.PI * (2 * k + 1) / sumQP;
                     if (delta >= deltaMax) break;
                     tryCandidate(sigma, delta);
                 }
 
-                // Opposite-sign solutions: Δ = 4πk/(q-P) [only if q ≠ P]
-                if (Math.abs(q - P) > EPS) {
+                // Family 2: Δ = 4πk/|Q-P|  [when Q ≠ P]
+                if (diffQP > EPS) {
                     for (let k = 1; ; k++) {
-                        const delta = 4 * Math.PI * k / Math.abs(q - P);
+                        const delta = 4 * Math.PI * k / diffQP;
+                        if (delta >= deltaMax) break;
+                        tryCandidate(sigma, delta);
+                    }
+                }
+
+                // Family 3: Δ = 4πk/(Q+P)
+                for (let k = 1; ; k++) {
+                    const delta = 4 * Math.PI * k / sumQP;
+                    if (delta >= deltaMax) break;
+                    tryCandidate(sigma, delta);
+                }
+
+                // Family 4: Δ = 2π(2k+1)/|Q-P|  [when Q ≠ P]
+                if (diffQP > EPS) {
+                    for (let k = 0; ; k++) {
+                        const delta = 2 * Math.PI * (2 * k + 1) / diffQP;
                         if (delta >= deltaMax) break;
                         tryCandidate(sigma, delta);
                     }
