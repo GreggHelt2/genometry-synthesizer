@@ -62,12 +62,20 @@ export class LissajousCurve extends Curve {
     }
 
     /**
-     * Finds special points on this Lissajous curve.
-     * Zero points: x=0 AND y=0 simultaneously.
-     * Double points: grid-based enumeration from Erb's framework.
-     * Boundary points: maxima of x²+y² via numerical peak detection.
+     * Finds all special points on this Lissajous curve using fully algebraic
+     * methods adapted from Erb's spectral node framework.
+     *
+     * - Zero points: sin(aθ+δ) = 0 AND sin(bθ) = 0 — enumeration
+     * - Boundary points: bounding-box extrema where |x|=A or |y|=A
+     * - Double points: Σ/Δ decomposition of sin=sin collision equations
+     *   into two fully algebraic families (no numerical root-finding)
+     *
+     * Results are memoized per parameter signature.
      */
     getSpecialPoints() {
+        const sig = this.getSignature();
+        if (this._spCache && this._spCacheSig === sig) return this._spCache;
+
         const totalRad = this.getRadiansToClosure();
         if (totalRad <= 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
 
@@ -76,103 +84,178 @@ export class LissajousCurve extends Curve {
         if (a === 0 || b === 0) return { zeroPoints: [], doublePoints: [], boundaryPoints: [] };
 
         const EPS = 1e-9;
-        const SPATIAL_EPS = 1e-4;
-
-        // --- Zero Points: sin(a·θ + δ) = 0 AND sin(b·θ) = 0 ---
+        const SPATIAL_EPS = 1e-6;
         const deltaRad = (this.delta * Math.PI) / 180;
-        const zeroPoints = [];
 
-        // sin(b·θ) = 0 → θ = mπ/b
-        // Then check if sin(a·θ + δ) ≈ 0 at those θ
-        for (let m = 0; ; m++) {
-            const theta = m * Math.PI / b;
-            if (theta >= totalRad - EPS) break;
-            const valX = Math.sin(a * theta + deltaRad);
-            if (Math.abs(valX) < 1e-6) {
-                const pt = this.getPoint(theta);
-                zeroPoints.push({ theta, x: pt.x, y: pt.y });
-            }
-        }
+        const zeroPoints = this._findZeroPoints(totalRad, a, b, deltaRad, EPS);
+        const boundaryPoints = this._findBoundaryPoints(totalRad, a, b, deltaRad, EPS);
+        const doublePoints = this._findDoublePoints(totalRad, a, b, deltaRad, EPS, SPATIAL_EPS);
 
-        // --- Double Points: grid t_l = l·π / (a·b) ---
-        const gridStep = Math.PI / (a * b);
-        const gridSize = Math.ceil(totalRad / gridStep);
-        const gridPoints = [];
-
-        for (let l = 0; l < gridSize; l++) {
-            const theta = l * gridStep;
-            if (theta >= totalRad - EPS) break;
-            const pt = this.getPoint(theta);
-            gridPoints.push({ theta, x: pt.x, y: pt.y });
-        }
-
-        // Group by spatial proximity
-        const doublePoints = [];
-        const used = new Set();
-        const scale = this.A || 100;
-
-        for (let i = 0; i < gridPoints.length; i++) {
-            if (used.has(i)) continue;
-            const pi = gridPoints[i];
-            const group = [pi];
-
-            for (let j = i + 1; j < gridPoints.length; j++) {
-                if (used.has(j)) continue;
-                const pj = gridPoints[j];
-                const dx = pi.x - pj.x;
-                const dy = pi.y - pj.y;
-                if (Math.sqrt(dx * dx + dy * dy) < SPATIAL_EPS * scale) {
-                    group.push(pj);
-                    used.add(j);
-                }
-            }
-
-            if (group.length >= 2) {
-                used.add(i);
-                // Filter out zero points
-                const isZero = Math.abs(pi.x) < SPATIAL_EPS * scale && Math.abs(pi.y) < SPATIAL_EPS * scale;
-                if (!isZero) {
-                    doublePoints.push({
-                        x: pi.x, y: pi.y,
-                        theta1: group[0].theta, theta2: group[1].theta
-                    });
-                }
-            }
-        }
-
-        // --- Boundary Points: numerical peak detection of |r|² = x² + y² ---
-        const boundaryPoints = this._findBoundaryPointsNumerical(totalRad);
-
-        return { zeroPoints, doublePoints, boundaryPoints };
+        const result = { zeroPoints, doublePoints, boundaryPoints };
+        this._spCache = result;
+        this._spCacheSig = sig;
+        return result;
     }
 
     /**
-     * Numerical boundary point detection — finds local maxima of x²+y².
+     * Zero points: x=0 AND y=0 simultaneously.
+     * sin(bθ) = 0 → θ = mπ/b, then check sin(aθ+δ) ≈ 0.
      */
-    _findBoundaryPointsNumerical(totalRad) {
-        const sampleCount = Math.min(50000, Math.max(1000, Math.round(totalRad * 200)));
-        const step = totalRad / sampleCount;
+    _findZeroPoints(totalRad, a, b, deltaRad, EPS) {
         const results = [];
+        const maxM = Math.ceil(b * totalRad / Math.PI);
 
-        let prevR2 = 0, prevPrevR2 = 0;
-        for (let i = 0; i <= sampleCount; i++) {
-            const theta = i * step;
-            const pt = this.getPoint(theta);
-            const r2 = pt.x * pt.x + pt.y * pt.y;
-
-            if (i >= 2 && prevR2 > prevPrevR2 && prevR2 > r2) {
-                // Local maximum at i-1
-                const peakTheta = (i - 1) * step;
-                const peakPt = this.getPoint(peakTheta);
-                const r = Math.sqrt(prevR2);
-                results.push({ theta: peakTheta, x: peakPt.x, y: peakPt.y, r });
+        for (let m = 0; m <= maxM; m++) {
+            const theta = m * Math.PI / b;
+            if (theta >= totalRad - EPS) break;
+            if (Math.abs(Math.sin(a * theta + deltaRad)) < 1e-6) {
+                const pt = this.getPoint(theta);
+                results.push({ theta, x: pt.x, y: pt.y });
             }
+        }
+        return results;
+    }
 
-            prevPrevR2 = prevR2;
-            prevR2 = r2;
+    /**
+     * Boundary points: bounding-box extrema where the curve touches |x|=A or |y|=A.
+     *
+     * x-boundary: sin(aθ+δ) = ±1 → θ = (π/2 + kπ − δ) / a
+     * y-boundary: sin(bθ) = ±1   → θ = (π/2 + kπ) / b
+     *
+     * This is the natural boundary definition for Lissajous curves in Erb's
+     * framework, and is fully algebraic (no numerical peak detection).
+     */
+    _findBoundaryPoints(totalRad, a, b, deltaRad, EPS) {
+        const results = [];
+        const A = this.A || 100;
+
+        // x-boundary: sin(aθ+δ) = ±1 → aθ+δ = π/2 + kπ
+        const maxKx = Math.ceil(a * totalRad / Math.PI) + 2;
+        for (let k = -maxKx; k <= maxKx; k++) {
+            const theta = (Math.PI / 2 + k * Math.PI - deltaRad) / a;
+            if (theta < -EPS || theta >= totalRad - EPS) continue;
+            const pt = this.getPoint(Math.max(0, theta));
+            const r = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            results.push({ theta: Math.max(0, theta), x: pt.x, y: pt.y, r });
         }
 
-        return results;
+        // y-boundary: sin(bθ) = ±1 → bθ = π/2 + kπ
+        const maxKy = Math.ceil(b * totalRad / Math.PI) + 2;
+        for (let k = 0; k <= maxKy; k++) {
+            const theta = (Math.PI / 2 + k * Math.PI) / b;
+            if (theta < -EPS || theta >= totalRad - EPS) continue;
+            const pt = this.getPoint(theta);
+            const r = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            results.push({ theta, x: pt.x, y: pt.y, r });
+        }
+
+        // Sort and deduplicate (corner points appear in both x and y enumerations)
+        results.sort((a, b) => a.theta - b.theta);
+        return this._deduplicateByTheta(results, EPS * 100);
+    }
+
+    /**
+     * Self-intersections via fully algebraic Σ/Δ decomposition.
+     *
+     * Collision: sin(aθ₁+δ) = sin(aθ₂+δ) AND sin(bθ₁) = sin(bθ₂).
+     * Each sin=sin equation has two solution families (sum-type and diff-type).
+     * Combining them yields two non-trivial algebraic families:
+     *
+     * Family A — Σ from x-condition, Δ from y-condition:
+     *   Σ = (π(2n+1) − 2δ) / a    (discrete)
+     *   Δ = 2πm / b                 (discrete, m ≥ 1)
+     *
+     * Family B — Σ from y-condition, Δ from x-condition:
+     *   Σ = π(2m+1) / b            (discrete)
+     *   Δ = 2πn / a                 (discrete, n ≥ 1)
+     *
+     * Both families are fully algebraic — no scanning or bisection needed.
+     */
+    _findDoublePoints(totalRad, a, b, deltaRad, EPS, SPATIAL_EPS) {
+        const A = this.A || 100;
+        const dedupRadius = Math.max(SPATIAL_EPS * A, 0.5);
+        const foundSet = new Set();
+        const doublePoints = [];
+        const twoT = 2 * totalRad;
+
+        // Helper: validate a (Σ, Δ) candidate and record if it's a real intersection
+        const tryCandidate = (sigma, delta) => {
+            if (delta < EPS) return;
+            const theta1 = (sigma + delta) / 2;
+            const theta2 = (sigma - delta) / 2;
+            if (theta1 < -EPS || theta1 >= totalRad - EPS) return;
+            if (theta2 < -EPS || theta2 >= totalRad - EPS) return;
+
+            const pt1 = this.getPoint(theta1);
+            const pt2 = this.getPoint(theta2);
+            const dist = Math.sqrt((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2);
+            if (dist < 0.01 * Math.max(A, 1)) {
+                // Skip origin (already counted as zero points)
+                if (Math.abs(pt1.x) < SPATIAL_EPS * A &&
+                    Math.abs(pt1.y) < SPATIAL_EPS * A) return;
+
+                const posKey = `${Math.round(pt1.x / dedupRadius)},${Math.round(pt1.y / dedupRadius)}`;
+                if (!foundSet.has(posKey)) {
+                    foundSet.add(posKey);
+                    doublePoints.push({
+                        x: pt1.x, y: pt1.y,
+                        theta1: Math.min(theta1, theta2),
+                        theta2: Math.max(theta1, theta2)
+                    });
+                }
+            }
+        };
+
+        // === Family A: Σ from x-condition, Δ from y-condition ===
+        // Σ = (π(2n+1) − 2δ) / a,  Δ = 2πm / b  (m ≥ 1)
+        {
+            // Range: 0 < Σ < 2T  →  2δ/π < 2n+1 < 2aT/π + 2δ/π
+            const nMin = Math.ceil((2 * deltaRad / Math.PI - 1) / 2);
+            const nMax = Math.floor(a * totalRad / Math.PI + (2 * deltaRad / Math.PI - 1) / 2);
+
+            for (let n = nMin; n <= nMax; n++) {
+                const sigma = (Math.PI * (2 * n + 1) - 2 * deltaRad) / a;
+                if (sigma <= EPS || sigma >= twoT - EPS) continue;
+
+                const deltaMax = Math.min(sigma, twoT - sigma);
+                for (let m = 1; ; m++) {
+                    const delta = 2 * Math.PI * m / b;
+                    if (delta > deltaMax + EPS) break;
+                    tryCandidate(sigma, delta);
+                }
+            }
+        }
+
+        // === Family B: Σ from y-condition, Δ from x-condition ===
+        // Σ = π(2m+1) / b,  Δ = 2πn / a  (n ≥ 1)
+        {
+            const mMax = Math.floor(b * totalRad / Math.PI);
+            for (let m = 0; m <= mMax; m++) {
+                const sigma = Math.PI * (2 * m + 1) / b;
+                if (sigma <= EPS || sigma >= twoT - EPS) continue;
+
+                const deltaMax = Math.min(sigma, twoT - sigma);
+                for (let n = 1; ; n++) {
+                    const delta = 2 * Math.PI * n / a;
+                    if (delta > deltaMax + EPS) break;
+                    tryCandidate(sigma, delta);
+                }
+            }
+        }
+
+        return doublePoints;
+    }
+
+    /** Deduplicate points by theta proximity. */
+    _deduplicateByTheta(points, eps) {
+        if (points.length <= 1) return points;
+        const result = [points[0]];
+        for (let i = 1; i < points.length; i++) {
+            if (Math.abs(points[i].theta - result[result.length - 1].theta) > eps) {
+                result.push(points[i]);
+            }
+        }
+        return result;
     }
 
     getSignature() {
