@@ -68,10 +68,106 @@ export class SuperformulaCurve extends Curve {
     }
 
     getRadiansToClosure() {
-        // Usually 2PI for integer m.
-        // If m is rational? The Chordal Rosette logic generally works in 2PI or multiple.
-        // For general plotting, 2PI covers the basic shape for m integers.
-        return 2 * Math.PI;
+        // The superformula uses the internal angle φ = m·θ/4.
+        // For the curve to close, BOTH the physical angle (cos θ, sin θ) AND the
+        // internal angle (cos φ, sin φ) must return to their starting values.
+        //
+        // The internal expression is f(φ) = |cos(φ)/a|^n2 + |sin(φ)/b|^n3.
+        // Due to absolute values, f always has period π.
+        // f has the shorter period π/2 ONLY when a=b AND n2=n3, because then
+        // f(φ+π/2) = |sin/a|^n2 + |cos/a|^n2 = f(φ).
+        // When n2≠n3 (even with a=b), swapping cos↔sin changes the exponents,
+        // so the internal function is NOT π/2-symmetric.
+        //
+        // Physical closure: θ = 2π·k (k full rotations)
+        // Internal closure: φ = m·2πk/4 = mπk/2 must be a multiple of the
+        //   internal period:
+        //   - Period π/2 (a=b, n2=n3): need mk/2 ∈ ½Z → mk ∈ Z → k=1 always works
+        //   - Period π   (general):    need mk/2 ∈ Z
+        //     • m even → k=1 works (2π)
+        //     • m odd  → k=2 needed (4π)
+        //   - m=0: curve is a circle (2π)
+
+        const { m, a, b, n2, n3 } = this;
+        const EPS = 1e-9;
+
+        if (Math.abs(m) < EPS) {
+            // m=0: r is constant, circle
+            return 2 * Math.PI;
+        }
+
+        // Full π/2 symmetry: a≈b AND n2≈n3
+        // In this case |cos/a|^n2 + |sin/a|^n2 is invariant under φ→φ+π/2,
+        // so 2π always suffices for any m.
+        if (Math.abs(a - b) < EPS && Math.abs(n2 - n3) < EPS) {
+            return 2 * Math.PI;
+        }
+
+        // For a ≠ b: we need m·k/2 to be an integer.
+        // Handle rational m by expressing as p/q in lowest terms.
+        // Then m·k/2 = p·k/(2·q), which is an integer when k = 2·q/gcd(p, 2·q).
+        // For integer m (q=1): even m → k=1, odd m → k=2.
+
+        // Approximate rational decomposition for m
+        // Use a simple continued-fraction approach to find p/q
+        const { p, q } = this._toRational(Math.abs(m));
+
+        // We need p·k/(2·q) to be an integer → k = 2·q / gcd(p, 2·q)
+        const g = this._gcd(p, 2 * q);
+        const k = (2 * q) / g;
+
+        return k * 2 * Math.PI;
+    }
+
+    /** Helper: greatest common divisor */
+    _gcd(a, b) {
+        a = Math.abs(a);
+        b = Math.abs(b);
+        while (b) { [a, b] = [b, a % b]; }
+        return a;
+    }
+
+    /** Helper: approximate a positive number as p/q (lowest terms) */
+    _toRational(x, tolerance = 1e-8, maxIter = 20) {
+        // Check if x is very close to an integer first
+        const rounded = Math.round(x);
+        if (Math.abs(x - rounded) < tolerance) {
+            return { p: rounded, q: 1 };
+        }
+
+        // Stern-Brocot / mediants approach
+        let a = Math.floor(x), b = 1;
+        let c = a + 1, d = 1;
+
+        for (let i = 0; i < maxIter; i++) {
+            const medP = a + c;
+            const medQ = b + d;
+            const medVal = medP / medQ;
+
+            if (Math.abs(medVal - x) < tolerance) {
+                const g = this._gcd(medP, medQ);
+                return { p: medP / g, q: medQ / g };
+            }
+
+            if (medVal < x) {
+                a = medP;
+                b = medQ;
+            } else {
+                c = medP;
+                d = medQ;
+            }
+        }
+
+        // Fallback: use whichever bound is closer
+        const lVal = a / b;
+        const rVal = c / d;
+        if (Math.abs(lVal - x) < Math.abs(rVal - x)) {
+            const g = this._gcd(a, b);
+            return { p: a / g, q: b / g };
+        } else {
+            const g = this._gcd(c, d);
+            return { p: c / g, q: d / g };
+        }
     }
 
     getSignature() {
