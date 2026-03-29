@@ -37,6 +37,16 @@ export class Curve {
     }
 
     /**
+     * Returns the recommended number of sample points per radian for rendering.
+     * Curves with high internal oscillation frequencies should override this
+     * to ensure smooth visual rendering.
+     * @returns {number} Samples per radian (default: 100).
+     */
+    getSamplesPerRadian() {
+        return 100;
+    }
+
+    /**
      * Returns special points on the curve: zero points (origin crossings),
      * double points (self-intersections), and boundary points (maximal radius).
      * Subclasses should override with analytical or numerical implementations.

@@ -143,7 +143,7 @@ export class CanvasRenderer {
             const curve = this.createCurve(roseParams);
             if (curve) {
                 const totalRad = curve.getRadiansToClosure();
-                const samplesPerRad = 100;
+                const samplesPerRad = (typeof curve.getSamplesPerRadian === 'function') ? curve.getSamplesPerRadian() : 100;
                 const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
                 const step = totalRad / sampleCount;
                 const points = [];
@@ -554,7 +554,8 @@ export class CanvasRenderer {
             const curve = this.createCurve(roseFlat);
             if (!curve) return;
             const totalRad = curve.getRadiansToClosure();
-            const sampleCount = Math.min(50000, Math.ceil(totalRad * 100));
+            const samplesPerRad = (typeof curve.getSamplesPerRadian === 'function') ? curve.getSamplesPerRadian() : 100;
+            const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
             const step = totalRad / sampleCount;
             const points = [];
             for (let i = 0; i <= sampleCount; i++) points.push(curve.getPoint(i * step));
@@ -583,7 +584,9 @@ export class CanvasRenderer {
                 const radA = curveA.getRadiansToClosure();
                 const radB = curveB.getRadiansToClosure();
                 const totalRad = Math.max(radA, radB);
-                const sampleCount = Math.min(50000, Math.ceil(totalRad * 100));
+                const sprA = (typeof curveA.getSamplesPerRadian === 'function') ? curveA.getSamplesPerRadian() : 100;
+                const sprB = (typeof curveB.getSamplesPerRadian === 'function') ? curveB.getSamplesPerRadian() : 100;
+                const sampleCount = Math.min(50000, Math.ceil(totalRad * Math.max(sprA, sprB)));
                 const step = totalRad / sampleCount;
                 const blendedPoints = [];
                 for (let i = 0; i <= sampleCount; i++) {
