@@ -36,6 +36,10 @@ export class PausingerBinomialCurve extends Curve {
         super();
         this.a = Math.round(Math.max(1, params.a || 1));
         this.b = Math.round(Math.max(1, params.b || 6));
+        // Enforce a < b (swap if needed)
+        if (this.a > this.b) {
+            [this.a, this.b] = [this.b, this.a];
+        }
         this.s = params.s ?? 0;
         this.A = params.A ?? 100;
         this.rot = params.rot ?? 0;
