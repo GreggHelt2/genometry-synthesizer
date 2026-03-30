@@ -47,6 +47,25 @@ export class Curve {
     }
 
     /**
+     * Generates an array of {x, y} sample points for rendering the curve.
+     * Default implementation: uniform sampling using getSamplesPerRadian().
+     * Subclasses may override with adaptive or analytically-informed sampling.
+     * @param {number} [maxSamples=50000] - Hard cap on total sample count.
+     * @returns {Array<{x: number, y: number}>}
+     */
+    generateRenderPoints(maxSamples = 50000) {
+        const totalRad = this.getRadiansToClosure();
+        const samplesPerRad = this.getSamplesPerRadian();
+        const sampleCount = Math.min(maxSamples, Math.ceil(totalRad * samplesPerRad));
+        const step = totalRad / sampleCount;
+        const points = [];
+        for (let i = 0; i <= sampleCount; i++) {
+            points.push(this.getPoint(i * step));
+        }
+        return points;
+    }
+
+    /**
      * Returns special points on the curve: zero points (origin crossings),
      * double points (self-intersections), and boundary points (maximal radius).
      * Subclasses should override with analytical or numerical implementations.

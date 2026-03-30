@@ -103,6 +103,10 @@ export class CoreParamsSection {
                 const toggle = this.createToggle(item.key, item.label, params);
                 this.dynamicContainer.appendChild(toggle.container);
                 this.controls[item.key] = toggle.instance;
+            } else if (item.type === 'select') {
+                const select = this.createSelect(item.key, item.label, item.options, params);
+                this.dynamicContainer.appendChild(select.container);
+                this.controls[item.key] = select.instance;
             } else {
                 const slider = this.createSlider(
                     item.key,
@@ -201,6 +205,44 @@ export class CoreParamsSection {
         return {
             container: paramGui.getElement(),
             instance: paramGui
+        };
+    }
+
+    /**
+     * Helper to create a select dropdown linked to store.
+     * Follows the same { container, instance } pattern as createSlider/createToggle.
+     */
+    createSelect(key, label, options, params) {
+        const select = new ParamSelect({
+            key: key,
+            label: label,
+            options: options,
+            value: params[key],
+            onChange: (val) => {
+                dispatchDeep(key, val, this.roseId);
+            },
+            onLinkToggle: () => {
+                const myKey = getLinkKey(key, this.roseId);
+                const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+                const otherKey = getLinkKey(key, otherRoseId);
+
+                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+                    linkManager.toggleLink(myKey, otherKey);
+                });
+            }
+        });
+
+        // Initialize link state
+        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
+            const myKey = getLinkKey(key, this.roseId);
+            if (linkManager.isLinked(myKey)) {
+                select.setLinkActive(true);
+            }
+        });
+
+        return {
+            container: select.getElement(),
+            instance: select
         };
     }
 

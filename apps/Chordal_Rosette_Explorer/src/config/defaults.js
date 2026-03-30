@@ -25,7 +25,8 @@ export const DEFAULTS = {
                 'Superformula': { m: 6, n1: 1, n2: 1, n3: 1, a: 1, b: 1, A: 100, rot: 0 },
                 'Farris Mystery': { r1: 100, k1: 1, r2: 50, k2: 7, r3: 25, k3: -17, A: 100, rot: 0 },
                 'Regular N-Sided Polygon': { n: 5, A: 100, rot: 0 },
-                'Pausinger Binomial': { a: 1, b: 6, s: 0, A: 100, rot: 0 }
+                'Pausinger Binomial': { a: 1, b: 6, s: 0, A: 100, rot: 0 },
+                'Complex Polynomial Mandala': { preset: 'p13', baseShape: 'circle', domainScale: 1.0, mappingRotation: 0, A: 100, rot: 0 }
             }
         },
         sequencer: {
@@ -177,7 +178,8 @@ export const DEFAULTS = {
                 'Superformula': { m: 6, n1: 1, n2: 1, n3: 1, a: 1, b: 1, A: 100, rot: 0 },
                 'Farris Mystery': { r1: 100, k1: 1, r2: 50, k2: 7, r3: 25, k3: -17, A: 100, rot: 0 },
                 'Regular N-Sided Polygon': { n: 5, A: 100, rot: 0 },
-                'Pausinger Binomial': { a: 1, b: 6, s: 0, A: 100, rot: 0 }
+                'Pausinger Binomial': { a: 1, b: 6, s: 0, A: 100, rot: 0 },
+                'Complex Polynomial Mandala': { preset: 'p13', baseShape: 'circle', domainScale: 1.0, mappingRotation: 0, A: 100, rot: 0 }
             }
         },
         sequencer: {

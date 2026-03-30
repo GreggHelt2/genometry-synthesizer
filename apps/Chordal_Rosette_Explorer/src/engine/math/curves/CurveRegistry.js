@@ -8,6 +8,7 @@ import { SuperformulaCurve } from './SuperformulaCurve.js';
 import { FarrisCurve } from './FarrisCurve.js';
 import { RegularNGonCurve } from './RegularNGonCurve.js';
 import { PausingerBinomialCurve } from './PausingerBinomialCurve.js';
+import { ComplexPolynomialMandalaCurve } from './ComplexPolynomialMandalaCurve.js';
 
 export const CurveRegistry = {
     'Rhodonea': RhodoneaCurve,
@@ -19,5 +20,6 @@ export const CurveRegistry = {
     'Superformula': SuperformulaCurve,
     'Farris Mystery': FarrisCurve,
     'Regular N-Sided Polygon': RegularNGonCurve,
-    'Pausinger Binomial': PausingerBinomialCurve
+    'Pausinger Binomial': PausingerBinomialCurve,
+    'Complex Polynomial Mandala': ComplexPolynomialMandalaCurve
 };

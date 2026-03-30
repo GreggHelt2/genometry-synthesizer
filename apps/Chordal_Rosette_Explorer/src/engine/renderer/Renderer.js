@@ -142,14 +142,7 @@ export class CanvasRenderer {
         if (roseParams.showBaseCurve) {
             const curve = this.createCurve(roseParams);
             if (curve) {
-                const totalRad = curve.getRadiansToClosure();
-                const samplesPerRad = (typeof curve.getSamplesPerRadian === 'function') ? curve.getSamplesPerRadian() : 100;
-                const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
-                const step = totalRad / sampleCount;
-                const points = [];
-                for (let i = 0; i <= sampleCount; i++) {
-                    points.push(curve.getPoint(i * step));
-                }
+                const points = curve.generateRenderPoints();
                 renderables.push({
                     type: 'baseCurve',
                     points: points,
@@ -553,12 +546,7 @@ export class CanvasRenderer {
         const collectBaseCurve = (roseFlat, hybridFlat, suffix) => {
             const curve = this.createCurve(roseFlat);
             if (!curve) return;
-            const totalRad = curve.getRadiansToClosure();
-            const samplesPerRad = (typeof curve.getSamplesPerRadian === 'function') ? curve.getSamplesPerRadian() : 100;
-            const sampleCount = Math.min(50000, Math.ceil(totalRad * samplesPerRad));
-            const step = totalRad / sampleCount;
-            const points = [];
-            for (let i = 0; i <= sampleCount; i++) points.push(curve.getPoint(i * step));
+            const points = curve.generateRenderPoints();
 
             renderables.push({
                 type: 'baseCurve',
