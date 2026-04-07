@@ -54,12 +54,18 @@ Sequencers determine *which* vertices on the base curve are connected by chords.
 
 ### Dual-Rosette Morphing (Hybridization)
 
-The central feature is the ability to configure two independent rosettes (**Rosette A** and **Rosette B**) and smoothly interpolate between them in real time:
+The central feature is the ability to configure two independent rosettes (**Rosette A** and **Rosette B**) and smoothly morph between them in real time. Hybridization operates on the **chordal rosettes themselves** — it interpolates between matched vertex pairs across the two rosettes, not between the underlying base curves. Each vertex position in the hybrid result is a weighted average of the corresponding vertices from Rosette A and Rosette B:
 
-- **Linear Vertex Morphing** — Per-vertex LERP with LCM-based resampling to guarantee topological closure throughout the morph
-- **Ring Matching** — When rosettes have different coset counts, topological LCM mapping ensures the full group structure is preserved
-- **Approximate Resampling** — Automatic performance fallback when exact LCM would exceed a user-configurable threshold (default 20,000 segments)
-- **Blended Visualization** — An alternative to endpoint interpolation that blends the *base curves themselves*, producing a single geometric composite from which new chords are derived
+```
+V_hybrid[i] = (1 − w) · V_A[i] + w · V_B[i]
+```
+
+Because the two rosettes may have different vertex counts, the engine uses **LCM-based resampling** to upsample both polylines to a common segment count before interpolation, guaranteeing topological closure throughout the morph:
+
+- **LCM Vertex Matching** — Both rosettes are upsampled to their Least Common Multiple segment count, ensuring every vertex in one rosette has a geometric partner in the other. The upsampled vertices lie exactly on the original chordal line segments, preserving geometric fidelity
+- **Ring Matching** — When rosettes have different coset counts, topological LCM mapping duplicates rings from the lower-cardinality set to match the higher one, preserving the full group structure throughout the animation
+- **Approximate Resampling** — Automatic performance fallback when exact LCM would exceed a user-configurable threshold (default 20,000 segments), switching to linear interpolation across polyline indices
+- **Blended Visualization** — A secondary, alternative mode that blends the *base curves themselves* (point-by-point weighted averages at shared parameter values) rather than the chordal endpoints, producing a single geometric composite from which new chords are derived. This yields different visual results when the rosettes have different closure ranges or sequencing rules
 
 ### Group-Theoretic Exploration
 
