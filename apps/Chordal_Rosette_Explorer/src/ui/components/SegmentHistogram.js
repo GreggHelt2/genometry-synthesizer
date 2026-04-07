@@ -27,10 +27,12 @@ export class SegmentHistogram {
         // Outer container
         this.container = createElement('div', 'mt-2');
 
-        // Label
-        this.label = createElement('div', 'text-[11px] text-gray-500 mb-1', {
-            textContent: 'Chord Length Distribution'
-        });
+        // Label row: "Chord Length Distribution" on left, "Selected: N" on right
+        this.label = createElement('div', 'text-[11px] text-gray-500 mb-1 flex justify-between items-center');
+        const labelText = createElement('span', '', { textContent: 'Chord Length Distribution' });
+        this._selectedCountEl = createElement('span', 'text-gray-600', { textContent: '' });
+        this.label.appendChild(labelText);
+        this.label.appendChild(this._selectedCountEl);
         this.container.appendChild(this.label);
 
         // Horizontal layout: [Left Stats] [Canvas] [Right Buttons]
@@ -196,6 +198,8 @@ export class SegmentHistogram {
                 }
                 // Always redraw to update selection overlays
                 this._redraw();
+                // Update selected count in label
+                this._updateSelectedCount();
             });
 
             // Sync highlight color when ChordSelection color changes
@@ -525,6 +529,22 @@ export class SegmentHistogram {
             <div><span class="text-gray-500">Mean:</span> ${this._formatNum(mean)}</div>
             <div><span class="text-gray-500">Median:</span> ${this._formatNum(median)}</div>
         `;
+    }
+
+    /**
+     * Update the "Selected: N" count in the label row.
+     * @private
+     */
+    _updateSelectedCount() {
+        if (!this._selectedCountEl) return;
+        const count = this._chordSelection ? this._chordSelection.size : 0;
+        if (count > 0) {
+            this._selectedCountEl.textContent = `Selected: ${count}`;
+            this._selectedCountEl.className = 'text-yellow-400';
+        } else {
+            this._selectedCountEl.textContent = '';
+            this._selectedCountEl.className = 'text-gray-600';
+        }
     }
 
     /**

@@ -79,7 +79,9 @@ export class StatsSection {
                 value: this._chordSelection.highlightColor,
                 onChange: (val) => this._chordSelection.setHighlightColor(val, `color-picker-${roseId}`)
             });
-            this.chordAccordion.append(this.selectionColorPicker.getElement());
+            const colorEl = this.selectionColorPicker.getElement();
+            colorEl.style.marginTop = '8px';
+            this.chordAccordion.append(colorEl);
 
             // Sync picker when color changes externally (e.g. snapshot load)
             this._chordSelection.addEventListener('colorchange', (e) => {

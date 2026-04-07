@@ -138,7 +138,9 @@ export class InterpolationPanel extends Panel {
                 value: chordSelection.highlightColor,
                 onChange: (val) => chordSelection.setHighlightColor(val, 'color-picker-hybrid')
             });
-            this.chordAccordion.append(this.selectionColorPicker.getElement());
+            const colorEl = this.selectionColorPicker.getElement();
+            colorEl.style.marginTop = '8px';
+            this.chordAccordion.append(colorEl);
 
             // Sync picker when color changes externally (e.g. snapshot load)
             chordSelection.addEventListener('colorchange', (e) => {
