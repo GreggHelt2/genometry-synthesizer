@@ -507,6 +507,11 @@ class App {
         this.rosetteRendererA = new CanvasRenderer(this.panelA.canvas);
         this.rosetteRendererB = new CanvasRenderer(this.panelB.canvas);
 
+        // Wire renderer refs for Trails "Clear Canvas" button
+        this.panelA._trailsRenderer = this.rosetteRendererA;
+        this.panelB._trailsRenderer = this.rosetteRendererB;
+        this.interpPanel._trailsRenderer = this.hybridRenderer;
+
         // Canvas Chord Pickers
         this.pickerA = new ChordPicker(this.panelA.canvas, this.chordSelection, this.rosetteRendererA, {
             sourceId: 'canvas-rosetteA'

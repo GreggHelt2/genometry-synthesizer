@@ -141,6 +141,10 @@ export const DEFAULTS = {
             color: '#000000',
             opacity: 0
         },
+        trails: {
+            enabled: false,
+            decay: 0.1
+        },
         rendering: {
             autoScale: false,
             autoScaleRatio: 0.9,
@@ -293,6 +297,10 @@ export const DEFAULTS = {
         background: {
             color: '#000000',
             opacity: 0
+        },
+        trails: {
+            enabled: false,
+            decay: 0.1
         },
         rendering: {
             autoScale: false,
@@ -608,6 +616,10 @@ export const DEFAULTS = {
         background: {
             color: '#000000',
             opacity: 0
+        },
+        trails: {
+            enabled: false,
+            decay: 0.1
         },
         rendering: {
             autoScale: false,

@@ -36,6 +36,7 @@ export function flattenRoseParams(roseState) {
     const rendering = roseState.rendering || {};
     const coset = roseState.coset || {};
     const sp = roseState.specialPoints || {};
+    const trails = roseState.trails || {};
 
     // Stroke coloring
     const sc = stroke.coloring || {};
@@ -123,6 +124,10 @@ export function flattenRoseParams(roseState) {
         backgroundColor: bg.color,
         backgroundOpacity: bg.opacity,
 
+        // Trails
+        trailsEnabled: trails.enabled,
+        trailsDecay: trails.decay,
+
         // Rendering
         autoScale: rendering.autoScale,
         autoScaleRatio: rendering.autoScaleRatio,
@@ -174,6 +179,7 @@ export function flattenHybridParams(hybridState) {
     const rendering = hybridState.rendering || {};
     const coset = hybridState.coset || {};
     const ci = hybridState.coincidentIndices || {};
+    const trails = hybridState.trails || {};
 
     const sc = stroke.coloring || {};
     const scp = sc.params || {};
@@ -358,6 +364,10 @@ export function flattenHybridParams(hybridState) {
         backgroundColor: bg.color,
         backgroundOpacity: bg.opacity,
 
+        // Trails
+        trailsEnabled: trails.enabled,
+        trailsDecay: trails.decay,
+
         // Rendering
         autoScale: rendering.autoScale,
         autoScaleRatio: rendering.autoScaleRatio,
@@ -437,6 +447,10 @@ const FLAT_KEY_TO_PATH = {
     // Background
     backgroundColor: ['background', 'color'],
     backgroundOpacity: ['background', 'opacity'],
+
+    // Trails
+    trailsEnabled: ['trails', 'enabled'],
+    trailsDecay: ['trails', 'decay'],
 
     // Special Points
     showSpecialPoints: ['specialPoints', 'show'],
@@ -639,6 +653,10 @@ const HYBRID_FLAT_KEY_TO_PATH = {
     // Background
     backgroundColor: ['background', 'color'],
     backgroundOpacity: ['background', 'opacity'],
+
+    // Trails
+    trailsEnabled: ['trails', 'enabled'],
+    trailsDecay: ['trails', 'decay'],
 
     // Rendering
     autoScale: ['rendering', 'autoScale'],

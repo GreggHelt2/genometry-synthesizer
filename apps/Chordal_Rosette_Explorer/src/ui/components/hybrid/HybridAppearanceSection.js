@@ -6,6 +6,7 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { dispatchDeep } from '../../../engine/state/stateAdapters.js';
+import { TrailsSection } from '../chordal_rosette/TrailsSection.js';
 
 export class HybridAppearanceSection {
     constructor(orchestrator) {
@@ -41,6 +42,9 @@ export class HybridAppearanceSection {
 
         // 8. General Rendering
         this.renderGeneralHelper();
+
+        // 9. Trails Effect
+        this.renderTrails();
     }
 
     renderHybridViz() {
@@ -535,6 +539,16 @@ export class HybridAppearanceSection {
         this.generalAccordion.append(this.generalModule.container);
     }
 
+    renderTrails() {
+        this.trailsSection = new TrailsSection(this.orchestrator, 'hybrid', {
+            onClearCanvas: () => {
+                const renderer = this.orchestrator._trailsRenderer;
+                if (renderer) renderer.forceClear();
+            }
+        });
+        this.orchestrator.controlsContainer.appendChild(this.trailsSection.element);
+    }
+
     createSlider(key, min, max, step, label) {
         const paramGui = new ParamNumber({
             key, label, min, max, step, value: 0,
@@ -622,6 +636,9 @@ export class HybridAppearanceSection {
         // 8. General
         if (this.generalModule) this.generalModule.update(flatParams);
 
+        // 9. Trails
+        if (this.trailsSection) this.trailsSection.update(flatParams);
+
         // Sync eye toggles
         if (this.hybridVizEyeToggle) this.hybridVizEyeToggle.setActive(flatParams.showHybridLines !== false);
         if (this.fillEyeToggle) this.fillEyeToggle.setActive(flatParams.showFill !== false);
@@ -648,5 +665,8 @@ export class HybridAppearanceSection {
         modules.forEach(m => {
             if (m && m.updateLinkVisuals) m.updateLinkVisuals();
         });
+        if (this.trailsSection && this.trailsSection.updateLinkVisuals) {
+            this.trailsSection.updateLinkVisuals();
+        }
     }
 }

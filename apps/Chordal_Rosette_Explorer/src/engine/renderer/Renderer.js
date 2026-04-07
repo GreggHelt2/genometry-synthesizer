@@ -65,6 +65,33 @@ export class CanvasRenderer {
         this.ctx.clearRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
     }
 
+    /**
+     * Apply a semi-transparent overlay to create a trail/persistence effect.
+     * Previous frame content fades toward the given color instead of being cleared.
+     * @param {number} decay - Alpha of the fade overlay (0.01 = long trails, 0.5 = short trails)
+     * @param {string} fadeColor - Color to fade toward (typically the background color)
+     */
+    trailFade(decay = 0.1, fadeColor = '#000000') {
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // Reset to pixel coords
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.fillStyle = fadeColor;
+        this.ctx.globalAlpha = decay;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
+    }
+
+    /**
+     * Force a full clear of the canvas (used by "Clear Canvas" button
+     * while trails mode is active).
+     */
+    forceClear() {
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
+    }
+
     getSequencer(type) {
         const SequencerClass = SequencerRegistry[type] || AdditiveGroupModuloNGenerator;
         return new SequencerClass();
@@ -118,7 +145,12 @@ export class CanvasRenderer {
         // Flatten the v3.0 state for rendering
         const roseParams = flattenRoseParams(roseState);
 
-        this.clear();
+        // --- Trail or Clear ---
+        if (roseParams.trailsEnabled) {
+            this.trailFade(roseParams.trailsDecay, roseParams.backgroundColor || '#000000');
+        } else {
+            this.clear();
+        }
         this.ctx.save();
 
         // Anti-aliasing
@@ -515,7 +547,12 @@ export class CanvasRenderer {
         const roseParamsB = flattenRoseParams(state.rosetteB);
         const hybridParams = flattenHybridParams(state.hybrid);
 
-        this.clear();
+        // --- Trail or Clear ---
+        if (hybridParams.trailsEnabled) {
+            this.trailFade(hybridParams.trailsDecay, hybridParams.backgroundColor || '#000000');
+        } else {
+            this.clear();
+        }
         this.ctx.save();
 
         // --- Background Rendering ---

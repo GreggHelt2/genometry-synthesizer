@@ -1,6 +1,7 @@
 import { Accordion } from '../Accordion.js';
 import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
 import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
+import { TrailsSection } from './TrailsSection.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
@@ -196,6 +197,18 @@ export class AppearanceSection {
             null // actionType no longer used
         );
         this.generalAccordion.append(this.generalModule.container);
+
+        // 6. Trails Effect Accordion
+        this.trailsSection = new TrailsSection(this.orchestrator, this.roseId, {
+            onClearCanvas: () => {
+                // Access the renderer via the orchestrator's canvas
+                if (this.orchestrator.canvas) {
+                    const renderer = this.orchestrator._trailsRenderer;
+                    if (renderer) renderer.forceClear();
+                }
+            }
+        });
+        this.element.appendChild(this.trailsSection.element);
     }
 
     handleLinkToggle(key) {
@@ -236,6 +249,9 @@ export class AppearanceSection {
         if (this.generalModule && this.generalModule.updateLinkVisuals) {
             this.generalModule.updateLinkVisuals();
         }
+        if (this.trailsSection && this.trailsSection.updateLinkVisuals) {
+            this.trailsSection.updateLinkVisuals();
+        }
     }
 
     register(accordion, id) {
@@ -253,6 +269,9 @@ export class AppearanceSection {
         if (this.fillModule) this.fillModule.update(params);
 
         if (this.generalModule) this.generalModule.update(params);
+
+        // Trails
+        if (this.trailsSection) this.trailsSection.update(params);
 
         // Sync eye toggles
         if (this.chordalEyeToggle) this.chordalEyeToggle.setActive(params.showChordalLines !== false);
