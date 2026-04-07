@@ -159,7 +159,8 @@ export class CanvasRenderer {
         this.canvas.style.imageRendering = aa ? 'auto' : 'pixelated';
 
         // --- Background Rendering ---
-        if (roseParams.backgroundOpacity > 0) {
+        // Skip when trails are active — trailFade() already fills with backgroundColor
+        if (!roseParams.trailsEnabled && roseParams.backgroundOpacity > 0) {
             this.ctx.save();
             this.ctx.globalAlpha = roseParams.backgroundOpacity;
             this.ctx.fillStyle = roseParams.backgroundColor || '#000000';
@@ -556,7 +557,8 @@ export class CanvasRenderer {
         this.ctx.save();
 
         // --- Background Rendering ---
-        if (hybridParams.backgroundOpacity > 0) {
+        // Skip when trails are active — trailFade() already fills with backgroundColor
+        if (!hybridParams.trailsEnabled && hybridParams.backgroundOpacity > 0) {
             this.ctx.save();
             this.ctx.globalAlpha = hybridParams.backgroundOpacity;
             this.ctx.fillStyle = hybridParams.backgroundColor || '#000000';
