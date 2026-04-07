@@ -209,11 +209,11 @@ genometry-synthesizer/
 
 ### Maurer Roses → P-Curves → Chordal Rosettes
 
-1. **Maurer Roses (Peter Maurer, 1987)** Introduced discrete polylines on rose curves r = sin(kθ), where vertices at multiples of d° are connected sequentially. The interplay of k and d produces intricate patterns whose structure is governed by modular arithmetic.
+1. **Maurer Roses (Peter Maurer, 1987)**: Introduced discrete polylines on rose curves r = sin(kθ), where vertices at multiples of d° are connected sequentially. The interplay of k and d produces intricate patterns whose structure is governed by modular arithmetic.
 
-2. **P-Curves (Helt, 2016)** Generalized the construction to arbitrary parametric base curves and introduced the **Lines To Close** metric: LTC = N / gcd(d, N), quantifying how many chords are needed before the polyline closes.
+2. **P-Curves (Helt, 2016)**: Generalized the construction to arbitrary parametric base curves and introduced the **Lines To Close** metric: LTC = N / gcd(d, N), quantifying how many chords are needed before the polyline closes.
 
-3. **Chordal Rosettes and Hybridized Chordal Roseettes** See accompanying paper
+3. **Chordal Rosettes and Hybridized Chordal Roseettes**: See accompanying paper
 
 ### Group Decomposition
 
