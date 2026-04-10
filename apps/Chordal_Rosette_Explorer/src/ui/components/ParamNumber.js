@@ -193,6 +193,8 @@ export class ParamNumber {
             this.linkBtn.addEventListener('click', () => {
                 if (this.onLinkToggle) this.toggleLink();
             });
+        } else {
+            this.linkBtn.classList.add('hidden');
         }
 
         // 5. Play/Pause Button (Moved to Main Row)

@@ -123,7 +123,8 @@ export class HybridAppearanceSection {
             },
             {
                 showToggle: { key: 'showRoseA', label: 'Show Source A' },
-                sizeLabel: 'Line Width'
+                sizeLabel: 'Line Width',
+                enableLinking: false
             }
         );
         groupA.appendChild(this.underlayModuleA.container);
@@ -147,7 +148,8 @@ export class HybridAppearanceSection {
             },
             {
                 showToggle: { key: 'showRoseB', label: 'Show Source B' },
-                sizeLabel: 'Line Width'
+                sizeLabel: 'Line Width',
+                enableLinking: false
             }
         );
         groupB.appendChild(this.underlayModuleB.container);
@@ -186,7 +188,8 @@ export class HybridAppearanceSection {
                 antiAlias: 'baseCurveAntiAliasA'
             },
             {
-                showToggle: { key: 'showBaseCurveA', label: 'Show Base Curve' }
+                showToggle: { key: 'showBaseCurveA', label: 'Show Base Curve' },
+                enableLinking: false
             }
         );
         groupA.appendChild(this.baseCurveModuleA.container);
@@ -209,7 +212,8 @@ export class HybridAppearanceSection {
                 antiAlias: 'baseCurveAntiAliasB'
             },
             {
-                showToggle: { key: 'showBaseCurveB', label: 'Show Base Curve' }
+                showToggle: { key: 'showBaseCurveB', label: 'Show Base Curve' },
+                enableLinking: false
             }
         );
         groupB.appendChild(this.baseCurveModuleB.container);
@@ -251,7 +255,8 @@ export class HybridAppearanceSection {
                 antiAlias: 'baseCurveAntiAliasBlend'
             },
             {
-                showToggle: { key: 'showBaseCurveBlend', label: 'Show Blended Curve' }
+                showToggle: { key: 'showBaseCurveBlend', label: 'Show Blended Curve' },
+                enableLinking: false
             }
         );
         this.blendedCurveAccordion.append(this.baseCurveModuleBlend.container);
@@ -275,7 +280,8 @@ export class HybridAppearanceSection {
             },
             {
                 sizeLabel: 'Line Width',
-                showToggle: { key: 'showBlendedRosette', label: 'Show Blended Rosette' }
+                showToggle: { key: 'showBlendedRosette', label: 'Show Blended Rosette' },
+                enableLinking: false
             }
         );
         this.blendedRosetteAccordion.append(this.blendedRosetteModule.container);
@@ -298,7 +304,8 @@ export class HybridAppearanceSection {
             },
             {
                 sizeLabel: 'Radius',
-                showToggle: { key: 'showBlendedVertices', label: 'Show Blended Vertices' }
+                showToggle: { key: 'showBlendedVertices', label: 'Show Blended Vertices' },
+                enableLinking: false
             }
         );
         this.blendedVerticesAccordion.append(this.blendedVerticesModule.container);
@@ -441,7 +448,8 @@ export class HybridAppearanceSection {
             },
             {
                 showToggle: { key: 'showInterpPaths', label: 'Show Paths', value: false },
-                sizeLabel: 'Line Width'
+                sizeLabel: 'Line Width',
+                enableLinking: false
             }
         );
         this.interpPathsAccordion.append(this.interpPathsModule.container);
