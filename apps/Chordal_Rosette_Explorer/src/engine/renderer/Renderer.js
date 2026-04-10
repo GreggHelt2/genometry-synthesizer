@@ -74,10 +74,23 @@ export class CanvasRenderer {
     trailFade(decay = 0.1, fadeColor = '#000000') {
         this.ctx.save();
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // Reset to pixel coords
+
+        // Main fade: blend existing content toward fadeColor
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.fillStyle = fadeColor;
         this.ctx.globalAlpha = decay;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Ensure the entire canvas is opaque by filling transparent gaps
+        // with the background color BEHIND existing content.
+        // Without this, trail-faded areas (opaque black) contrast with
+        // untouched transparent areas (showing the CSS container background),
+        // creating a visible grayish footprint.
+        this.ctx.globalCompositeOperation = 'destination-over';
+        this.ctx.fillStyle = fadeColor;
+        this.ctx.globalAlpha = 1.0;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
         this.ctx.restore();
     }
 
