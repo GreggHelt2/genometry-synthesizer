@@ -6,6 +6,7 @@ import { ParamSelect } from '../ParamSelect.js';
 import { ParamColor } from '../ParamColor.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 /**
  * SpecialPointsSection — accordion section for visualizing
@@ -198,34 +199,30 @@ export class SpecialPointsSection {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
-
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            linkManager.toggleLink(myKey, otherKey);
-        });
+        linkManager.toggleLink(myKey, otherKey);
     }
 
     initLinkState(key, control) {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey(key, this.roseId);
-            const level = linkManager.getLinkLevel(myKey);
-            if (level > 0) {
-                control.setLinkLevel(level);
-            }
-        });
+        const myKey = getLinkKey(key, this.roseId);
+        const level = linkManager.getLinkLevel(myKey);
+        if (level > 0) {
+            control.setLinkLevel(level);
+        }
     }
 
     updateLinkVisuals() {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.controls).forEach(key => {
-                const control = this.controls[key];
-                if (control && typeof control.setLinkLevel === 'function') {
-                    const fullKey = getLinkKey(key, this.roseId);
-                    control.setLinkLevel(linkManager.getLinkLevel(fullKey));
-                } else if (control && typeof control.setLinkActive === 'function') {
-                    const fullKey = getLinkKey(key, this.roseId);
-                    control.setLinkActive(linkManager.isLinked(fullKey));
-                }
-            });
+        // Map from control storage keys → flat state keys for correct getLinkKey lookup
+        const keyMap = {
+            zeroPointsColor: 'zeroPointsColor',
+            doublePointsColor: 'doublePointsColor',
+            boundaryPointsColor: 'boundaryPointsColor'
+        };
+        Object.entries(keyMap).forEach(([ctrlKey, stateKey]) => {
+            const control = this.controls[ctrlKey];
+            if (control && typeof control.setLinkLevel === 'function') {
+                const fullKey = getLinkKey(stateKey, this.roseId);
+                control.setLinkLevel(linkManager.getLinkLevel(fullKey));
+            }
         });
     }
 

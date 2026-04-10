@@ -6,6 +6,7 @@ import { ParamSelect } from '../ParamSelect.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { gcd } from '../../../engine/math/MathOps.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 export class CosetVizSection {
     /**
@@ -51,7 +52,8 @@ export class CosetVizSection {
             label: 'Show All Cosets',
             value: false,
             onChange: (val) => this.dispatch('showAllCosets', val),
-            onLinkToggle: () => this.handleLinkToggle('showAllCosets')
+            onLinkToggle: () => this.handleLinkToggle('showAllCosets'),
+            onTriLinkToggle: () => this.handleTriLinkToggle('showAllCosets')
         });
         this.initLinkState('showAllCosets', this.controls.showAllCosets);
         this.accordion.append(this.controls.showAllCosets.getElement());
@@ -76,8 +78,11 @@ export class CosetVizSection {
             label: 'Distribution',
             options: distOptions,
             value: 'sequential',
-            onChange: (val) => this.dispatch('cosetDistribution', val)
+            onChange: (val) => this.dispatch('cosetDistribution', val),
+            onLinkToggle: () => this.handleLinkToggle('cosetDistribution'),
+            onTriLinkToggle: () => this.handleTriLinkToggle('cosetDistribution')
         });
+        this.initLinkState('cosetDistribution', this.controls.distSelect);
         this.accordion.append(this.controls.distSelect.getElement());
     }
 
@@ -90,7 +95,8 @@ export class CosetVizSection {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: () => this.handleLinkToggle(key)
+            onLinkToggle: () => this.handleLinkToggle(key),
+            onTriLinkToggle: () => this.handleTriLinkToggle(key)
         });
 
         this.initLinkState(key, paramGui);
@@ -109,20 +115,22 @@ export class CosetVizSection {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
+        linkManager.toggleLink(myKey, otherKey);
+    }
 
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            linkManager.toggleLink(myKey, otherKey);
-        });
+    handleTriLinkToggle(key) {
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
+        linkManager.toggleTriLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const level = linkManager.getLinkLevel(myKey);
-            if (level > 0) {
-                control.setLinkLevel(level);
-            }
-        });
+        const level = linkManager.getLinkLevel(myKey);
+        if (level > 0) {
+            control.setLinkLevel(level);
+        }
     }
 
     updateLinkVisuals() {
@@ -130,19 +138,18 @@ export class CosetVizSection {
         const linkableControls = {
             showAllCosets: { stateKey: 'showAllCosets', control: this.controls.showAllCosets },
             cosetCount: { stateKey: 'cosetCount', control: this.controls.cosetCount?.instance },
-            cosetIndex: { stateKey: 'cosetIndex', control: this.controls.cosetIndex?.instance }
+            cosetIndex: { stateKey: 'cosetIndex', control: this.controls.cosetIndex?.instance },
+            distSelect: { stateKey: 'cosetDistribution', control: this.controls.distSelect }
         };
 
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.values(linkableControls).forEach(({ stateKey, control }) => {
-                if (control && typeof control.setLinkLevel === 'function') {
-                    const fullKey = getLinkKey(stateKey, this.roseId);
-                    control.setLinkLevel(linkManager.getLinkLevel(fullKey));
-                } else if (control && typeof control.setLinkActive === 'function') {
-                    const fullKey = getLinkKey(stateKey, this.roseId);
-                    control.setLinkActive(linkManager.isLinked(fullKey));
-                }
-            });
+        Object.values(linkableControls).forEach(({ stateKey, control }) => {
+            if (control && typeof control.setLinkLevel === 'function') {
+                const fullKey = getLinkKey(stateKey, this.roseId);
+                control.setLinkLevel(linkManager.getLinkLevel(fullKey));
+            } else if (control && typeof control.setLinkActive === 'function') {
+                const fullKey = getLinkKey(stateKey, this.roseId);
+                control.setLinkActive(linkManager.isLinked(fullKey));
+            }
         });
     }
 

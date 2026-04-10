@@ -3,6 +3,7 @@ import { ParamSelect } from '../ParamSelect.js';
 import { ParamColor } from '../ParamColor.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 export class GlobalRenderingModule {
     constructor(orchestrator, roseId, actionType, keys = {}) {
@@ -60,7 +61,8 @@ export class GlobalRenderingModule {
             label: 'Auto Scale',
             value: false,
             onChange: (val) => this.dispatch(this.keys.autoScale, val),
-            onLinkToggle: () => this.handleLinkToggle(this.keys.autoScale)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.autoScale),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.autoScale)
         });
         this.initLinkState(this.keys.autoScale, this.controls.autoScale);
         this.container.appendChild(this.controls.autoScale.getElement());
@@ -75,7 +77,8 @@ export class GlobalRenderingModule {
             label: 'Scale Line Width',
             value: true,
             onChange: (val) => this.dispatch(this.keys.scaleLineWidth, val),
-            onLinkToggle: () => this.handleLinkToggle(this.keys.scaleLineWidth)
+            onLinkToggle: () => this.handleLinkToggle(this.keys.scaleLineWidth),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.scaleLineWidth)
         });
         this.initLinkState(this.keys.scaleLineWidth, this.controls.scaleLineWidth);
         this.container.appendChild(this.controls.scaleLineWidth.getElement());
@@ -89,8 +92,11 @@ export class GlobalRenderingModule {
             key: this.keys.backgroundColor,
             label: 'Background Color',
             value: '#000000',
-            onChange: (val) => this.dispatch(this.keys.backgroundColor, val)
+            onChange: (val) => this.dispatch(this.keys.backgroundColor, val),
+            onLinkToggle: () => this.handleLinkToggle(this.keys.backgroundColor),
+            onTriLinkToggle: () => this.handleTriLinkToggle(this.keys.backgroundColor)
         });
+        this.initLinkState(this.keys.backgroundColor, this.controls.backgroundColor);
         this.container.appendChild(this.controls.backgroundColor.getElement());
 
         // 5. Selection Hit Tolerance (global, via ChordSelection)
@@ -125,7 +131,8 @@ export class GlobalRenderingModule {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: () => this.handleLinkToggle(key)
+            onLinkToggle: () => this.handleLinkToggle(key),
+            onTriLinkToggle: () => this.handleTriLinkToggle(key)
         });
 
         this.initLinkState(key, paramGui);
@@ -144,43 +151,43 @@ export class GlobalRenderingModule {
         const myKey = getLinkKey(key, this.roseId);
         const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
         const otherKey = getLinkKey(key, otherRoseId);
+        linkManager.toggleLink(myKey, otherKey);
+    }
 
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            linkManager.toggleLink(myKey, otherKey);
-        });
+    handleTriLinkToggle(key) {
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
+        linkManager.toggleTriLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const level = linkManager.getLinkLevel(myKey);
-            if (level > 0) {
-                control.setLinkLevel(level);
-            }
-        });
+        const level = linkManager.getLinkLevel(myKey);
+        if (level > 0) {
+            control.setLinkLevel(level);
+        }
     }
 
     updateLinkVisuals() {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.controls).forEach(k => {
-                const control = this.controls[k];
-                let instance = control;
-                if (control.instance) instance = control.instance;
+        Object.keys(this.controls).forEach(k => {
+            const control = this.controls[k];
+            let instance = control;
+            if (control.instance) instance = control.instance;
 
-                if (instance && typeof instance.setLinkLevel === 'function') {
-                    const paramKey = this.keys[k];
-                    if (paramKey) {
-                        const fullKey = getLinkKey(paramKey, this.roseId);
-                        instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
-                    }
-                } else if (instance && typeof instance.setLinkActive === 'function') {
-                    const paramKey = this.keys[k];
-                    if (paramKey) {
-                        const fullKey = getLinkKey(paramKey, this.roseId);
-                        instance.setLinkActive(linkManager.isLinked(fullKey));
-                    }
+            if (instance && typeof instance.setLinkLevel === 'function') {
+                const paramKey = this.keys[k];
+                if (paramKey) {
+                    const fullKey = getLinkKey(paramKey, this.roseId);
+                    instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
                 }
-            });
+            } else if (instance && typeof instance.setLinkActive === 'function') {
+                const paramKey = this.keys[k];
+                if (paramKey) {
+                    const fullKey = getLinkKey(paramKey, this.roseId);
+                    instance.setLinkActive(linkManager.isLinked(fullKey));
+                }
+            }
         });
     }
 

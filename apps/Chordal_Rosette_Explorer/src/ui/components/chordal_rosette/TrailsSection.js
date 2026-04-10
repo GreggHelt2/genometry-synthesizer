@@ -3,6 +3,7 @@ import { ParamNumber } from '../ParamNumber.js';
 import { ParamToggle } from '../ParamToggle.js';
 import { createElement } from '../../utils/dom.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 /**
  * TrailsSection — Accordion UI for enabling canvas trail persistence effect.
@@ -67,7 +68,8 @@ export class TrailsSection {
             onChange: (val) => {
                 dispatchDeep('trailsDecay', val, this.roseId);
             },
-            onLinkToggle: () => this.handleLinkToggle('trailsDecay')
+            onLinkToggle: () => this.handleLinkToggle('trailsDecay'),
+            onTriLinkToggle: () => this.handleTriLinkToggle('trailsDecay')
         });
         this.initLinkState('trailsDecay', this.decayControl);
 
@@ -95,29 +97,30 @@ export class TrailsSection {
 
     handleLinkToggle(key) {
         const myKey = getLinkKey(key, this.roseId);
-        // Link across all three panels for trails sync
-        const otherIds = ['rosetteA', 'rosetteB', 'hybrid'].filter(id => id !== this.roseId);
+        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
+        const otherKey = getLinkKey(key, otherRoseId);
+        linkManager.toggleLink(myKey, otherKey);
+    }
 
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            // Toggle link with the first "other" panel
-            const otherKey = getLinkKey(key, otherIds[0]);
-            linkManager.toggleLink(myKey, otherKey);
-        });
+    handleTriLinkToggle(key) {
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
+        linkManager.toggleTriLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const level = linkManager.getLinkLevel(myKey);
-            if (level > 0 && control.setLinkLevel) {
-                control.setLinkLevel(level);
-            }
-        });
+        const level = linkManager.getLinkLevel(myKey);
+        if (level > 0 && control.setLinkLevel) {
+            control.setLinkLevel(level);
+        }
     }
 
     updateLinkVisuals() {
-        if (this.decayControl && this.decayControl.updateLinkVisuals) {
-            this.decayControl.updateLinkVisuals();
+        if (this.decayControl && typeof this.decayControl.setLinkLevel === 'function') {
+            const fullKey = getLinkKey('trailsDecay', this.roseId);
+            this.decayControl.setLinkLevel(linkManager.getLinkLevel(fullKey));
         }
     }
 
