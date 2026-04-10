@@ -2,16 +2,15 @@ import { createElement } from '../utils/dom.js';
 import { WaveformSelector } from './WaveformSelector.js';
 import { AnimationController } from '../../logic/AnimationController.js';
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
-import { LINK_ICON_2, LINK_ICON_3 } from './linkIcons.js';
+import { LINK_ICON } from './linkIcons.js';
 
 
 
 export class ParamNumber {
-    constructor({ key, label, min, max, step, value, onChange, onLinkToggle, onTriLinkToggle, hardLimits }) {
+    constructor({ key, label, min, max, step, value, onChange, onLinkToggle, hardLimits }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
-        this.onTriLinkToggle = onTriLinkToggle;
         this.min = min;
         this.max = max;
         this.step = step;
@@ -20,7 +19,6 @@ export class ParamNumber {
         // Internal state tracking to avoid echo-back loops
         this.lastValue = value;
         this.isLinked = false;
-        this.linkLevel = 0;
 
         this.animationController = new AnimationController((val) => {
             // Callback from animation loop
@@ -189,16 +187,11 @@ export class ParamNumber {
         this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
-        this.linkBtn.innerHTML = LINK_ICON_2;
+        this.linkBtn.innerHTML = LINK_ICON;
 
-        if (this.onLinkToggle || this.onTriLinkToggle) {
+        if (this.onLinkToggle) {
             this.linkBtn.addEventListener('click', () => {
                 if (this.onLinkToggle) this.toggleLink();
-            });
-            this.linkBtn.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (this.onTriLinkToggle) this.onTriLinkToggle();
             });
         }
 
@@ -345,22 +338,17 @@ export class ParamNumber {
     }
 
     toggleLink() {
-        // Don't manage state here — linkManager notifications handle visuals via setLinkLevel
+        // Don't manage state here — linkManager notifications handle visuals via setLinkActive
         if (this.onLinkToggle) {
             this.onLinkToggle();
         }
     }
 
     setLinkActive(isActive) {
-        this.setLinkLevel(isActive ? 2 : 0);
-    }
-
-    setLinkLevel(level) {
-        this.linkLevel = level;
-        this.isLinked = level > 0;
+        this.isLinked = isActive;
         if (this.linkBtn) {
-            this.linkBtn.innerHTML = (level === 3) ? LINK_ICON_3 : LINK_ICON_2;
-            if (level > 0) {
+            this.linkBtn.innerHTML = LINK_ICON;
+            if (isActive) {
                 this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
                 this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
             } else {
@@ -484,8 +472,8 @@ export class ParamNumber {
     // ... (rest of methods)
 
     updateLinkVisuals() {
-        // Delegate to setLinkLevel for consistency
-        this.setLinkLevel(this.linkLevel);
+        // Delegate to setLinkActive for consistency
+        this.setLinkActive(this.isLinked);
     }
 
     toggleAnimationPanel() {

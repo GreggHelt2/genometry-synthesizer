@@ -1,15 +1,13 @@
 import { createElement } from '../utils/dom.js';
-import { LINK_ICON_2, LINK_ICON_3 } from './linkIcons.js';
+import { LINK_ICON } from './linkIcons.js';
 
 export class ParamToggle {
-    constructor({ key, label, value, onChange, onLinkToggle, onTriLinkToggle }) {
+    constructor({ key, label, value, onChange, onLinkToggle }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
-        this.onTriLinkToggle = onTriLinkToggle;
         this.lastValue = !!value;
         this.isLinked = false;
-        this.linkLevel = 0;
 
         this.render({ label, value: this.lastValue });
     }
@@ -28,16 +26,11 @@ export class ParamToggle {
         this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
-        this.linkBtn.innerHTML = LINK_ICON_2;
+        this.linkBtn.innerHTML = LINK_ICON;
 
-        if (this.onLinkToggle || this.onTriLinkToggle) {
+        if (this.onLinkToggle) {
             this.linkBtn.addEventListener('click', () => {
                 if (this.onLinkToggle) this.toggleLink();
-            });
-            this.linkBtn.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (this.onTriLinkToggle) this.onTriLinkToggle();
             });
         } else {
             this.linkBtn.classList.add('hidden');
@@ -122,14 +115,9 @@ export class ParamToggle {
     }
 
     setLinkActive(isActive) {
-        this.setLinkLevel(isActive ? 2 : 0);
-    }
-
-    setLinkLevel(level) {
-        this.linkLevel = level;
-        this.isLinked = level > 0;
-        this.linkBtn.innerHTML = (level === 3) ? LINK_ICON_3 : LINK_ICON_2;
-        if (level > 0) {
+        this.isLinked = isActive;
+        this.linkBtn.innerHTML = LINK_ICON;
+        if (isActive) {
             this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
             this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         } else {

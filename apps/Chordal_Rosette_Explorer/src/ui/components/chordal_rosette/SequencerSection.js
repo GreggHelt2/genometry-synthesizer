@@ -4,6 +4,7 @@ import { ParamSelect } from '../ParamSelect.js';
 import { createElement } from '../../utils/dom.js';
 import { SequencerRegistry } from '../../../engine/math/sequencers/SequencerRegistry.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 export class SequencerSection {
     /**
@@ -128,30 +129,28 @@ export class SequencerSection {
     }
 
     updateLinkVisuals() {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            // Sequencer type select
-            if (this.controls.sequencerType) {
-                const seqKey = getLinkKey('sequencerType', this.roseId);
-                this.controls.sequencerType.setLinkLevel(linkManager.getLinkLevel(seqKey));
-            }
+        // Sequencer type select
+        if (this.controls.sequencerType) {
+            const seqKey = getLinkKey('sequencerType', this.roseId);
+            this.controls.sequencerType.setLinkActive(linkManager.isLinked(seqKey));
+        }
 
-            // Static controls
-            if (this.controls.totalDivs) {
-                const fullKey = getLinkKey('totalDivs', this.roseId);
-                this.controls.totalDivs.setLinkLevel(linkManager.getLinkLevel(fullKey));
-            }
+        // Static controls
+        if (this.controls.totalDivs) {
+            const fullKey = getLinkKey('totalDivs', this.roseId);
+            this.controls.totalDivs.setLinkActive(linkManager.isLinked(fullKey));
+        }
 
-            // Dynamic controls
-            if (this.sequencerControls) {
-                Object.keys(this.sequencerControls).forEach(key => {
-                    const control = this.sequencerControls[key];
-                    if (control && control.instance) {
-                        const fullKey = getLinkKey(key, this.roseId);
-                        control.instance.setLinkLevel(linkManager.getLinkLevel(fullKey));
-                    }
-                });
-            }
-        });
+        // Dynamic controls
+        if (this.sequencerControls) {
+            Object.keys(this.sequencerControls).forEach(key => {
+                const control = this.sequencerControls[key];
+                if (control && control.instance) {
+                    const fullKey = getLinkKey(key, this.roseId);
+                    control.instance.setLinkActive(linkManager.isLinked(fullKey));
+                }
+            });
+        }
     }
 
     update(params) {

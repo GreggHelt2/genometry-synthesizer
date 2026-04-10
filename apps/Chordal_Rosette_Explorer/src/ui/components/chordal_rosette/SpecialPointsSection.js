@@ -204,9 +204,8 @@ export class SpecialPointsSection {
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        const level = linkManager.getLinkLevel(myKey);
-        if (level > 0) {
-            control.setLinkLevel(level);
+        if (linkManager.isLinked(myKey)) {
+            control.setLinkActive(true);
         }
     }
 
@@ -219,9 +218,9 @@ export class SpecialPointsSection {
         };
         Object.entries(keyMap).forEach(([ctrlKey, stateKey]) => {
             const control = this.controls[ctrlKey];
-            if (control && typeof control.setLinkLevel === 'function') {
+            if (control && typeof control.setLinkActive === 'function') {
                 const fullKey = getLinkKey(stateKey, this.roseId);
-                control.setLinkLevel(linkManager.getLinkLevel(fullKey));
+                control.setLinkActive(linkManager.isLinked(fullKey));
             }
         });
     }

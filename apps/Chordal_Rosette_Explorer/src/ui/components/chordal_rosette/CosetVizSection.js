@@ -52,8 +52,7 @@ export class CosetVizSection {
             label: 'Show All Cosets',
             value: false,
             onChange: (val) => this.dispatch('showAllCosets', val),
-            onLinkToggle: () => this.handleLinkToggle('showAllCosets'),
-            onTriLinkToggle: () => this.handleTriLinkToggle('showAllCosets')
+            onLinkToggle: () => this.handleLinkToggle('showAllCosets')
         });
         this.initLinkState('showAllCosets', this.controls.showAllCosets);
         this.accordion.append(this.controls.showAllCosets.getElement());
@@ -79,8 +78,7 @@ export class CosetVizSection {
             options: distOptions,
             value: 'sequential',
             onChange: (val) => this.dispatch('cosetDistribution', val),
-            onLinkToggle: () => this.handleLinkToggle('cosetDistribution'),
-            onTriLinkToggle: () => this.handleTriLinkToggle('cosetDistribution')
+            onLinkToggle: () => this.handleLinkToggle('cosetDistribution')
         });
         this.initLinkState('cosetDistribution', this.controls.distSelect);
         this.accordion.append(this.controls.distSelect.getElement());
@@ -95,8 +93,7 @@ export class CosetVizSection {
             step: step,
             value: min,
             onChange: (val) => this.dispatch(key, val),
-            onLinkToggle: () => this.handleLinkToggle(key),
-            onTriLinkToggle: () => this.handleTriLinkToggle(key)
+            onLinkToggle: () => this.handleLinkToggle(key)
         });
 
         this.initLinkState(key, paramGui);
@@ -112,24 +109,16 @@ export class CosetVizSection {
     }
 
     handleLinkToggle(key) {
-        const myKey = getLinkKey(key, this.roseId);
-        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = getLinkKey(key, otherRoseId);
-        linkManager.toggleLink(myKey, otherKey);
-    }
-
-    handleTriLinkToggle(key) {
         const keyA = getLinkKey(key, 'rosetteA');
         const keyB = getLinkKey(key, 'rosetteB');
         const keyH = getLinkKey(key, 'hybrid');
-        linkManager.toggleTriLink(keyA, keyB, keyH);
+        linkManager.toggleFullLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        const level = linkManager.getLinkLevel(myKey);
-        if (level > 0) {
-            control.setLinkLevel(level);
+        if (linkManager.isLinked(myKey)) {
+            control.setLinkActive(true);
         }
     }
 
@@ -143,10 +132,7 @@ export class CosetVizSection {
         };
 
         Object.values(linkableControls).forEach(({ stateKey, control }) => {
-            if (control && typeof control.setLinkLevel === 'function') {
-                const fullKey = getLinkKey(stateKey, this.roseId);
-                control.setLinkLevel(linkManager.getLinkLevel(fullKey));
-            } else if (control && typeof control.setLinkActive === 'function') {
+            if (control && typeof control.setLinkActive === 'function') {
                 const fullKey = getLinkKey(stateKey, this.roseId);
                 control.setLinkActive(linkManager.isLinked(fullKey));
             }

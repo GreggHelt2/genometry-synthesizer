@@ -4,6 +4,7 @@ import { ParamToggle } from '../ParamToggle.js';
 import { ParamSelect } from '../ParamSelect.js';
 import { CurveRegistry } from '../../../engine/math/curves/CurveRegistry.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 export class CoreParamsSection {
     /**
@@ -247,17 +248,12 @@ export class CoreParamsSection {
     }
 
     updateLinkVisuals() {
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            Object.keys(this.controls).forEach(key => {
-                const control = this.controls[key];
-                if (control && typeof control.setLinkLevel === 'function') {
-                    const fullKey = getLinkKey(key, this.roseId);
-                    control.setLinkLevel(linkManager.getLinkLevel(fullKey));
-                } else if (control && typeof control.setLinkActive === 'function') {
-                    const fullKey = getLinkKey(key, this.roseId);
-                    control.setLinkActive(linkManager.isLinked(fullKey));
-                }
-            });
+        Object.keys(this.controls).forEach(key => {
+            const control = this.controls[key];
+            if (control && typeof control.setLinkActive === 'function') {
+                const fullKey = getLinkKey(key, this.roseId);
+                control.setLinkActive(linkManager.isLinked(fullKey));
+            }
         });
     }
 

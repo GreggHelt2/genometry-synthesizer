@@ -68,8 +68,7 @@ export class TrailsSection {
             onChange: (val) => {
                 dispatchDeep('trailsDecay', val, this.roseId);
             },
-            onLinkToggle: () => this.handleLinkToggle('trailsDecay'),
-            onTriLinkToggle: () => this.handleTriLinkToggle('trailsDecay')
+            onLinkToggle: () => this.handleLinkToggle('trailsDecay')
         });
         this.initLinkState('trailsDecay', this.decayControl);
 
@@ -96,31 +95,23 @@ export class TrailsSection {
     }
 
     handleLinkToggle(key) {
-        const myKey = getLinkKey(key, this.roseId);
-        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = getLinkKey(key, otherRoseId);
-        linkManager.toggleLink(myKey, otherKey);
-    }
-
-    handleTriLinkToggle(key) {
         const keyA = getLinkKey(key, 'rosetteA');
         const keyB = getLinkKey(key, 'rosetteB');
         const keyH = getLinkKey(key, 'hybrid');
-        linkManager.toggleTriLink(keyA, keyB, keyH);
+        linkManager.toggleFullLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        const level = linkManager.getLinkLevel(myKey);
-        if (level > 0 && control.setLinkLevel) {
-            control.setLinkLevel(level);
+        if (linkManager.isLinked(myKey) && control.setLinkActive) {
+            control.setLinkActive(true);
         }
     }
 
     updateLinkVisuals() {
-        if (this.decayControl && typeof this.decayControl.setLinkLevel === 'function') {
+        if (this.decayControl && typeof this.decayControl.setLinkActive === 'function') {
             const fullKey = getLinkKey('trailsDecay', this.roseId);
-            this.decayControl.setLinkLevel(linkManager.getLinkLevel(fullKey));
+            this.decayControl.setLinkActive(linkManager.isLinked(fullKey));
         }
     }
 

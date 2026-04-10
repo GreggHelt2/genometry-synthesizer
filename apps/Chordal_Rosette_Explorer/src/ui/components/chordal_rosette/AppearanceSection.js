@@ -7,6 +7,7 @@ import { ParamColor } from '../ParamColor.js';
 import { ParamNumber } from '../ParamNumber.js';
 import { createElement } from '../../utils/dom.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
+import { linkManager } from '../../../engine/logic/LinkManager.js';
 
 export class AppearanceSection {
     /**
@@ -212,23 +213,17 @@ export class AppearanceSection {
     }
 
     handleLinkToggle(key) {
-        const myKey = getLinkKey(key, this.roseId);
-        const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
-        const otherKey = getLinkKey(key, otherRoseId);
-
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            linkManager.toggleLink(myKey, otherKey);
-        });
+        const keyA = getLinkKey(key, 'rosetteA');
+        const keyB = getLinkKey(key, 'rosetteB');
+        const keyH = getLinkKey(key, 'hybrid');
+        linkManager.toggleFullLink(keyA, keyB, keyH);
     }
 
     initLinkState(key, control) {
         const myKey = getLinkKey(key, this.roseId);
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const level = linkManager.getLinkLevel(myKey);
-            if (level > 0) {
-                control.setLinkLevel(level);
-            }
-        });
+        if (linkManager.isLinked(myKey)) {
+            control.setLinkActive(true);
+        }
     }
 
     updateLinkVisuals() {

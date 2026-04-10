@@ -1,7 +1,7 @@
 import { createElement } from '../utils/dom.js';
 import { ColorUtils } from '../../engine/math/ColorUtils.js';
 import { SimpleColorPicker } from './SimpleColorPicker.js';
-import { LINK_ICON_2, LINK_ICON_3 } from './linkIcons.js';
+import { LINK_ICON } from './linkIcons.js';
 
 export class ParamGradient {
     /**
@@ -12,11 +12,10 @@ export class ParamGradient {
      * @param {Function} props.onChange - Callback with new stops array
      * @param {Function} props.onLinkToggle - Optional link toggle callback
      */
-    constructor({ key, label, value, onChange, onLinkToggle, onTriLinkToggle }) {
+    constructor({ key, label, value, onChange, onLinkToggle }) {
         this.key = key;
         this.onChange = onChange;
         this.onLinkToggle = onLinkToggle;
-        this.onTriLinkToggle = onTriLinkToggle;
 
         // Internal State
         // Ensure default alpha if missing
@@ -32,7 +31,6 @@ export class ParamGradient {
         }));
 
         this.isLinked = false;
-        this.linkLevel = 0;
         this.draggedStopIndex = -1;
         this.dragStartX = 0;
         this.isDragging = false;
@@ -61,15 +59,10 @@ export class ParamGradient {
         this.linkBtn = createElement('button', 'p-1 rounded hover:bg-gray-600 text-gray-500 transition-colors border border-transparent', {
             title: 'Link Parameter'
         });
-        this.linkBtn.innerHTML = LINK_ICON_2;
+        this.linkBtn.innerHTML = LINK_ICON;
 
-        if (this.onLinkToggle || this.onTriLinkToggle) {
+        if (this.onLinkToggle) {
             this.linkBtn.addEventListener('click', () => this.toggleLink());
-            this.linkBtn.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (this.onTriLinkToggle) this.onTriLinkToggle();
-            });
         } else {
             this.linkBtn.classList.add('invisible');
         }
@@ -401,14 +394,9 @@ export class ParamGradient {
         }
     }
     setLinkActive(isActive) {
-        this.setLinkLevel(isActive ? 2 : 0);
-    }
-
-    setLinkLevel(level) {
-        this.linkLevel = level;
-        this.isLinked = level > 0;
-        this.linkBtn.innerHTML = (level === 3) ? LINK_ICON_3 : LINK_ICON_2;
-        if (level > 0) {
+        this.isLinked = isActive;
+        this.linkBtn.innerHTML = LINK_ICON;
+        if (isActive) {
             this.linkBtn.classList.remove('text-gray-500', 'border-transparent');
             this.linkBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
         } else {
