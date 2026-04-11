@@ -105,7 +105,7 @@ export class ChordalRosettePanel extends Panel {
 
         // Preview Canvas
         const canvasContainer = createElement('div', 'w-full aspect-square bg-black border-b border-gray-700 relative');
-        this.canvas = createElement('canvas', 'w-full h-full block');
+        this.canvas = createElement('canvas', 'w-full h-full block bg-black');
         this.canvas.width = 320;
         this.canvas.height = 320;
 

@@ -420,7 +420,7 @@ class App {
 
         // Canvas Layer (Aligned with Preview Canvases)
         this.canvasContainer = createElement('div', 'w-full aspect-square bg-black border-b border-gray-700 relative flex-none');
-        this.canvas = createElement('canvas', 'w-full h-full block');
+        this.canvas = createElement('canvas', 'w-full h-full block bg-black');
         this.canvas.width = 600; // Init larger
         this.canvas.height = 600;
         this.canvasContainer.appendChild(this.canvas);
