@@ -173,11 +173,18 @@ export class CanvasRenderer {
 
         // --- Background Rendering ---
         // Skip when trails are active — trailFade() already fills with backgroundColor
-        if (!roseParams.trailsEnabled && roseParams.backgroundOpacity > 0) {
+        if (!roseParams.trailsEnabled) {
             this.ctx.save();
-            this.ctx.globalAlpha = roseParams.backgroundOpacity;
-            this.ctx.fillStyle = roseParams.backgroundColor || '#000000';
+            // Always fill opaque black first so canvas is never transparent
+            this.ctx.globalAlpha = 1;
+            this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            // Then layer the user's background color/opacity on top
+            if (roseParams.backgroundOpacity > 0) {
+                this.ctx.globalAlpha = roseParams.backgroundOpacity;
+                this.ctx.fillStyle = roseParams.backgroundColor || '#000000';
+                this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            }
             this.ctx.restore();
         }
 
@@ -571,11 +578,18 @@ export class CanvasRenderer {
 
         // --- Background Rendering ---
         // Skip when trails are active — trailFade() already fills with backgroundColor
-        if (!hybridParams.trailsEnabled && hybridParams.backgroundOpacity > 0) {
+        if (!hybridParams.trailsEnabled) {
             this.ctx.save();
-            this.ctx.globalAlpha = hybridParams.backgroundOpacity;
-            this.ctx.fillStyle = hybridParams.backgroundColor || '#000000';
+            // Always fill opaque black first so canvas is never transparent
+            this.ctx.globalAlpha = 1;
+            this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            // Then layer the user's background color/opacity on top
+            if (hybridParams.backgroundOpacity > 0) {
+                this.ctx.globalAlpha = hybridParams.backgroundOpacity;
+                this.ctx.fillStyle = hybridParams.backgroundColor || '#000000';
+                this.ctx.fillRect(0, 0, this.logicalWidth || this.width, this.logicalHeight || this.height);
+            }
             this.ctx.restore();
         }
 
