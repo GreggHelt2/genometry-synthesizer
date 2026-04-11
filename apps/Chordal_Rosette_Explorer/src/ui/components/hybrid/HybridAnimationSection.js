@@ -26,12 +26,41 @@ export class HybridAnimationSection {
         this.morphControl = this.createSlider('weight', 0, 1, 0.001, 'Morph Weight');
         this.accordion.append(this.morphControl.container);
 
+        // Add Play/Pause button to the accordion header
+        const playSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+        this.headerPlayBtn = this.accordion.addHeaderAction(playSvg, () => {
+            const paramNumber = this.morphControl.instance;
+            paramNumber.togglePlayback();
+            this.syncHeaderPlayButton();
+        }, 'Play/Pause Morph Animation');
+
+        // Monkey-patch the ParamNumber's togglePlayback to also sync our header button
+        const paramNumber = this.morphControl.instance;
+        const originalToggle = paramNumber.togglePlayback.bind(paramNumber);
+        paramNumber.togglePlayback = () => {
+            originalToggle();
+            this.syncHeaderPlayButton();
+        };
+
         // Align labels initially
         requestAnimationFrame(() => {
             if (this.orchestrator.alignLabels) {
                 this.orchestrator.alignLabels(this.accordion.content);
             }
         });
+    }
+
+    /** Keep the header play button visual in sync with the morph animation state. */
+    syncHeaderPlayButton() {
+        if (!this.headerPlayBtn || !this.morphControl) return;
+        const isPlaying = this.morphControl.instance.animationController.isPlaying;
+        if (isPlaying) {
+            this.headerPlayBtn.classList.remove('text-gray-500', 'border-transparent');
+            this.headerPlayBtn.classList.add('text-green-400', 'bg-gray-700', 'border-green-400');
+        } else {
+            this.headerPlayBtn.classList.remove('text-green-400', 'bg-gray-700', 'border-green-400');
+            this.headerPlayBtn.classList.add('text-gray-500', 'border-transparent');
+        }
     }
 
     createSlider(key, min, max, step, label) {
@@ -63,5 +92,6 @@ export class HybridAnimationSection {
         if (this.morphControl) {
             this.morphControl.instance.setValue(flatParams.weight);
         }
+        this.syncHeaderPlayButton();
     }
 }

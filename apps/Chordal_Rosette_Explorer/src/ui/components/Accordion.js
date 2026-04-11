@@ -42,7 +42,8 @@ export class Accordion {
         const container = createElement('div', 'border-b border-gray-700 mb-2');
 
         // Header
-        this.header = createElement('div', 'flex justify-between items-center p-2 cursor-pointer bg-gray-800 hover:bg-gray-700 select-none');
+        this.header = createElement('div', 'flex justify-between items-center p-2 cursor-pointer bg-gray-800 hover:bg-gray-700 select-none overflow-hidden');
+        this.header.style.height = '40px';
         this.header.addEventListener('click', () => this.toggle());
 
         this.titleEl = createElement('span', 'font-bold text-sm uppercase tracking-wider text-gray-200', { textContent: this.title });
@@ -55,7 +56,7 @@ export class Accordion {
         this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
 
         // Actions container (between title and expand arrow)
-        this.actionsContainer = createElement('div', 'flex items-center gap-1 ml-auto mr-2');
+        this.actionsContainer = createElement('div', 'flex items-center gap-1 ml-auto mr-5');
 
         this.header.appendChild(this.titleEl);
         this.header.appendChild(this.actionsContainer);
