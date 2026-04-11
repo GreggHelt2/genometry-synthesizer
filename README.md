@@ -2,6 +2,8 @@
 
 A real-time, interactive tool for visualizing, animating, and exploring **Chordal Rosettes** — mathematical polylines formed by connecting sequences of points on parametric curves with straight-line chords. The application extends the classical **Maurer Rose** construction (1987) into a general-purpose geometric synthesizer, supporting morphing between two independent structures, group-theoretic decomposition, and a rich multi-layer rendering pipeline.
 
+**[▶ Try the live demo](https://gregghelt2.github.io/genometry-synthesizer)**
+
 ---
 
 ## What Is a Chordal Rosette?
