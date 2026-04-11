@@ -57,19 +57,15 @@ export class CoreParamsSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey('curveType', otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             }
         });
 
         // Initialize link state
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey('curveType', this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                this.curveTypeSelect.setLinkActive(true);
-            }
-        });
+        const myKey = getLinkKey('curveType', this.roseId);
+        if (linkManager.isLinked(myKey)) {
+            this.curveTypeSelect.setLinkActive(true);
+        }
 
         this.accordion.append(this.curveTypeSelect.getElement());
         this.controls.curveType = this.curveTypeSelect;
@@ -144,19 +140,15 @@ export class CoreParamsSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             }
         });
 
         // Initialize link state
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey(key, this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                toggle.setLinkActive(true);
-            }
-        });
+        const toggleLinkKey = getLinkKey(key, this.roseId);
+        if (linkManager.isLinked(toggleLinkKey)) {
+            toggle.setLinkActive(true);
+        }
 
         return {
             container: toggle.getElement(),
@@ -183,20 +175,16 @@ export class CoreParamsSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             },
             allowFloat: allowFloat
         });
 
         // Initialize Link State
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey(key, this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                paramGui.setLinkActive(true);
-            }
-        });
+        const sliderLinkKey = getLinkKey(key, this.roseId);
+        if (linkManager.isLinked(sliderLinkKey)) {
+            paramGui.setLinkActive(true);
+        }
 
         // Register for Animation
         if (this.orchestrator.registerParam) {
@@ -227,19 +215,15 @@ export class CoreParamsSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             }
         });
 
         // Initialize link state
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey(key, this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                select.setLinkActive(true);
-            }
-        });
+        const selectLinkKey = getLinkKey(key, this.roseId);
+        if (linkManager.isLinked(selectLinkKey)) {
+            select.setLinkActive(true);
+        }
 
         return {
             container: select.getElement(),

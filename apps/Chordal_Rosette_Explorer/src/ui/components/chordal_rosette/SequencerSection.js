@@ -58,19 +58,15 @@ export class SequencerSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey('sequencerType', otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             }
         });
 
         // Initialize link state
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey('sequencerType', this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                this.sequencerSelect.setLinkActive(true);
-            }
-        });
+        const myKey = getLinkKey('sequencerType', this.roseId);
+        if (linkManager.isLinked(myKey)) {
+            this.sequencerSelect.setLinkActive(true);
+        }
 
         this.accordion.append(this.sequencerSelect.getElement());
         this.controls.sequencerType = this.sequencerSelect;
@@ -104,19 +100,15 @@ export class SequencerSection {
                 const otherRoseId = this.roseId === 'rosetteA' ? 'rosetteB' : 'rosetteA';
                 const otherKey = getLinkKey(key, otherRoseId);
 
-                import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-                    linkManager.toggleLink(myKey, otherKey);
-                });
+                linkManager.toggleLink(myKey, otherKey);
             }
         });
 
         // Initialize Link State
-        import('../../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            const myKey = getLinkKey(key, this.roseId);
-            if (linkManager.isLinked(myKey)) {
-                paramGui.setLinkActive(true);
-            }
-        });
+        const myKey = getLinkKey(key, this.roseId);
+        if (linkManager.isLinked(myKey)) {
+            paramGui.setLinkActive(true);
+        }
 
         if (this.orchestrator.registerParam) {
             this.orchestrator.registerParam(paramGui);

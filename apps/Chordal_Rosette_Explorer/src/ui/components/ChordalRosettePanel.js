@@ -10,6 +10,7 @@ import { CoincidentFinderSection } from './chordal_rosette/CoincidentFinderSecti
 import { SpecialPointsSection } from './chordal_rosette/SpecialPointsSection.js';
 
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
+import { linkManager } from '../../engine/logic/LinkManager.js';
 import { flattenRoseParams } from '../../engine/state/stateAdapters.js';
 
 import { Panel } from './Panel.js';
@@ -37,10 +38,8 @@ export class ChordalRosettePanel extends Panel {
         store.subscribe(this.updateUI.bind(this));
 
         // Subscribe to LinkManager updates
-        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            this.linkManager = linkManager;
-            linkManager.subscribe(this.updateLinkVisuals.bind(this));
-        });
+        this.linkManager = linkManager;
+        linkManager.subscribe(this.updateLinkVisuals.bind(this));
 
         // Initial UI update
         this.updateUI(store.getState());

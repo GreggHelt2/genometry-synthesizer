@@ -304,9 +304,7 @@ class App {
         newBtn.onclick = () => {
             if (!confirm('Reset all parameters to defaults? Unsaved changes will be lost.')) return;
             store.reset();
-            import('./engine/logic/LinkManager.js').then(({ linkManager }) => {
-                linkManager.clearAll();
-            });
+            linkManager.clearAll();
             persistenceManager.clearAutoSave();
             this.saveInput.value = `defaults_${App.getFormattedTimestamp()}`;
         };

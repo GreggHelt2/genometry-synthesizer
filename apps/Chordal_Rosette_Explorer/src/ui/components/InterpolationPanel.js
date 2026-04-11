@@ -15,6 +15,8 @@ import { ParamSelect } from './ParamSelect.js';
 import { ParamColor } from './ParamColor.js';
 import { ParamToggle } from './ParamToggle.js';
 import { dispatchDeep, flattenHybridParams, flattenRoseParams } from '../../engine/state/stateAdapters.js';
+import { linkManager } from '../../engine/logic/LinkManager.js';
+import { persistenceManager } from '../../engine/state/PersistenceManager.js';
 
 import { HybridAnimationSection } from './hybrid/HybridAnimationSection.js';
 import { HybridCosetSection } from './hybrid/HybridCosetSection.js';
@@ -37,9 +39,7 @@ export class InterpolationPanel extends Panel {
         store.subscribe(this.updateUI.bind(this));
 
         // Subscribe to linkManager for cross-panel link visual updates
-        import('../../engine/logic/LinkManager.js').then(({ linkManager }) => {
-            linkManager.subscribe(this.updateLinkVisuals.bind(this));
-        });
+        linkManager.subscribe(this.updateLinkVisuals.bind(this));
 
         // Initial UI update to sync with default state
         this.updateUI(store.getState());
@@ -48,9 +48,7 @@ export class InterpolationPanel extends Panel {
     handleAccordionToggle(isOpen, id) {
         if (!id) return;
         this.uiState.accordions[id] = isOpen;
-        import('../../engine/state/PersistenceManager.js').then(({ persistenceManager }) => {
-            persistenceManager.save();
-        });
+        persistenceManager.save();
         // If Chord Selection accordion re-opened and histogram is dirty, update now
         if (isOpen && id === 'hybrid-chord-analysis' && this._histogramDirty && this._lastHistogramArgs) {
             this._updateHistogram(...this._lastHistogramArgs);
