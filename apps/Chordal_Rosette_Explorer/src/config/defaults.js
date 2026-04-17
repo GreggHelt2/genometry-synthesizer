@@ -328,7 +328,7 @@ export const DEFAULTS = {
 
     hybrid: {
         mix: {
-            weight: 0.0,
+            weight: 0.5,
             method: 'linear',
             samples: 360,
             resampleMethod: 'lcm',
