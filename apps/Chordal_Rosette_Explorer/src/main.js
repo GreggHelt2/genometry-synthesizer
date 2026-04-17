@@ -210,16 +210,10 @@ class App {
         // 1. Header Row
         const header = createElement('div', 'h-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-4 font-bold text-sm text-gray-400');
 
-        const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v5.1' });
+        const titleText = createElement('span', '', { textContent: 'Chordal Rosette Explorer v5.2' });
         header.appendChild(titleText);
 
-        // Collapse All button
-        const collapseBtn = createElement('button', 'px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
-            textContent: '⏶ Collapse All',
-            title: 'Collapse all accordion panels'
-        });
-        collapseBtn.addEventListener('click', () => Accordion.collapseAll());
-        header.appendChild(collapseBtn);
+
 
         // Snapshot Controls Container
         const snapControls = createElement('div', 'flex gap-2');
@@ -473,8 +467,21 @@ class App {
         });
 
         // 3. Footer Row
-        this.footer = createElement('div', 'h-6 bg-gray-900 border-t border-gray-700 flex items-center justify-center text-xs text-gray-500', { textContent: 'Ready' });
-        app.appendChild(this.footer);
+        const footerRow = createElement('div', 'h-6 bg-gray-900 border-t border-gray-700 flex items-center justify-center text-xs relative');
+
+        // Collapse All button (centered)
+        const collapseBtn = createElement('button', 'px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white border border-gray-600 transition-colors', {
+            textContent: '⏶ Collapse All',
+            title: 'Collapse all accordion panels'
+        });
+        collapseBtn.addEventListener('click', () => Accordion.collapseAll());
+        footerRow.appendChild(collapseBtn);
+
+        // Status text (right-aligned, absolute so it doesn't shift the centered button)
+        this.footer = createElement('div', 'absolute right-2 text-gray-500', { textContent: 'Ready' });
+        footerRow.appendChild(this.footer);
+
+        app.appendChild(footerRow);
     }
 
     /**
