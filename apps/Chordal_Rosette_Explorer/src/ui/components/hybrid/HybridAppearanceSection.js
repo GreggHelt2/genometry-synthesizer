@@ -459,6 +459,7 @@ export class HybridAppearanceSection {
             dispatchDeep('showInterpPaths', val, 'hybrid');
         });
 
+
         // 'Selected Only' toggle — restrict interp paths to selected chords
         this.interpPathsSelectedOnlyControl = new ParamToggle({
             key: 'interpPathsSelectedOnly',
@@ -659,6 +660,28 @@ export class HybridAppearanceSection {
         if (this.baseCurveEyeBlend) this.baseCurveEyeBlend.setActive(flatParams.showBaseCurveBlend || false);
         if (this.blendedRosetteEye) this.blendedRosetteEye.setActive(flatParams.showBlendedRosette || false);
         if (this.blendedVerticesEye) this.blendedVerticesEye.setActive(flatParams.showBlendedVertices || false);
+
+        // Eye Toggle Gating: lock accordion body when layer is hidden
+        if (this.vizAccordion) this.vizAccordion.setGated(flatParams.showHybridLines === false);
+        if (this.baseChordalAccordion) {
+            // Gated when BOTH Source A and Source B are off
+            this.baseChordalAccordion.setGated(!(flatParams.showRoseA || false) && !(flatParams.showRoseB || false));
+        }
+        if (this.baseCurveVizAccordion) {
+            // Gated when BOTH base curves are off
+            this.baseCurveVizAccordion.setGated(!(flatParams.showBaseCurveA || false) && !(flatParams.showBaseCurveB || false));
+        }
+        if (this.blendedVizAccordion) {
+            // Gated when ALL three blended layers are off
+            this.blendedVizAccordion.setGated(
+                !(flatParams.showBaseCurveBlend || false) &&
+                !(flatParams.showBlendedRosette || false) &&
+                !(flatParams.showBlendedVertices || false)
+            );
+        }
+        if (this.fillAccordion) this.fillAccordion.setGated(flatParams.showFill === false);
+        if (this.vertexAccordion) this.vertexAccordion.setGated(!(flatParams.showVertices || false));
+        if (this.interpPathsAccordion) this.interpPathsAccordion.setGated(!(flatParams.showInterpPaths || false));
     }
 
     updateLinkVisuals() {

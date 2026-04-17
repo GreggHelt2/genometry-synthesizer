@@ -50,7 +50,6 @@ export class AppearanceSection {
         );
         this.chordalAccordion.append(this.chordalModule.container);
 
-        // Eye toggle for chordal line visibility
         this.chordalEyeToggle = this.chordalAccordion.addEyeToggle(true, (val) => {
             dispatchDeep('showChordalLines', val, this.roseId);
         });
@@ -273,6 +272,12 @@ export class AppearanceSection {
         if (this.vertexEyeToggle) this.vertexEyeToggle.setActive(params.showVertices || false);
         if (this.baseCurveEyeToggle) this.baseCurveEyeToggle.setActive(params.showBaseCurve !== false);
         if (this.fillEyeToggle) this.fillEyeToggle.setActive(params.showFill !== false);
+
+        // Eye Toggle Gating: lock accordion body when layer is hidden
+        if (this.chordalAccordion) this.chordalAccordion.setGated(params.showChordalLines === false);
+        if (this.vertexAccordion) this.vertexAccordion.setGated(!(params.showVertices || false));
+        if (this.baseCurveAccordion) this.baseCurveAccordion.setGated(params.showBaseCurve === false);
+        if (this.fillAccordion) this.fillAccordion.setGated(params.showFill === false);
     }
 
     createSlider(key, min, max, step, label) {

@@ -8,11 +8,17 @@ export class Accordion {
         this.isOpen = isOpen;
         this.onToggle = onToggle;
         this.id = id;
+        /** When true, the accordion body is locked closed (eye toggle is OFF) */
+        this.isGated = false;
         this.element = this.render();
         Accordion._instances.push(this);
     }
 
     toggle() {
+        // If gated and trying to open, block it
+        if (this.isGated && !this.isOpen) {
+            return;
+        }
         this.isOpen = !this.isOpen;
         this.content.style.display = this.isOpen ? 'block' : 'none';
         this.icon.style.transform = this.isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
@@ -35,6 +41,37 @@ export class Accordion {
         this.title = newTitle;
         if (this.titleEl) {
             this.titleEl.textContent = newTitle;
+        }
+    }
+
+    /**
+     * Gate or ungate this accordion.
+     * When gated: force-collapse the body, dim the header, block opening via arrow/header click.
+     * When ungated: restore normal behavior (does not auto-expand).
+     * The arrow icon remains visible but is non-functional when gated.
+     * @param {boolean} isGated
+     */
+    setGated(isGated) {
+        if (this.isGated === isGated) return;
+        this.isGated = isGated;
+
+        if (isGated) {
+            // Force collapse
+            if (this.isOpen) {
+                this.isOpen = false;
+                this.content.style.display = 'none';
+                this.icon.style.transform = 'rotate(-90deg)';
+                if (this.onToggle) this.onToggle(this.isOpen, this.id);
+            }
+            // Dim only the title and arrow, keep eye toggles at full brightness
+            this.titleEl.style.opacity = '0.5';
+            this.icon.style.opacity = '0.5';
+            this.header.style.cursor = 'default';
+        } else {
+            // Restore normal header
+            this.titleEl.style.opacity = '';
+            this.icon.style.opacity = '';
+            this.header.style.cursor = 'pointer';
         }
     }
 
