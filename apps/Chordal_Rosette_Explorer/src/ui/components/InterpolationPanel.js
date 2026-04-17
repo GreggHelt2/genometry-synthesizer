@@ -71,6 +71,31 @@ export class InterpolationPanel extends Panel {
     }
 
     renderContent() {
+        // --- Pinned Morph Weight Bar (non-scrollable, always visible) ---
+        this.pinnedBar = createElement('div', 'w-full flex-shrink-0 border-b border-gray-700 bg-gray-850');
+        this.pinnedBar.style.cssText = 'padding: 4px 8px; background: #1a1a2e;';
+        this.element.appendChild(this.pinnedBar);
+
+        // Morph Weight ParamNumber
+        this.morphControl = new ParamNumber({
+            key: 'weight',
+            label: 'Morph Weight',
+            min: 0,
+            max: 1,
+            step: 0.001,
+            value: 0.5,
+            hardLimits: true,
+            onChange: (val) => {
+                dispatchDeep('weight', val, 'hybrid');
+            }
+        });
+
+        // Register for animation persistence
+        if (!this.animationParams) this.animationParams = new Set();
+        this.animationParams.add(this.morphControl);
+
+        this.pinnedBar.appendChild(this.morphControl.getElement());
+
         // Scrollable Controls Container (Matches ChordalRosettePanel)
         this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
         this.element.appendChild(this.controlsContainer);
@@ -148,9 +173,10 @@ export class InterpolationPanel extends Panel {
 
         this.controlsContainer.appendChild(this.chordAccordion.element);
 
-        // 1. Animation Section
+        // 1. Animation Section — currently empty (Morph Weight moved to pinned bar)
+        // Instantiate for persistence/accordion state compatibility but hide from view
         this.animationSection = new HybridAnimationSection(this);
-        this.controlsContainer.appendChild(this.animationSection.element);
+        // Not appended to controlsContainer — will be shown when LFO config is added
 
         // 2. Appearance Section (Visualizations, Base Chordal, Base Curve, Vertex, General)
         this.appearanceSection = new HybridAppearanceSection(this);
@@ -200,6 +226,11 @@ export class InterpolationPanel extends Panel {
     updateUI(state) {
         // Flatten hybrid state for sub-sections
         const flatHybrid = flattenHybridParams(state.hybrid);
+
+        // Pinned Morph Weight sync
+        if (this.morphControl) {
+            this.morphControl.setValue(flatHybrid.weight);
+        }
 
         // Section Updates — pass flat params
         if (this.animationSection) this.animationSection.update(flatHybrid);
