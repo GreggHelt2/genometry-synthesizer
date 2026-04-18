@@ -22,6 +22,7 @@ import { HybridAnimationSection } from './hybrid/HybridAnimationSection.js';
 import { HybridCosetSection } from './hybrid/HybridCosetSection.js';
 import { HybridAppearanceSection } from './hybrid/HybridAppearanceSection.js';
 import { HybridCoincidentSection } from './hybrid/HybridCoincidentSection.js';
+import { ZoneContainer } from './ZoneContainer.js';
 
 export class InterpolationPanel extends Panel {
     constructor(id, title, options = {}) {
@@ -60,12 +61,28 @@ export class InterpolationPanel extends Panel {
     }
 
     restoreUIState(state) {
-        if (!state || !state.accordions) return;
+        if (!state) return;
         this.uiState = state;
-        for (const [id, isOpen] of Object.entries(state.accordions)) {
-            const acc = this.accordions.get(id);
-            if (acc && acc.isOpen !== isOpen) {
-                acc.toggle();
+
+        if (state.accordions) {
+            for (const [id, isOpen] of Object.entries(state.accordions)) {
+                const acc = this.accordions.get(id);
+                if (acc && acc.isOpen !== isOpen) {
+                    acc.toggle();
+                }
+            }
+        }
+
+        // Restore zone collapse states
+        if (state.zones) {
+            if (this.interpolationZone && state.zones.interpolation !== undefined) {
+                this.interpolationZone.setOpen(state.zones.interpolation);
+            }
+            if (this.styleZone && state.zones.style !== undefined) {
+                this.styleZone.setOpen(state.zones.style);
+            }
+            if (this.analysisZone && state.zones.analysis !== undefined) {
+                this.analysisZone.setOpen(state.zones.analysis);
             }
         }
     }
@@ -99,6 +116,21 @@ export class InterpolationPanel extends Panel {
         // Scrollable Controls Container (Matches ChordalRosettePanel)
         this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
         this.element.appendChild(this.controlsContainer);
+
+        // ═══════════════════════════════════════════
+        // 🔷 INTERPOLATION Zone
+        // ═══════════════════════════════════════════
+        this.interpolationZone = new ZoneContainer('Interpolation', '🔷', {
+            color: '#60a5fa',
+            collapsible: true,
+            onToggle: (isOpen) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.interpolation = isOpen;
+                persistenceManager.save();
+            },
+            id: 'hybrid-interpolation'
+        });
+        this.controlsContainer.appendChild(this.interpolationZone.element);
 
         // Info Accordion
         this.infoAccordion = new Accordion('Hybrid Info', false, this.handleAccordionToggle.bind(this), 'hybrid-info');
@@ -139,9 +171,9 @@ export class InterpolationPanel extends Panel {
         this.infoContent = createElement('div', 'p-2 text-xs text-gray-300 font-mono flex flex-col gap-1');
         this.infoAccordion.append(this.infoContent);
 
-        this.controlsContainer.appendChild(this.infoAccordion.element);
+        this.interpolationZone.append(this.infoAccordion.element);
 
-        // Chord Selection & Analysis Accordion (separate from Hybrid Info)
+        // Chord Selection & Analysis Accordion
         this.chordAccordion = new Accordion('Chord Selection & Analysis', false, this.handleAccordionToggle.bind(this), 'hybrid-chord-analysis');
         this.accordions.set('hybrid-chord-analysis', this.chordAccordion);
 
@@ -171,28 +203,62 @@ export class InterpolationPanel extends Panel {
             });
         }
 
-        this.controlsContainer.appendChild(this.chordAccordion.element);
+        this.interpolationZone.append(this.chordAccordion.element);
 
-        // 1. Animation Section — currently empty (Morph Weight moved to pinned bar)
-        // Instantiate for persistence/accordion state compatibility but hide from view
+        // Animation Section — currently empty (Morph Weight moved to pinned bar)
         this.animationSection = new HybridAnimationSection(this);
-        // Not appended to controlsContainer — will be shown when LFO config is added
 
-        // 2. Appearance Section (Visualizations, Base Chordal, Base Curve, Vertex, General)
+        // ═══════════════════════════════════════════
+        // 🎨 STYLE Zone
+        // ═══════════════════════════════════════════
+        this.styleZone = new ZoneContainer('Style', '🎨', {
+            color: '#c084fc',
+            collapsible: true,
+            onToggle: (isOpen) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.style = isOpen;
+                persistenceManager.save();
+            },
+            id: 'hybrid-style'
+        });
+        this.controlsContainer.appendChild(this.styleZone.element);
+
+        // Appearance Section — HybridAppearanceSection appends accordions into
+        // orchestrator.controlsContainer during construction. Temporarily redirect
+        // to the style zone body so accordions mount into the correct zone.
+        const savedContainer = this.controlsContainer;
+        this.controlsContainer = this.styleZone.body;
         this.appearanceSection = new HybridAppearanceSection(this);
+        this.controlsContainer = savedContainer;
 
-        // 3. Coset Visualization Section
+        // ═══════════════════════════════════════════
+        // 📊 ANALYSIS & UTILITIES Zone (collapsible, starts collapsed)
+        // ═══════════════════════════════════════════
+        this.analysisZone = new ZoneContainer('Analysis & Utilities', '📊', {
+            color: '#34d399',
+            collapsible: true,
+            defaultCollapsed: true,
+            onToggle: (isOpen, id) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.analysis = isOpen;
+                persistenceManager.save();
+            },
+            id: 'hybrid-analysis'
+        });
+        this.controlsContainer.appendChild(this.analysisZone.element);
+
+        // Coset Visualization Section
         this.cosetSection = new HybridCosetSection(this);
-        this.controlsContainer.appendChild(this.cosetSection.element);
+        this.analysisZone.append(this.cosetSection.element);
 
-        // 4. Coincident Indices Section
+        // Coincident Indices Section
         this.coincidentSection = new HybridCoincidentSection(this);
-        this.controlsContainer.appendChild(this.coincidentSection.element);
+        this.analysisZone.append(this.coincidentSection.element);
 
         // Recording Controls Section
         this.recordingAccordion = new Accordion('Recording', false, this.handleAccordionToggle.bind(this), 'hybrid-recording');
         this.accordions.set('hybrid-recording', this.recordingAccordion);
-        this.controlsContainer.appendChild(this.recordingAccordion.element);
+        this.analysisZone.append(this.recordingAccordion.element);
 
         // Format Selector
         const formatWrapper = createElement('div', 'mb-3');

@@ -8,6 +8,7 @@ import { AppearanceSection } from './chordal_rosette/AppearanceSection.js';
 import { CosetVizSection } from './chordal_rosette/CosetVizSection.js';
 import { CoincidentFinderSection } from './chordal_rosette/CoincidentFinderSection.js';
 import { SpecialPointsSection } from './chordal_rosette/SpecialPointsSection.js';
+import { ZoneContainer } from './ZoneContainer.js';
 
 import { persistenceManager } from '../../engine/state/PersistenceManager.js';
 import { linkManager } from '../../engine/logic/LinkManager.js';
@@ -82,18 +83,32 @@ export class ChordalRosettePanel extends Panel {
     }
 
     restoreUIState(state) {
-        if (!state || !state.accordions) return;
+        if (!state) return;
 
         this.uiState = state;
 
         // Apply to existing accordions
-        for (const [id, isOpen] of Object.entries(state.accordions)) {
-            const acc = this.accordions.get(id);
-            if (acc) {
-                // Only toggle if state differs (avoid animation glitches)
-                if (acc.isOpen !== isOpen) {
-                    acc.toggle();
+        if (state.accordions) {
+            for (const [id, isOpen] of Object.entries(state.accordions)) {
+                const acc = this.accordions.get(id);
+                if (acc) {
+                    if (acc.isOpen !== isOpen) {
+                        acc.toggle();
+                    }
                 }
+            }
+        }
+
+        // Restore zone collapse states
+        if (state.zones) {
+            if (this.geometryZone && state.zones.geometry !== undefined) {
+                this.geometryZone.setOpen(state.zones.geometry);
+            }
+            if (this.styleZone && state.zones.style !== undefined) {
+                this.styleZone.setOpen(state.zones.style);
+            }
+            if (this.analysisZone && state.zones.analysis !== undefined) {
+                this.analysisZone.setOpen(state.zones.analysis);
             }
         }
     }
@@ -115,41 +130,85 @@ export class ChordalRosettePanel extends Panel {
         this.controlsContainer = createElement('div', 'flex-1 overflow-y-auto w-full');
         this.element.appendChild(this.controlsContainer);
 
-        // Create Sub-Sections (The new V3 architecture)
+        // ═══════════════════════════════════════════
+        // 🔷 GEOMETRY Zone
+        // ═══════════════════════════════════════════
+        this.geometryZone = new ZoneContainer('Geometry', '🔷', {
+            color: '#60a5fa',
+            collapsible: true,
+            onToggle: (isOpen) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.geometry = isOpen;
+                persistenceManager.save();
+            },
+            id: `${this.roseId}-geometry`
+        });
+        this.controlsContainer.appendChild(this.geometryZone.element);
 
-        // 1. Stats
+        // Stats (Info + Chord Analysis)
         this.statsSection = new StatsSection(this, this.roseId, {
             chordSelection: this._options.chordSelection || null
         });
-        this.controlsContainer.appendChild(this.statsSection.element);
+        this.geometryZone.append(this.statsSection.element);
 
-        // 2. Core Params
+        // Core Params (Base Curve Generator)
         this.coreParamsSection = new CoreParamsSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.coreParamsSection.element);
+        this.geometryZone.append(this.coreParamsSection.element);
 
-        // 3. Sequencer
+        // Sequencer
         this.sequencerSection = new SequencerSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.sequencerSection.element);
+        this.geometryZone.append(this.sequencerSection.element);
 
-        // 4. Relatives
+        // Relatives Navigation
         this.relativesSection = new RelativesSection(this);
-        this.controlsContainer.appendChild(this.relativesSection.element);
+        this.geometryZone.append(this.relativesSection.element);
 
-        // 5. Appearance (Chordal, Vertex, General)
+        // ═══════════════════════════════════════════
+        // 🎨 STYLE Zone
+        // ═══════════════════════════════════════════
+        this.styleZone = new ZoneContainer('Style', '🎨', {
+            color: '#c084fc',
+            collapsible: true,
+            onToggle: (isOpen) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.style = isOpen;
+                persistenceManager.save();
+            },
+            id: `${this.roseId}-style`
+        });
+        this.controlsContainer.appendChild(this.styleZone.element);
+
+        // Appearance (Chordal Line, Vertex, Base Curve, Fill, General, Trails)
         this.appearanceSection = new AppearanceSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.appearanceSection.element);
+        this.styleZone.append(this.appearanceSection.element);
 
-        // 6. Coset Visualization
+        // ═══════════════════════════════════════════
+        // 📊 ANALYSIS Zone (collapsible, starts collapsed)
+        // ═══════════════════════════════════════════
+        this.analysisZone = new ZoneContainer('Analysis', '📊', {
+            color: '#34d399',
+            collapsible: true,
+            defaultCollapsed: true,
+            onToggle: (isOpen, id) => {
+                this.uiState.zones = this.uiState.zones || {};
+                this.uiState.zones.analysis = isOpen;
+                persistenceManager.save();
+            },
+            id: `${this.roseId}-analysis`
+        });
+        this.controlsContainer.appendChild(this.analysisZone.element);
+
+        // Coset Visualization
         this.cosetVizSection = new CosetVizSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.cosetVizSection.element);
+        this.analysisZone.append(this.cosetVizSection.element);
 
-        // 7. Coincident Finder
+        // Coincident Finder
         this.coincidentFinderSection = new CoincidentFinderSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.coincidentFinderSection.element);
+        this.analysisZone.append(this.coincidentFinderSection.element);
 
-        // 8. Special Points (Erb self-intersection analysis)
+        // Special Points (Erb self-intersection analysis)
         this.specialPointsSection = new SpecialPointsSection(this, this.roseId);
-        this.controlsContainer.appendChild(this.specialPointsSection.element);
+        this.analysisZone.append(this.specialPointsSection.element);
     }
 
 
