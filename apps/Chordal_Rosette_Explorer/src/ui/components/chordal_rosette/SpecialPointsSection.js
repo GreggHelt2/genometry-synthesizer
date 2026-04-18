@@ -295,6 +295,7 @@ export class SpecialPointsSection {
         const CurveClass = CurveRegistry[curveType];
         if (!CurveClass) {
             this.infoDiv.textContent = 'Zero: — | Double: — | Boundary: —';
+            this.accordion.setTitle('Curve Special Points');
             return;
         }
 
@@ -308,10 +309,21 @@ export class SpecialPointsSection {
         try {
             const curve = new CurveClass(curveParams);
             const sp = curve.getSpecialPoints();
-            this.infoDiv.textContent =
-                `Zero: ${sp.zeroPoints.length} | Double: ${sp.doublePoints.length} | Boundary: ${sp.boundaryPoints.length}`;
+            const z = sp.zeroPoints.length;
+            const d = sp.doublePoints.length;
+            const b = sp.boundaryPoints.length;
+            this.infoDiv.textContent = `Zero: ${z} | Double: ${d} | Boundary: ${b}`;
+
+            // Header state summary — compact symbols: ○=zero ✕=double □=boundary
+            const parts = [];
+            if (z > 0) parts.push(`○${z}`);
+            if (d > 0) parts.push(`✕${d}`);
+            if (b > 0) parts.push(`□${b}`);
+            const summary = parts.length > 0 ? parts.join(' ') : 'none';
+            this.accordion.setTitle(`Special Points — ${summary}`);
         } catch (e) {
             this.infoDiv.textContent = 'Zero: — | Double: — | Boundary: —';
+            this.accordion.setTitle('Curve Special Points');
         }
     }
 }

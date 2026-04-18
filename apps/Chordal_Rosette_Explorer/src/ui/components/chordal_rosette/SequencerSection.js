@@ -167,6 +167,11 @@ export class SequencerSection {
                 control.instance.setValue(params[key]);
             }
         });
+
+        // Header state summary
+        const n = params.totalDivs || '?';
+        const s = params.step || params.generator || '?';
+        this.accordion.setTitle(`Sequencer — n=${n}, s=${s}`);
     }
 
     rebuildSequencerControls(type, params) {

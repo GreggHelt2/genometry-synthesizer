@@ -165,6 +165,9 @@ export class CosetVizSection {
         // Update Info
         this.cosetInfo.textContent = `Cosets (k): ${k}`;
 
+        // Header state summary
+        this.accordion.setTitle(`Coset Visualization — k=${k}`);
+
         // Enable/Disable Logic
         const showAll = params.showAllCosets;
         const isMulti = k > 1;
