@@ -111,6 +111,14 @@ export class ChordalRosettePanel extends Panel {
                 this.analysisZone.setOpen(state.zones.analysis);
             }
         }
+
+        // Restore tab states
+        if (state.tabs) {
+            const tabKey = `${this.roseId}-appearance`;
+            if (state.tabs[tabKey] && this.appearanceSection && this.appearanceSection.restoreTabState) {
+                this.appearanceSection.restoreTabState(state.tabs[tabKey]);
+            }
+        }
     }
 
     renderContent() {

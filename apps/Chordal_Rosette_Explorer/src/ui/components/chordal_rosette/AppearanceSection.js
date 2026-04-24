@@ -1,4 +1,4 @@
-import { Accordion } from '../Accordion.js';
+import { TabStrip } from '../TabStrip.js';
 import { LayerRenderingModule } from '../modules/LayerRenderingModule.js';
 import { GlobalRenderingModule } from '../modules/GlobalRenderingModule.js';
 import { TrailsSection } from './TrailsSection.js';
@@ -8,6 +8,7 @@ import { ParamNumber } from '../ParamNumber.js';
 import { createElement } from '../../utils/dom.js';
 import { dispatchDeep, getLinkKey } from '../../../engine/state/stateAdapters.js';
 import { linkManager } from '../../../engine/logic/LinkManager.js';
+import { persistenceManager } from '../../../engine/state/PersistenceManager.js';
 
 export class AppearanceSection {
     /**
@@ -18,7 +19,7 @@ export class AppearanceSection {
         this.orchestrator = orchestrator;
         this.roseId = roseId;
 
-        // Container for multiple accordions
+        // Container for the tab strip
         this.element = document.createElement('div');
         this.element.className = '';
 
@@ -28,48 +29,25 @@ export class AppearanceSection {
     }
 
     renderContent() {
-        // 1. Chordal Line Viz Accordion
-        this.chordalAccordion = new Accordion('Chordal Line Viz', true, (isOpen, id) => {
-            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => {
-                if (this.orchestrator.alignLabels) this.orchestrator.alignLabels(this.chordalAccordion.content);
-            });
-        }, `${this.roseId}-chordal-viz`);
-        this.register(this.chordalAccordion, `${this.roseId}-chordal-viz`);
-        this.element.appendChild(this.chordalAccordion.element);
+        // ── Build content panels for each tab ──
 
-        // Uses LayerRenderingModule
+        // 1. Chordal Line Viz
+        this.chordalContent = createElement('div', 'p-0');
         this.chordalModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            null, // actionType no longer used
-            {}, // Default keys
-            {
-                showConnectMode: true
-            }
+            null,
+            {},
+            { showConnectMode: true }
         );
-        this.chordalAccordion.append(this.chordalModule.container);
+        this.chordalContent.appendChild(this.chordalModule.container);
 
-        this.chordalEyeToggle = this.chordalAccordion.addEyeToggle(true, (val) => {
-            dispatchDeep('showChordalLines', val, this.roseId);
-        });
-
-
-        // 2. Vertex Rendering Accordion
-        this.vertexAccordion = new Accordion('Vertex Rendering', false, (isOpen, id) => {
-            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => {
-                if (this.orchestrator.alignLabels) this.orchestrator.alignLabels(this.vertexAccordion.content);
-            });
-        }, `${this.roseId}-vertex-viz`);
-        this.register(this.vertexAccordion, `${this.roseId}-vertex-viz`);
-        this.element.appendChild(this.vertexAccordion.element);
-
-        // Uses LayerRenderingModule (General replacement for VertexVizModule)
+        // 2. Vertex Rendering
+        this.vertexContent = createElement('div', 'p-0');
         this.vertexModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            null, // actionType no longer used
+            null,
             {
                 showVertices: 'showVertices',
                 size: 'vertexRadius',
@@ -88,7 +66,7 @@ export class AppearanceSection {
                 sizeLabel: 'Radius'
             }
         );
-        this.vertexAccordion.append(this.vertexModule.container);
+        this.vertexContent.appendChild(this.vertexModule.container);
 
         // Vertex label toggle
         this.vertexLabelsToggle = new ParamToggle({
@@ -99,30 +77,19 @@ export class AppearanceSection {
                 dispatchDeep('showVertexLabels', val, this.roseId);
             }
         });
-        this.vertexAccordion.append(this.vertexLabelsToggle.getElement());
+        this.vertexContent.appendChild(this.vertexLabelsToggle.getElement());
 
         // Vertex label font size slider
         const fontSizeSlider = this.createSlider('vertexLabelFontSize', 5, 30, 1, 'Label Size');
         this.vertexLabelFontSizeControl = fontSizeSlider.instance;
-        this.vertexAccordion.append(fontSizeSlider.container);
+        this.vertexContent.appendChild(fontSizeSlider.container);
 
-        // Eye toggle for vertex visibility
-        this.vertexEyeToggle = this.vertexAccordion.addEyeToggle(false, (val) => {
-            dispatchDeep('showVertices', val, this.roseId);
-        });
-
-
-        // 3. Base Curve Rendering Accordion
-        this.baseCurveAccordion = new Accordion('Base Curve Rendering', false, (isOpen, id) => {
-            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-        }, `${this.roseId}-base-viz`);
-        this.register(this.baseCurveAccordion, `${this.roseId}-base-viz`);
-        this.element.appendChild(this.baseCurveAccordion.element);
-
+        // 3. Base Curve Rendering
+        this.baseCurveContent = createElement('div', 'p-0');
         this.baseCurveModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            null, // actionType no longer used
+            null,
             {
                 colorMethod: 'baseCurveColorMethod',
                 gradientType: 'baseCurveGradientType',
@@ -139,25 +106,14 @@ export class AppearanceSection {
                 showToggle: { key: 'showBaseCurve', label: 'Show Base Curve' }
             }
         );
-        this.baseCurveAccordion.append(this.baseCurveModule.container);
+        this.baseCurveContent.appendChild(this.baseCurveModule.container);
 
-        // Eye toggle for base curve visibility
-        this.baseCurveEyeToggle = this.baseCurveAccordion.addEyeToggle(true, (val) => {
-            dispatchDeep('showBaseCurve', val, this.roseId);
-        });
-
-
-        // 4. Fill Rendering Accordion
-        this.fillAccordion = new Accordion('Fill Rendering', false, (isOpen, id) => {
-            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-        }, `${this.roseId}-fill-viz`);
-        this.register(this.fillAccordion, `${this.roseId}-fill-viz`);
-        this.element.appendChild(this.fillAccordion.element);
-
+        // 4. Fill Rendering
+        this.fillContent = createElement('div', 'p-0');
         this.fillModule = new LayerRenderingModule(
             this.orchestrator,
             this.roseId,
-            null, // actionType no longer used
+            null,
             {
                 colorMethod: 'fillColorMethod',
                 gradientType: 'fillGradientType',
@@ -173,42 +129,59 @@ export class AppearanceSection {
                 showToggle: { key: 'showFill', label: 'Show Fill', value: true }
             }
         );
-        this.fillAccordion.append(this.fillModule.container);
+        this.fillContent.appendChild(this.fillModule.container);
 
-        // Eye toggle for fill visibility
-        this.fillEyeToggle = this.fillAccordion.addEyeToggle(true, (val) => {
-            dispatchDeep('showFill', val, this.roseId);
-        });
-
-
-        // General Rendering Settings Accordion - Use Module
-        this.generalAccordion = new Accordion('General Rendering Settings', false, (isOpen, id) => {
-            if (this.orchestrator.handleAccordionToggle) this.orchestrator.handleAccordionToggle(isOpen, id);
-            if (isOpen) requestAnimationFrame(() => {
-                if (this.orchestrator.alignLabels) this.orchestrator.alignLabels(this.generalAccordion.content);
-            });
-        }, `${this.roseId}-appearance-general`);
-        this.register(this.generalAccordion, `${this.roseId}-appearance-general`);
-        this.element.appendChild(this.generalAccordion.element);
-
+        // 5. General Rendering Settings
+        this.generalContent = createElement('div', 'p-0');
         this.generalModule = new GlobalRenderingModule(
             this.orchestrator,
             this.roseId,
-            null // actionType no longer used
+            null
         );
-        this.generalAccordion.append(this.generalModule.container);
+        this.generalContent.appendChild(this.generalModule.container);
 
-        // 6. Trails Effect Accordion
+        // 6. Trails Effect
+        this.trailsContent = createElement('div', 'p-0');
         this.trailsSection = new TrailsSection(this.orchestrator, this.roseId, {
             onClearCanvas: () => {
-                // Access the renderer via the orchestrator's canvas
                 if (this.orchestrator.canvas) {
                     const renderer = this.orchestrator._trailsRenderer;
                     if (renderer) renderer.forceClear();
                 }
             }
         });
-        this.element.appendChild(this.trailsSection.element);
+        this.trailsContent.appendChild(this.trailsSection.element);
+
+        // ── Create Tab Strip ──
+        this.tabStrip = new TabStrip([
+            { id: 'chordal', label: 'Chordal',  eyeToggle: true, eyeDefault: true,  content: this.chordalContent },
+            { id: 'vertex',  label: 'Vertex',   eyeToggle: true, eyeDefault: false, content: this.vertexContent },
+            { id: 'curve',   label: 'Curve',    eyeToggle: true, eyeDefault: true,  content: this.baseCurveContent },
+            { id: 'fill',    label: 'Fill',     eyeToggle: true, eyeDefault: true,  content: this.fillContent },
+            { id: 'general', label: 'General',                                      content: this.generalContent },
+            { id: 'trails',  label: 'Trails',   eyeToggle: true, eyeDefault: false, content: this.trailsContent }
+        ], {
+            onTabChange: (tabId) => {
+                this.orchestrator.uiState.tabs = this.orchestrator.uiState.tabs || {};
+                this.orchestrator.uiState.tabs[`${this.roseId}-appearance`] = tabId;
+                persistenceManager.save();
+            },
+            onEyeToggle: (tabId, isOn) => {
+                const dispatchMap = {
+                    chordal: 'showChordalLines',
+                    vertex: 'showVertices',
+                    curve: 'showBaseCurve',
+                    fill: 'showFill',
+                    trails: 'trailsEnabled'
+                };
+                if (dispatchMap[tabId]) {
+                    dispatchDeep(dispatchMap[tabId], isOn, this.roseId);
+                }
+            },
+            persistKey: `${this.roseId}-appearance`
+        });
+
+        this.element.appendChild(this.tabStrip.element);
     }
 
     handleLinkToggle(key) {
@@ -226,32 +199,12 @@ export class AppearanceSection {
     }
 
     updateLinkVisuals() {
-        // Delegate to modules
-        if (this.chordalModule && this.chordalModule.updateLinkVisuals) {
-            this.chordalModule.updateLinkVisuals();
-        }
-        if (this.vertexModule && this.vertexModule.updateLinkVisuals) {
-            this.vertexModule.updateLinkVisuals();
-        }
-        if (this.baseCurveModule && this.baseCurveModule.updateLinkVisuals) {
-            this.baseCurveModule.updateLinkVisuals();
-        }
-        if (this.fillModule && this.fillModule.updateLinkVisuals) {
-            this.fillModule.updateLinkVisuals();
-        }
-
-        if (this.generalModule && this.generalModule.updateLinkVisuals) {
-            this.generalModule.updateLinkVisuals();
-        }
-        if (this.trailsSection && this.trailsSection.updateLinkVisuals) {
-            this.trailsSection.updateLinkVisuals();
-        }
-    }
-
-    register(accordion, id) {
-        if (this.orchestrator.registerAccordion) {
-            this.orchestrator.registerAccordion(id, accordion);
-        }
+        if (this.chordalModule && this.chordalModule.updateLinkVisuals) this.chordalModule.updateLinkVisuals();
+        if (this.vertexModule && this.vertexModule.updateLinkVisuals) this.vertexModule.updateLinkVisuals();
+        if (this.baseCurveModule && this.baseCurveModule.updateLinkVisuals) this.baseCurveModule.updateLinkVisuals();
+        if (this.fillModule && this.fillModule.updateLinkVisuals) this.fillModule.updateLinkVisuals();
+        if (this.generalModule && this.generalModule.updateLinkVisuals) this.generalModule.updateLinkVisuals();
+        if (this.trailsSection && this.trailsSection.updateLinkVisuals) this.trailsSection.updateLinkVisuals();
     }
 
     update(params) {
@@ -261,23 +214,27 @@ export class AppearanceSection {
         if (this.vertexLabelFontSizeControl) this.vertexLabelFontSizeControl.setValue(params.vertexLabelFontSize || 15);
         if (this.baseCurveModule) this.baseCurveModule.update(params);
         if (this.fillModule) this.fillModule.update(params);
-
         if (this.generalModule) this.generalModule.update(params);
-
-        // Trails
         if (this.trailsSection) this.trailsSection.update(params);
 
-        // Sync eye toggles
-        if (this.chordalEyeToggle) this.chordalEyeToggle.setActive(params.showChordalLines !== false);
-        if (this.vertexEyeToggle) this.vertexEyeToggle.setActive(params.showVertices || false);
-        if (this.baseCurveEyeToggle) this.baseCurveEyeToggle.setActive(params.showBaseCurve !== false);
-        if (this.fillEyeToggle) this.fillEyeToggle.setActive(params.showFill !== false);
+        // Sync eye toggles on tab headers
+        if (this.tabStrip) {
+            this.tabStrip.setEyeState('chordal', params.showChordalLines !== false);
+            this.tabStrip.setEyeState('vertex', params.showVertices || false);
+            this.tabStrip.setEyeState('curve', params.showBaseCurve !== false);
+            this.tabStrip.setEyeState('fill', params.showFill !== false);
+            this.tabStrip.setEyeState('trails', params.trailsEnabled || false);
+        }
+    }
 
-        // Eye Toggle Gating: lock accordion body when layer is hidden
-        if (this.chordalAccordion) this.chordalAccordion.setGated(params.showChordalLines === false);
-        if (this.vertexAccordion) this.vertexAccordion.setGated(!(params.showVertices || false));
-        if (this.baseCurveAccordion) this.baseCurveAccordion.setGated(params.showBaseCurve === false);
-        if (this.fillAccordion) this.fillAccordion.setGated(params.showFill === false);
+    /**
+     * Restore persisted active tab.
+     * Called from ChordalRosettePanel.restoreUIState().
+     */
+    restoreTabState(tabId) {
+        if (tabId && this.tabStrip) {
+            this.tabStrip.setActiveTab(tabId);
+        }
     }
 
     createSlider(key, min, max, step, label) {

@@ -85,6 +85,13 @@ export class InterpolationPanel extends Panel {
                 this.analysisZone.setOpen(state.zones.analysis);
             }
         }
+
+        // Restore tab states
+        if (state.tabs) {
+            if (state.tabs['hybrid-appearance'] && this.appearanceSection && this.appearanceSection.restoreTabState) {
+                this.appearanceSection.restoreTabState(state.tabs['hybrid-appearance']);
+            }
+        }
     }
 
     renderContent() {
